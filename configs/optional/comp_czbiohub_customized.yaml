@@ -1,0 +1,56 @@
+## Customised resources
+## Replace place holders and then specify resources while executing snakemake
+## Allows the user to modify resources globally without opening the yaml file
+resources:
+  cpu_merged:
+    partition: ${{cpu_partition_merged}}
+    qos: ${{cpu_qos_merged}}
+    gpu: ${{gpu_count_merged}}
+    mem_mb: ${{mem_mb_merged}}
+    disk_mb: ${{disk_mb_merged}}
+  cpu:
+    partition: ${{cpu_partition}}
+    qos: ${{cpu_qos}}
+    gpu: ${{gpu_count}}
+    mem_mb: ${{mem_mb}}
+  gpu:
+    partition: ${{gpu_partition}}
+    qos: ${{gpu_qos}}
+    gpu: ${{gpu_count}}
+    mem_mb: ${{mem_mb}}
+    
+os: intel
+
+## Customised resources for each dataset
+resources_customized:
+  dataset_names:
+    blood_benchmark_test:
+      partition: ${{cpu_partition_merged}}
+      qos: ${{cpu_qos_merged}}
+      gpu: ${{gpu_count_merged}}
+      mem_mb: ${{mem_mb_merged}}
+      disk_mb: ${{disk_mb_merged}}
+    blood_benchmark:
+      partition: ${{cpu_partition_merged}}
+      qos: ${{cpu_qos_merged}}
+      gpu: ${{gpu_count_merged}}
+      mem_mb: ${{mem_mb_merged}}
+      disk_mb: ${{disk_mb_merged}}
+    blood_benchmark_donor:
+      partition: ${{cpu_partition_merged}}
+      qos: ${{cpu_qos_merged}}
+      gpu: ${{gpu_count_merged}}
+      mem_mb: ${{mem_mb_merged}}
+      disk_mb: ${{disk_mb_merged}}
+    blood_lineage_specific:
+      partition: ${{cpu_partition_merged}}
+      qos: ${{cpu_qos_merged}}
+      gpu: ${{gpu_count_merged}}
+      mem_mb: ${{mem_mb_merged}}
+      disk_mb: ${{disk_mb_merged}}
+    test:
+      partition: ${{cpu_partition_merged}}
+      qos: ${{cpu_qos_merged}}
+      gpu: ${{gpu_count_merged}}
+      mem_mb: ${{mem_mb_merged}}
+      disk_mb: ${{disk_mb_merged}}

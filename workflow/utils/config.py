@@ -237,6 +237,44 @@ def get_resource(config, resource_key, profile='cpu', attempt=1, factor=0.5):
         return ''
     return int(res + (attempt - 1) * factor * res) if resource_key == 'mem_mb' else res
 
+def get_resource_customized(config, config_customized=False, dataset_name=None, resource_key=None, profile='cpu', attempt=1):
+    """
+    Retrieve resource information from config['resources'_customized']
+    :param config_customized=True to get the customized resources
+    :param config: config passed from Snakemake
+    :param profile: resource profile, key under config['resources']
+    :param dataset_name: name of the dataset
+    :param resource_key: resource key, key under config['resources'][profile]
+    
+    """
+    if config_customized:
+        if 'resources_customized' not in config or 'dataset_names' not in config['resources_customized']:
+            return ''
+        dataset_names = config['resources_customized']['dataset_names']
+        if dataset_name not in dataset_names or profile not in dataset_names[dataset_name]:
+            return ''
+        try:
+            res = dataset_names[dataset_name][profile][resource_key]
+        except KeyError:
+            print(
+                f'WARNING: Invalid profile "{profile}" or resource key "{resource_key}". '
+                'Please check that your config contains the correct entries under config["resources_customized"]'
+            )
+            res = ''
+        return int(res * attempt * 1.2) if resource_key == 'mem_mb' else res
+    else:
+        if 'resources' not in config or profile not in config['resources']:
+            return ''
+        try:
+            res = config['resources'][profile][resource_key]
+        except KeyError:
+            print(
+                f'WARNING: Invalid profile "{profile}" or resource key "{resource_key}". '
+                'Please check that your config contains the correct entries under config["resources"]'
+            )
+            res = ''
+        return int(res * attempt * 1.2) if resource_key == 'mem_mb' else res
+
 
 def get_datasets_for_module(config, module):
     """
