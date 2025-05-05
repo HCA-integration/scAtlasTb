@@ -2,6 +2,8 @@
 
 ## 05.05.2025 Storage optimisation when subsetting data
 
+PR: https://github.com/HCA-integration/scAtlasTb/pull/233
+
 Subset dataset by only saving coordinates of the entries that are being subset to. This omits saving a new copy of the data for subsets.
 
 **Performance boost:** Massive storage savings when e.g. data is split after a parameter grid search is performed on those splits. This also saves time spent writing the unnecessary copies, and loading a large matrix and subsetting it is sufficiently fast (since data is not fully loaded).
