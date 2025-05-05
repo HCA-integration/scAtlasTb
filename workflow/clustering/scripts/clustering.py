@@ -16,7 +16,7 @@ except Exception as e:
     from scanpy.tools import leiden, louvain
     from scanpy.preprocessing import neighbors
 
-from utils.io import read_anndata, write_zarr_linked, get_file_reader, read_elem
+from utils.io import read_anndata, write_zarr_linked, get_store, read_slot
 
 
 def check_and_set_neighbors_key(adata, neighbors_key):
@@ -115,9 +115,8 @@ if algorithm == 'leiden':
     cpu_kwargs |= dict(n_iterations=2)
 
 # check if clusters have already been computed
-read_func, _ = get_file_reader(input_file)
-f = read_func(input_file, 'r')
-cluster_key_exists = cluster_key in f['obs'].keys()
+store = get_store(input_file)
+cluster_key_exists = cluster_key in store['obs'].keys()
 
 
 if cluster_key_exists and not overwrite:
@@ -138,8 +137,8 @@ else:
         conn_key = neighbors.get('connectivities_key', 'connectivities')
         dist_key = neighbors.get('distances_key', 'distances')
         adata.obsp = {
-            'connectivities': read_elem(f['obsp'][conn_key]),
-            'distances': read_elem(f['obsp'][dist_key]),
+            'connectivities': read_slot(input_file, store, f'obsp/{conn_key}'),
+            'distances': read_slot(input_file, store, f'obsp/{dist_key}'),
         }
         
         logging.info(f'{algorithm} clustering with {kwargs} for {adata.n_obs} cells...')
@@ -150,7 +149,6 @@ else:
             **kwargs,
         )
     else:
-        from concurrent.futures import ThreadPoolExecutor, as_completed
         from joblib import Parallel, delayed
         from tqdm import tqdm
         
@@ -184,16 +182,16 @@ else:
         neighbors_args['use_rep'] = use_rep
         
         # check if use_rep is present in obsm
-        if use_rep not in f['obsm'].keys():
-            params = read_elem(f['uns']['neighbors']['params'])
+        if use_rep not in store['obsm'].keys():
+            params = read_slot(input_file, store, 'uns/neighbors/params')
             if 'use_rep' not in params:
                 raise ValueError(f'use_rep not defined in neighbors_args for {params}, consider recomputing neighbors')
             use_rep = params['use_rep']
             neighbors_args['use_rep'] = use_rep
-            assert use_rep in f['obsm'].keys(), f'obsm key {use_rep} not found in {input_file}'
+            assert use_rep in store['obsm'].keys(), f'obsm key {use_rep} not found in {input_file}'
         
         adata = read_anndata(input_file, **read_kwargs)
-        adata.obsm[use_rep] = read_elem(f['obsm'][use_rep])
+        adata.obsm[use_rep] = read_slot(input_file, store, f'obsm/{use_rep}')
         
         prev_cluster_key = f'{algorithm}_{resolution}_{level-1}'
         cluster_labels = adata.obs[prev_cluster_key].unique()

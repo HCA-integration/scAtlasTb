@@ -29,7 +29,7 @@ neighbor_args = params.get('neighbor_args', {})
 unintegrated_layer = params.get('unintegrated_layer', 'X')
 corrected_layer = params.get('corrected_layer', 'X')
 
-files_to_keep = ['obsm', 'obsp', 'raw', 'uns', 'var']
+files_to_keep = ['raw', 'uns', 'var']
 
 # determine output types
 # default output type is 'full'
@@ -91,9 +91,14 @@ if output_type == 'full':
     adata.obsm['X_emb'] = adata.obsm['X_pca']
     del hvg_matrix
     force_neighbors = True
+    files_to_keep.append('obsm/X_pca')
 elif output_type == 'embed':
     logging.info('Run PCA on embedding...')
     compute_pca(adata, matrix=adata.obsm['X_emb'])
+    files_to_keep.append('obsm/X_pca')
+
+if force_neighbors:
+    files_to_keep.append('obsp')
 
 logging.info(f'Computing neighbors for output type {output_type} force_neighbors={force_neighbors}...')
 compute_neighbors(

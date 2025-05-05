@@ -10,7 +10,7 @@ from dask import array as da
 import logging
 logging.basicConfig(level=logging.INFO)
 
-from utils.io import read_anndata, write_zarr_linked
+from utils.io import read_anndata, write_zarr_linked, get_file_reader
 from utils.misc import dask_compute
 
 
@@ -22,11 +22,12 @@ backed = params.get('backed', True)
 dask = params.get('dask', True)
 subset = params.get('subset', False)
 
-kwargs = {'obs': 'obs'}
+kwargs = {'obs': 'obs', 'var': 'var'}
 adata = read_anndata(input_file, **kwargs)
 logging.info(adata.__str__())
 
 mask = pd.Series(np.full(adata.n_obs, True, dtype=bool), index=adata.obs_names)
+subset_mask = None
 
 ex_filters = params.get('remove_by_column', {})
 logging.info(pformat(ex_filters))
@@ -53,7 +54,9 @@ if subset and False in value_counts.index:
         'obsp': 'obsp',
     }
     # filter out slots that aren't present in the input
-    kwargs = {k: v for k, v in kwargs.items() if k in [f.name for f in Path(input_file).iterdir()]}
+    func, _ = get_file_reader(input_file)
+    store = func(input_file, 'r')
+    kwargs = {k: v for k, v in kwargs.items() if k in store.keys()}
     
     logging.info('Read all slots for subsetting...')
     obs = adata.obs # save updated obs
@@ -68,11 +71,17 @@ if subset and False in value_counts.index:
     logging.info('Subset data by filters...')
     adata = dask_compute(adata[adata.obs['filtered']].copy())
     logging.info(adata.__str__())
+    files_to_keep = kwargs.keys()
+else:
+    var_mask = np.full(adata.n_vars, True, dtype=bool)
+    subset_mask = (mask.values, var_mask)
+    files_to_keep = []
 
 logging.info(f'Write to {output_file}...')
 write_zarr_linked(
     adata,
     input_file,
     output_file,
-    files_to_keep=kwargs.keys(),
+    files_to_keep=files_to_keep,
+    subset_mask=subset_mask,
 )

@@ -11,12 +11,13 @@ from pprint import pformat
 from scipy.sparse import csr_matrix, coo_matrix
 import sparse
 from dask import array as da
+import tqdm.dask as tdask
 from dask import config as da_config
 da_config.set(num_workers=snakemake.threads)
 
 from utils.accessors import adata_to_memory
 from utils.annotate import add_wildcards
-from utils.io import read_anndata, csr_matrix_int64_indptr
+from utils.io import read_anndata, write_zarr, write_zarr_linked
 from utils.misc import dask_compute
 
 input_file = snakemake.input[0]
@@ -25,20 +26,23 @@ split_key = snakemake.wildcards.key
 values = snakemake.params.get('values', [])
 backed = snakemake.params.get('backed', True)
 dask = snakemake.params.get('dask', True)
+write_copy = snakemake.params.get('write_copy', False)
 exclude_slots = snakemake.params.get('exclude_slots', [])
 
 out_dir = Path(output_dir)
 if not out_dir.exists():
     out_dir.mkdir()
 
-logging.info(f'Read anndata file {input_file}...')
-
-adata = read_anndata(
-    input_file,
+write_copy = write_copy or input_file.endswith('.h5ad')
+# kwargs = dict(obs='obs', var='var', uns='uns')
+kwargs = dict(
     backed=backed,
     dask=dask,
     exclude_slots=exclude_slots,
 )
+
+logging.info(f'Read anndata file {input_file}...')
+adata = read_anndata(input_file, **kwargs)
 logging.info(adata.__str__())
 
 # convert split_key column to string
@@ -63,8 +67,12 @@ for split_file in split_files:
     logging.info(f'Split by {split_key}={split}')
     adata_sub = adata[adata.obs[split_key] == split]
     logging.info(adata_sub.__str__())
+
+    # add wildcards
+    add_wildcards(adata_sub, {'key': split_key, 'value': split} , 'split_data')
     
     if adata_sub.n_obs == 0:
+        write_copy = True
         adata_sub = ad.AnnData(
             X=np.zeros(adata_sub.shape),
             obs=adata_sub.obs,
@@ -79,14 +87,21 @@ for split_file in split_files:
             },
             uns=adata_sub.uns,
         )
+    
+    if write_copy:
+        with tdask.TqdmCallback(desc='Copy subset'):
+            adata_sub = dask_compute(adata_sub.copy())
+        logging.info(f'Write to {out_file}...')
+        write_zarr(adata_sub, out_file)
     else:
-        logging.info('Copy subset...')
-        adata_sub = adata_sub.copy()      
-        adata_sub = dask_compute(adata_sub)
-        adata_sub = adata_to_memory(adata_sub)
-        
-    # write to file
-    logging.info(f'Write to {out_file}...')
-    add_wildcards(adata_sub, {'key': split_key, 'value': split} , 'split_data')
-    adata_sub.write_zarr(out_file)
+        logging.info(f'Write to {out_file} with subset mask...')
+        obs_mask = adata.obs_names.isin(adata_sub.obs_names)
+        var_mask = adata.var_names.isin(adata_sub.var_names)
+        write_zarr_linked(
+            adata_sub,
+            in_dir=input_file,
+            out_dir=out_file,
+            subset_mask=(obs_mask, var_mask),
+            files_to_keep=['uns']+exclude_slots
+        )
     del adata_sub

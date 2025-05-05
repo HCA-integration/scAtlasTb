@@ -12,12 +12,12 @@ filter_per_study:
       sample:
         - Schulte-Schrepping_C2P01H_d0
         - Schulte-Schrepping_C2P05F_d0
-        - Schulte-Schrepping_C2P07H_d0
-        - Schulte-Schrepping_C2P10H_d0
-        - Schulte-Schrepping_C2P13F_d0
-        - Schulte-Schrepping_C2P15H_d0
-        - Schulte-Schrepping_C2P16H_d0
-        - Schulte-Schrepping_C2P19H_d0
+        # - Schulte-Schrepping_C2P07H_d0
+        # - Schulte-Schrepping_C2P10H_d0
+        # - Schulte-Schrepping_C2P13F_d0
+        # - Schulte-Schrepping_C2P15H_d0
+        # - Schulte-Schrepping_C2P16H_d0
+        # - Schulte-Schrepping_C2P19H_d0
       donor:
         - C19-CB-0008
       disease:

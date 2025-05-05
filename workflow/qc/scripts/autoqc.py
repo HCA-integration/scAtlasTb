@@ -13,6 +13,8 @@ output_file = snakemake.output[0]
 gauss_threshold = snakemake.params['gauss_threshold']
 layer = snakemake.params['layer']
 
+files_to_keep = ['obs', 'uns']
+
 adata = read_anndata(
     input_file,
     X=layer,
@@ -26,12 +28,12 @@ if adata.n_obs == 0:
         columns=adata.obs.columns.tolist() \
             +["n_counts", "n_genes", "percent_mito", "percent_ribo", "percent_hb"]
     )
-    write_zarr_linked(adata, input_file, output_file, files_to_keep=[])
+    write_zarr_linked(adata, input_file, output_file, files_to_keep=files_to_keep)
     exit(0)
 
 print('Calculate QC stats...')
 if 'feature_name' in adata.var.columns:
-    var_names = adata.var['feature_name']
+    var_names = adata.var['feature_name'].astype(str)
 else:
     var_names = adata.var_names
 
@@ -56,5 +58,5 @@ write_zarr_linked(
     adata,
     input_file,
     output_file,
-    files_to_keep=['obs', 'uns']
+    files_to_keep=files_to_keep,
 )
