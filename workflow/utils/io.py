@@ -37,13 +37,23 @@ def get_file_reader(file):
     return func, file_type
 
 
-def check_slot_exists(file, slot):
+def get_store(file, return_file_type=False):
     func, file_type = get_file_reader(file)
-    with func(file, 'r') as f:
-        exists = slot in f
-    return exists
+    try:
+        store = func(file, 'r')
+    except zarr.errors.PathNotFoundError as e:
+        raise FileNotFoundError(f'Cannot read file {file}') from e
+    if return_file_type:
+        return store, file_type
+    return store
 
 
+def check_slot_exists(file, slot):
+    store = get_store(file)
+    return slot in store
+
+
+# TODO: deprecate
 def to_memory(matrix):
     if isinstance(matrix, (ad.experimental.CSRDataset, ad.experimental.CSCDataset)):
         print_flushed('Convert to memory...')
