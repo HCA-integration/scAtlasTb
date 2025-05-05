@@ -25,6 +25,6 @@ for file in outputs:
         assert 'var' in z
 
     except AssertionError as e:
-        pprint(uns)
+        # pprint(uns.keys())
         print('AssertionError for:', file)
         raise e
