@@ -1,5 +1,14 @@
 # Changelog
 
+## 05.05.2025 Storage optimisation when subsetting data
+
+Subset dataset by only saving coordinates of the entries that are being subset to. This omits saving a new copy of the data for subsets.
+
+**Performance boost:** Massive storage savings when e.g. data is split after a parameter grid search is performed on those splits. This also saves time spent writing the unnecessary copies, and loading a large matrix and subsetting it is sufficiently fast (since data is not fully loaded).
+
+### BREAKING CHANGE
+Zarr files that have been subset via masking, cannot be read by the `anndata.read_zarr`, but instead relies on `utils.read_anndata`, which internally subsets the slots before creating the correct anndata object.
+
 ## 14.12.2023 extend relabel model
 
 Extend the model to allow for merging of existing columns.
