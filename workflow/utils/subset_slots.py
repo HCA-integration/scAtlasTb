@@ -181,60 +181,7 @@ def remove_mask_file(mask_file, link_slot):
     remove_path(mask_file, remove_file=True)
     
 
-# def set_mask_old(mask, out_dir):
-#     obs_mask, var_mask = mask
-#     mask_dir = out_dir / 'mask'
-    
-#     if mask_dir.exists():
-    
-#         # update mask
-#         obs_mask_old = np.load(out_dir / 'mask' / 'obs_mask.npy')
-#         var_mask_old = np.load(out_dir / 'mask' / 'var_mask.npy')
-        
-#         assert obs_mask_old[obs_mask_old].shape == obs_mask.shape, \
-#             f'{obs_mask_old[obs_mask_old].shape} != {obs_mask.shape}'
-#         assert var_mask_old[var_mask_old].shape == var_mask.shape, \
-#             f'{var_mask_old[var_mask_old].shape} != {var_mask.shape}'
-        
-#         # Update old masks
-#         obs_mask_old[obs_mask_old] &= obs_mask
-#         obs_mask = obs_mask_old
-        
-#         var_mask_old[var_mask_old] &= var_mask
-#         var_mask = var_mask_old
-
-#         # remove pre-existing symlink
-#         mask_dir.unlink()
-    
-#     # create new directory
-#     mask_dir.mkdir()
-#     np.save(mask_dir / 'obs_mask.npy', obs_mask)
-#     np.save(mask_dir / 'var_mask.npy', var_mask)
-
-
 ## Functions for subsetting slots when reading them
-
-# def subset_slots(slots, mask_dir, chunks, verbose=True):
-#     for slot_name, slot in tqdm(slots.items(), desc='subset slots', disable=not verbose):
-#         if isinstance(slot, dict) and slot != 'uns':
-#             for key, value in slot.items():
-#                 slot = subset_slot(
-#                     slot_name=slot_name,
-#                     slot=value,
-#                     mask_dir=mask_dir,
-#                     chunks=chunks
-#                 )
-#                 slots[slot_name][key] = slot
-#         else:
-#             slot = subset_slot(
-#                 slot_name=slot_name,
-#                 slot=slot,
-#                 mask_dir=mask_dir,
-#                 chunks=chunks
-#             )
-#             slots[slot_name] = slot
-#     return slots
-
 
 def subset_slot(slot_name, slot, mask_dir, chunks=('auto', -1)):
     if slot is None or not mask_dir.exists():
@@ -293,7 +240,7 @@ def _subset_matrix(slot, mask_dir):
     obs_mask_file = mask_dir / 'obs.npy'
     var_mask_file = mask_dir / 'var.npy'
     if not obs_mask_file.exists() or not var_mask_file.exists():
-        return slot # _subset_slot_old(slot_name, slot, mask_dir, chunks)
+        return slot
     
     obs_mask = np.load(obs_mask_file)
     var_mask = np.load(var_mask_file)
@@ -305,7 +252,7 @@ def _subset_slot(slot_name, slot, mask_dir):
     mask_file = mask_dir / 'mask.npy'
     
     if not mask_file.exists():
-        return slot # _subset_slot_old(slot_name, slot, mask_dir, chunks)
+        return slot
     
     mask = np.load(mask_file)
     
@@ -314,38 +261,3 @@ def _subset_slot(slot_name, slot, mask_dir):
         return slot[mask, :][:, mask].copy()
     
     return slot[mask].copy()
-
-
-# def _subset_slot_old(slot_name, slot, mask_dir, chunks):
-#     obs_mask = np.load(mask_dir / 'obs_mask.npy')
-#     var_mask = np.load(mask_dir / 'var_mask.npy')
-    
-#     n_obs = len(obs_mask)
-#     n_vars = len(var_mask)
-    
-#     if slot_name in ['X', 'layers', 'raw']:
-#         if slot.shape[0] == n_obs:
-#             slot = slot[obs_mask, :]
-#         if slot.shape[1] == n_vars:
-#             slot = slot[:, var_mask]
-#         if isinstance(slot, da.Array):
-#             return slot.copy().rechunk(chunks)
-#         return slot.copy()
-    
-#     if slot_name.startswith('obs') and slot.shape[0] == n_obs:
-#         if slot_name == 'obsp':
-#             slot = slot[obs_mask, :][:, obs_mask].copy()
-#         slot = slot[obs_mask].copy()
-#         if slot_name == 'obs':
-#             for col in slot.columns:
-#                 if slot[col].dtype.name == 'category':
-#                     slot[col] = slot[col].cat.remove_unused_categories()
-#         return slot
-    
-#     if slot_name.startswith('var') and slot.shape[0] == n_vars:
-#         if slot_name == 'varp':
-#             return slot[var_mask, :][:, var_mask].copy()
-#         return slot[var_mask].copy()
-    
-#     return slot
-
