@@ -11,14 +11,16 @@ import anndata as ad
 from anndata.experimental import read_elem, sparse_dataset
 
 
-def read_as_dask_array(elem, chunks=('auto', -1)):
+def read_as_dask_array(elem, chunks=('auto', -1), verbose=True):
     if isinstance(elem, zarr.storage.BaseStore):
-        print('Read dask array from zarr directly', flush=True)
+        if verbose:
+            print('Read dask array from zarr directly', flush=True)
         return da.from_zarr(elem, chunks=chunks)
-    print('Read and convert to dask array', flush=True)
+    if verbose:
+        print('Read and convert to dask array', flush=True)
     elem = read_elem(elem)
     if np.min(elem.shape) == 0:
-        chunks = 'auto'
+        chunks = elem.shape
     return da.from_array(elem, chunks=chunks)
 
 

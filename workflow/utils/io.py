@@ -159,7 +159,7 @@ def read_partial(
     if chunks is None:
         chunks = (stride, -1)
     print_flushed(f'dask: {dask}, backed: {backed}', verbose=verbose)
-    if dask:
+    if dask and verbose:
         print_flushed('chunks:', chunks)
     
     slots = {}
@@ -260,17 +260,17 @@ def _read_slot_dask(
             elem = sparse_dataset(elem)
             return sparse_dataset_as_dask(elem, stride=stride)
         print_flushed(f'Read {slot} as sparse dask array...', verbose=verbose)
-        elem = read_as_dask_array(elem, chunks=chunks)
+        elem = read_as_dask_array(elem, chunks=chunks, verbose=verbose)
         return elem.map_blocks(csr_matrix_int64_indptr, dtype=elem.dtype)
     
     elif iospec.encoding_type in force_sparse_types or force_slot_sparse:
         print_flushed(f'Read {slot} as dask array and convert blocks to csr_matrix...', verbose=verbose)
-        elem = read_as_dask_array(elem, chunks=chunks)
+        elem = read_as_dask_array(elem, chunks=chunks, verbose=verbose)
         return elem.map_blocks(csr_matrix_int64_indptr, dtype=elem.dtype)
     
     elif iospec.encoding_type == "array":
         print_flushed(f'Read {slot} as dask array...', verbose=verbose)
-        return read_as_dask_array(elem, chunks=chunks)
+        return read_as_dask_array(elem, chunks=chunks, verbose=verbose)
     
     return read_elem(elem)
 
