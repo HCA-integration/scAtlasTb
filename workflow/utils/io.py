@@ -13,6 +13,13 @@ from scipy.sparse import csr_matrix
 from anndata.experimental import read_elem, sparse_dataset
 from pprint import pformat
 from dask import array as da
+from dask import config as da_config
+da_config.set(**{'array.slicing.split_large_chunks': False})
+
+from .subset_slots import subset_slot, set_mask_per_slot
+
+
+ALL_SLOTS = ['X', 'obs', 'var', 'obsm', 'varm', 'obsp', 'varp', 'layers', 'uns']
 
 
 def print_flushed(*args, **kwargs):
@@ -84,18 +91,13 @@ def read_anndata(
     elif exclude_slots == 'all':
         exclude_slots = ['X', 'layers', 'raw']
 
-    func, file_type = get_file_reader(file)
-    try:
-        store = func(file, 'r')
-    except zarr.errors.PathNotFoundError as e:
-        raise FileNotFoundError(f'Cannot read file {file}') from e
-    
+    store, file_type = get_store(file, return_file_type=True)
     # set default kwargs
     kwargs = {x: x for x in store} if not kwargs else kwargs
     # set key == value if value is None
     kwargs |= {k: k for k, v in kwargs.items() if v is None}
     # exclude slots
-    kwargs = {k: v for k, v in kwargs.items() if k not in exclude_slots}
+    kwargs = {k: v for k, v in kwargs.items() if k not in exclude_slots+['subset_mask']}
     
     # return an empty AnnData object if no keys are available
     if len(store.keys()) == 0:
@@ -110,6 +112,7 @@ def read_anndata(
                 raise ValueError(message)
             warnings.warn(f'{message}, will be skipped')
     adata = read_partial(
+        file,
         store,
         dask=dask,
         backed=backed,
@@ -126,6 +129,7 @@ def read_anndata(
 
 
 def read_partial(
+    file: str,
     group: [h5py.Group, zarr.Group],
     backed: bool = False,
     dask: bool = False,
@@ -148,11 +152,6 @@ def read_partial(
     :params **kwargs: dict of to_slot: slot, by default use all available slot for the zarr file
     :return: AnnData object
     """
-    if force_sparse_types is None:
-        force_sparse_types = []
-    elif isinstance(force_sparse_types, str):
-        force_sparse_types = [force_sparse_types]
-        
     if force_sparse_slots is None:
         force_sparse_slots = []
     elif isinstance(force_sparse_slots, str):
@@ -169,56 +168,86 @@ def read_partial(
     for to_slot, from_slot in kwargs.items():
         print_flushed(f'Read slot "{from_slot}", store as "{to_slot}"...', verbose=verbose)
         force_slot_sparse = any(from_slot.startswith((x, f'/{x}')) for x in force_sparse_slots)
-        if from_slot in ['layers', '/layers', 'raw', '/raw']:
+        
+        if from_slot in ['layers', 'raw', 'obsm', 'obsp']:
+            keys = group[from_slot].keys()
+            if from_slot == 'raw':
+                keys = [key for key in keys if key in ['X', 'var', 'varm']]
             slots[to_slot] = {
                 sub_slot: read_slot(
-                    group,
-                    f'{from_slot}/{sub_slot}',
-                    force_sparse_types,
-                    force_slot_sparse,
+                    file=file,
+                    group=group,
+                    slot_name=f'{from_slot}/{sub_slot}',
+                    force_sparse_types=force_sparse_types,
+                    force_slot_sparse=force_slot_sparse,
                     backed=backed and from_slot in dask_slots,
                     dask=dask and from_slot in dask_slots,
                     chunks=chunks,
                     stride=stride,
+                    fail_on_missing=False,
                     verbose=verbose,
                 )
-                for sub_slot in group[from_slot]
+                for sub_slot in keys
             }
         else:
             slots[to_slot] = read_slot(
-                group,
-                from_slot,
-                force_sparse_types,
-                force_slot_sparse,
+                file=file,
+                group=group,
+                slot_name=from_slot,
+                force_sparse_types=force_sparse_types,
+                force_slot_sparse=force_slot_sparse,
                 backed=backed,
                 dask=dask,
                 chunks=chunks,
                 stride=stride,
+                fail_on_missing=False,
                 verbose=verbose,
             )
+    
+    try:
+        adata = ad.AnnData(**slots)
+    except Exception as e:
+        print_flushed(f'Error reading {file}')
+        raise e
+    
+    if verbose:
+        print_flushed('shape:', adata.shape, verbose=verbose)
+    
+    return adata
 
-    return ad.AnnData(**slots)
 
 
 def read_slot(
+    file: [str, Path],
     group: [h5py.Group, zarr.Group],
-    slot: str,
-    force_sparse_types: list,
-    force_slot_sparse: bool,
-    backed: bool,
-    dask: bool,
-    chunks: [int, tuple],
-    stride: int,
-    verbose: bool,
-):
-    if slot not in group:
-        warnings.warn(f'Slot "{slot}" not found, skip...')
+    slot_name: str,
+    force_sparse_types: [str, list] = None,
+    force_slot_sparse: bool = False,
+    backed: bool = False,
+    dask: bool = False,
+    chunks: [int, tuple] = ('auto', -1),
+    stride: int = 1000,
+    fail_on_missing: bool = True,
+    verbose: bool = True,
+):  
+    if group is None:
+        group = get_store(file)
+    
+    if force_sparse_types is None:
+        force_sparse_types = []
+    elif isinstance(force_sparse_types, str):
+        force_sparse_types = [force_sparse_types]
+    
+    if slot_name not in group:
+        if fail_on_missing:
+            raise ValueError(f'Slot "{slot_name}" not found in {file}')
+        warnings.warn(f'Slot "{slot_name}" not found, skip...')
         return None
     
     if dask:
-        return _read_slot_dask(
+        slot = _read_slot_dask(
             group,
-            slot,
+            slot_name,
             force_sparse_types,
             force_slot_sparse,
             stride=stride,
@@ -226,14 +255,28 @@ def read_slot(
             backed=backed,
             verbose=verbose,
         )
-    return _read_slot_default(
-        group,
-        slot,
-        force_sparse_types,
-        force_slot_sparse,
-        backed=backed,
-        verbose=verbose,
-    )
+    else:
+        slot = _read_slot_default(
+            group,
+            slot_name,
+            force_sparse_types,
+            force_slot_sparse,
+            backed=backed,
+            verbose=verbose,
+        )
+    
+    try:
+        slot = subset_slot(
+            slot_name=slot_name,
+            slot=slot,
+            mask_dir=Path(file) / 'subset_mask',
+            chunks=chunks,
+        )
+    except Exception as e:
+        print_flushed(f'Error subsetting {slot_name}')
+        raise e
+    
+    return slot
 
 
 def _read_slot_dask(
@@ -390,7 +433,8 @@ def write_zarr(adata, file):
             try:
                 adata.obs[col] = pd.to_numeric(adata.obs[col])
             except (ValueError, TypeError):
-                adata.obs[col] = adata.obs[col].astype('category')
+                # Convert non-NaN entries to string, preserve NaN values
+                adata.obs[col] = adata.obs[col].apply(lambda x: str(x) if pd.notna(x) else x).astype('category')
     
     adata.write_zarr(file) # doesn't seem to work with dask array
 
@@ -423,6 +467,7 @@ def link_zarr(
     relative_path: bool = True,
     slot_map: MutableMapping = None,
     in_dir_map: MutableMapping = None,
+    subset_mask: tuple = None,
     verbose: bool = True,
 ):
     """
@@ -488,6 +533,7 @@ def link_zarr(
     
     # deal with nested mapping
     slot_map, in_dir_map = prune_nested_links(slot_map, in_dir_map)
+    slots_to_link = slot_map.keys()
 
     # link all files
     out_dir = Path(out_dir)
@@ -510,26 +556,26 @@ def link_zarr(
             overwrite=overwrite,
             verbose=verbose,
         )
-
-
-# TODO: deprecate
-def link_zarr_partial(in_dir, out_dir, files_to_keep=None, overwrite=True, relative_path=True):
-    """
-    Link zarr files excluding defined slots
-    """
-    if not in_dir.endswith('.zarr'):
-        return
-    if files_to_keep is None:
-        files_to_keep = []
-    in_dirs = [f.name for f in Path(in_dir).iterdir()]
-    files_to_link = [f for f in in_dirs if f not in files_to_keep]
-    link_zarr(
-        in_dir=in_dir,
-        out_dir=out_dir,
-        file_names=files_to_link,
-        overwrite=overwrite,
-        relative_path=relative_path,
-    )
+    
+    for slot in [x for x in ALL_SLOTS if x not in slots_to_link]:
+        set_mask_per_slot(
+            slot=slot,
+            mask=subset_mask,
+            out_dir=out_dir,
+        )
+    
+    for out_slot, in_slot in slot_map:
+        if out_slot in ['subset_mask', '.zattrs', '.zgroup'] or \
+            out_slot.endswith('.zattrs') or \
+            out_slot.endswith('.zgroup'):
+            continue
+        set_mask_per_slot(
+            slot=out_slot,
+            mask=subset_mask,
+            in_slot=in_slot,
+            in_dir=in_dir_map[in_slot],
+            out_dir=out_dir,
+        )
 
 
 def write_zarr_linked(
@@ -541,6 +587,7 @@ def write_zarr_linked(
     slot_map: MutableMapping = None,
     in_dir_map: MutableMapping = None,
     verbose: bool = True,
+    subset_mask: tuple = None,
 ):
     """
     Write adata to linked zarr file
@@ -555,7 +602,7 @@ def write_zarr_linked(
         in_dirs = []
     else:
         in_dir = Path(in_dir)
-        if not in_dir.name.endswith('.zarr'):
+        if not in_dir.name.endswith(('.zarr', '.zarr/')):
             adata.write_zarr(out_dir)
             return
         in_dirs = [f.name for f in in_dir.iterdir()]
@@ -609,14 +656,17 @@ def write_zarr_linked(
         relative_path=relative_path,
         slot_map=slot_map,
         in_dir_map=in_dir_map,
+        subset_mask=subset_mask,
         verbose=verbose,
     )
     
+    out_dir = Path(out_dir)
+    
     # update .zattrs files
     for slot in ['obs', 'var']:
-        zattrs_file = Path(out_dir) / slot / '.zattrs'
+        zattrs_file = out_dir / slot / '.zattrs'
 
-        if not (zattrs_file).exists() or slot in files_to_link:
+        if not zattrs_file.is_symlink():
             continue
         
         with open(zattrs_file, 'r') as file:
@@ -629,5 +679,6 @@ def write_zarr_linked(
         ]
         zattrs['column-order'] = sorted(columns)
         
+        zattrs_file.unlink()
         with open(zattrs_file, 'w') as file:
             json.dump(zattrs, file, indent=4)
