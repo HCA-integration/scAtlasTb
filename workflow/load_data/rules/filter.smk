@@ -20,7 +20,7 @@ use rule filter from load_data_filter as load_data_filter_study with:
         remove_by_column=lambda wildcards: config['filter_per_study'][wildcards.study].get('remove_by_column', {}),
         backed=False,
         dask=True,
-        subset=True,
+        subset=False,
     resources:
         mem_mb=get_resource(config,profile='cpu',resource_key='mem_mb'),
 

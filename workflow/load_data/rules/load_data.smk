@@ -58,8 +58,8 @@ rule harmonize_metadata:
         meta=lambda wildcards: unlist_dict(
             get_wildcards(dataset_df, columns=all_but(dataset_df.columns,'subset'), wildcards=wildcards)
         ),
-        backed=False,
-        dask=False,
+        backed=True,
+        dask=True,
     output:
         zarr=directory(out_dir / 'harmonize_metadata' / '{dataset}.zarr'),
         # plot=image_dir / 'harmonize_metadata' / 'counts_sanity--{dataset}.png',

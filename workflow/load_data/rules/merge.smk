@@ -14,8 +14,8 @@ use rule merge from load_data as load_data_merge_organ with:
     params:
         dataset=lambda wildcards: wildcards.organ,
         merge_strategy='inner',
-        backed=False, # when backed only, code breaks when var are not the same
-        dask=False,
+        dask=True,
+        backed=True, # when backed only, code breaks when var are not the same
     resources:
         mem_mb=lambda wildcards, attempt: get_resource(config,profile='cpu',resource_key='mem_mb', attempt=attempt, factor=3),
     threads:
@@ -33,8 +33,8 @@ use rule merge from load_data as load_data_merge_organ_filter with:
     params:
         dataset=lambda wildcards: wildcards.organ,
         merge_strategy='inner',
-        backed=False,
-        dask=False,
+        backed=True,
+        dask=True,
     resources:
         mem_mb=lambda wildcards, attempt: get_resource(config,profile='cpu',resource_key='mem_mb', attempt=attempt),
     threads:
@@ -52,8 +52,8 @@ use rule merge from load_data as load_data_merge_subset with:
     params:
         dataset=lambda wildcards: f'{wildcards.organ}-{wildcards.subset}',
         merge_strategy='inner',
-        backed=False,
-        dask=False,
+        backed=True,
+        dask=True,
     resources:
         mem_mb=lambda wildcards, attempt: get_resource(config,profile='cpu',resource_key='mem_mb', attempt=attempt),
         # disk_mb=get_resource(config,profile='cpu',resource_key='disk_mb'),
