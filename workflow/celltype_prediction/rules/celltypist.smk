@@ -33,6 +33,9 @@ rule celltypist:
         norm_layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'norm_counts', default=None),
         is_normalized=lambda wildcards: mcfg.get_from_parameters(wildcards, 'norm_counts', default=None) is not None,
     resources:
-        mem_mb=mcfg.get_resource(profile='cpu',resource_key='mem_mb')
+        partition=lambda w, attempt: mcfg.get_resource(resource_key='partition', profile='cpu', attempt=attempt),
+        qos=lambda w, attempt: mcfg.get_resource(resource_key='qos', profile='cpu', attempt=attempt),
+        mem_mb=lambda w, attempt: mcfg.get_resource(resource_key='mem_mb', profile='cpu', attempt=attempt, factor=3),
+        gpu=lambda w, attempt: mcfg.get_resource(resource_key='gpu', profile='cpu', attempt=attempt ),
     script:
         '../scripts/celltypist.py'
