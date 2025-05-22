@@ -35,9 +35,10 @@ adata = read_anndata(input_file, **kwargs)
 if 'feature_name' in adata.var.columns:
     adata.var_names = adata.var['feature_name']
 
-print('Normalizing and log-transforming data...', flush=True)
-sc.pp.normalize_total(adata, target_sum=1e4)
-sc.pp.log1p(adata)
+if not is_normalized:
+    print('Normalizing and log-transforming data...', flush=True)
+    sc.pp.normalize_total(adata, target_sum=1e4)
+    sc.pp.log1p(adata)
 
 # run celltypist
 model = models.Model.load(model=input_model)
