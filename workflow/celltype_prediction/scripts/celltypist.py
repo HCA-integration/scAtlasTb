@@ -15,7 +15,9 @@ input_model = snakemake.input.model
 output_file = snakemake.output[0]
 
 model_name = snakemake.wildcards.celltypist_model
-layer = snakemake.params.get('layer', 'X')
+layer = snakemake.params.get('norm_layer')
+if layer is None:
+    layer = snakemake.params.get('raw_layer', 'X')
 is_normalized = snakemake.params.get('is_normalized', False)
 label_key = snakemake.params.label_key
 params = snakemake.params.celltypist_params
@@ -31,13 +33,19 @@ if params.get('majority_voting') and not params.get('over_clustering'):
     kwargs |=  {'obsm': 'obsm', 'obsp': 'obsp', 'uns': 'uns'}
 adata = read_anndata(input_file, **kwargs)
 
+if label_key is not None:
+    if label_key not in adata.obs.columns:
+        raise ValueError(f'Label key "{label_key}" not in adata.obs.columns')
+
 # assign and subset adata based on feature names instead on ensembl IDs
 if 'feature_name' in adata.var.columns:
     adata.var_names = adata.var['feature_name']
+adata.var_names = adata.var_names.astype(str)
 
-print('Normalizing and log-transforming data...', flush=True)
-sc.pp.normalize_total(adata, target_sum=1e4)
-sc.pp.log1p(adata)
+if not is_normalized:
+    print('Normalizing and log-transforming data...', flush=True)
+    sc.pp.normalize_total(adata, target_sum=1e4)
+    sc.pp.log1p(adata)
 
 # run celltypist
 model = models.Model.load(model=input_model)
@@ -48,6 +56,9 @@ predictions = celltypist.annotate(adata, model=model, **params)
 print(predictions, flush=True)
 
 if label_key:
+    # convert to string to avoid nan duplicates
+    adata.obs[label_key] = adata.obs[label_key].astype(str)
+    
     # plot predictions vs author labels
     celltypist.dotplot(
         predictions,
