@@ -33,9 +33,14 @@ if params.get('majority_voting') and not params.get('over_clustering'):
     kwargs |=  {'obsm': 'obsm', 'obsp': 'obsp', 'uns': 'uns'}
 adata = read_anndata(input_file, **kwargs)
 
+if label_key is not None:
+    if label_key not in adata.obs.columns:
+        raise ValueError(f'Label key "{label_key}" not in adata.obs.columns')
+
 # assign and subset adata based on feature names instead on ensembl IDs
 if 'feature_name' in adata.var.columns:
     adata.var_names = adata.var['feature_name']
+adata.var_names = adata.var_names.astype(str)
 
 if not is_normalized:
     print('Normalizing and log-transforming data...', flush=True)
@@ -51,6 +56,9 @@ predictions = celltypist.annotate(adata, model=model, **params)
 print(predictions, flush=True)
 
 if label_key:
+    # convert to string to avoid nan duplicates
+    adata.obs[label_key] = adata.obs[label_key].astype(str)
+    
     # plot predictions vs author labels
     celltypist.dotplot(
         predictions,
