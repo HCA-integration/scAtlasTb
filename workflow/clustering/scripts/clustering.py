@@ -157,6 +157,7 @@ else:
     else:
         from joblib import Parallel, delayed
         from tqdm import tqdm
+        import gc
         
         def cluster_subset(
             adata,
@@ -220,17 +221,24 @@ else:
         
         logging.info(f'Will recompute neighbors with {neighbors_args}')
         logging.info(f'{algorithm} clustering with {kwargs} for clusters from {cluster_key}...')
-            
-        results = Parallel(n_jobs=threads)(
-            delayed(cluster_subset)(
-                adata,
-                prev_cluster_key=prev_cluster_key,
-                prev_cluster_value=prev_cluster,
-                neighbors_args=neighbors_args,
-                **kwargs
+        
+        results = list(
+            tqdm(
+                Parallel(return_as='generator', n_jobs=threads)(
+                    delayed(cluster_subset)(
+                        adata,
+                        prev_cluster_key=prev_cluster_key,
+                        prev_cluster_value=prev_cluster,
+                        neighbors_args=neighbors_args,
+                        use_gpu=USE_GPU,
+                        **kwargs
+                    ) for prev_cluster in cluster_labels
+                ),
+                desc=f'Cluster with {threads} threads',
+                total=len(cluster_labels),
             )
-            for prev_cluster in tqdm(cluster_labels, desc=f'Cluster with {threads} threads', miniters=1)
         )
+        gc.collect()
 
         for clusters in results:
             adata.obs.loc[clusters.index, cluster_key] = clusters
