@@ -33,7 +33,7 @@ def get_mem_mb(attempt, profile):
         mem_mb = int(mem_mb)
     except ValueError:
         return mem_mb
-    return min(100_000, int(mem_mb // 5))
+    return min(100_000, int(mem_mb // 8))
 
 
 rule scrublet:
