@@ -179,14 +179,14 @@ else:
             # )
             
             # logging.info(f'Subsetting to {prev_cluster_key}={prev_cluster_value}...')
-            sub_adata = adata[adata.obs[prev_cluster_key] == prev_cluster_value].copy()
+            adata = adata[adata.obs[prev_cluster_key] == prev_cluster_value].copy()
             
-            if sub_adata.n_obs < 2 * neighbors_args.get('n_neighbors', 15):
-                prev_cluster_clean = sub_adata.obs[prev_cluster_key].astype(str).apply(lambda x: x.split('_')[-1])
-                return sub_adata.obs[prev_cluster_key].str.cat(prev_cluster_clean, sep='_')
+            if adata.n_obs < 2 * neighbors_args.get('n_neighbors', 15):
+                prev_cluster_clean = adata.obs[prev_cluster_key].astype(str).apply(lambda x: x.split('_')[-1])
+                return adata.obs[prev_cluster_key].str.cat(prev_cluster_clean, sep='_')
             
-            sub_adata = apply_clustering(
-                sub_adata,
+            adata = apply_clustering(
+                adata,
                 resolution=resolution,
                 key_added=key_added,
                 cpu_kwargs=cpu_kwargs,
@@ -195,7 +195,9 @@ else:
                 recompute_neighbors=True,
                 use_gpu=use_gpu,
             )
-            return sub_adata.obs[[prev_cluster_key, key_added]].agg('_'.join, axis=1)
+            
+            return adata.obs[[prev_cluster_key, key_added]].agg('_'.join, axis=1)
+        
         
         neighbors_args = snakemake.params.get('neighbors_args', {})
         use_rep = neighbors_args.get('use_rep', 'X_pca')
