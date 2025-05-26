@@ -15,8 +15,7 @@ import numpy as np
 import anndata as ad
 import scanpy
 
-from utils.io import read_anndata, write_zarr_linked, csr_matrix_int64_indptr
-from utils.misc import dask_compute
+from utils.io import read_anndata, write_zarr_linked
 from utils.processing import _filter_batch, sc, USE_GPU
 rsc = sc
 
@@ -68,6 +67,7 @@ overwrite_args = snakemake.params.get('overwrite_args')
 union_over = extra_hvg_args.get('union_over')
 extra_genes = extra_hvg_args.get('extra_genes', [])
 remove_genes = extra_hvg_args.get('remove_genes', [])
+min_cells = extra_hvg_args.pop('min_cells', 10)
 
 hvg_column_name = 'extra_hvgs'
 use_gpu = USE_GPU
@@ -95,9 +95,9 @@ adata = read_anndata(
 )
 logging.info(adata.__str__())
 
-if adata.n_obs > 2e6:
-    use_gpu = False
-    sc = scanpy
+# if adata.n_obs > 2e6:
+#     use_gpu = False
+#     sc = scanpy
 
 # add metadata
 if 'preprocessing' not in adata.uns:
@@ -136,7 +136,6 @@ else:
             .apply(lambda x: '--'.join(x), axis=1)
         
         # remove groups with fewer than min_cells
-        min_cells = 10
         value_counts = union_values.value_counts()
         remove_groups = value_counts[value_counts < min_cells]
         union_values = union_values[~union_values.isin(remove_groups.index)]
@@ -158,14 +157,13 @@ else:
             # filter genes and cells that would break HVG function
             batch_mask = _filter_batch(_ad, batch_key=args.get('batch_key'))
             _ad = _ad[batch_mask, _ad.var['nonzero_genes']].copy()
-            _ad = dask_compute(_ad, layers='X', verbose=False)
             
-            if _ad.n_obs > 1e6:
-                use_gpu = False
-                sc = scanpy
-            elif USE_GPU:
-                use_gpu = True
-                sc = rsc
+            # if _ad.n_obs > 1e6:
+            #     use_gpu = False
+            #     sc = scanpy
+            # elif USE_GPU:
+            #     use_gpu = True
+            #     sc = rsc
             
             if use_gpu:
                 rsc.get.anndata_to_GPU(_ad)
@@ -181,7 +179,6 @@ else:
     else:
         # default gene selection
         logging.info(f'Select features for all cells with arguments: {args}...')
-        adata = dask_compute(adata)
         if use_gpu:
             sc.get.anndata_to_GPU(adata)
         sc.pp.highly_variable_genes(adata, **args)
