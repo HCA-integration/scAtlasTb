@@ -11,12 +11,14 @@ import warnings
 warnings.filterwarnings("ignore")
 from dask import config as da_config
 da_config.set(num_workers=snakemake.threads)
+import numpy as np
 import anndata as ad
+import scanpy
 
 from utils.io import read_anndata, write_zarr_linked, csr_matrix_int64_indptr
 from utils.misc import dask_compute
 from utils.processing import _filter_batch, sc, USE_GPU
-
+rsc = sc
 
 def match_genes(var_df, gene_list, column=None):
     import urllib
@@ -68,6 +70,7 @@ extra_genes = extra_hvg_args.get('extra_genes', [])
 remove_genes = extra_hvg_args.get('remove_genes', [])
 
 hvg_column_name = 'extra_hvgs'
+use_gpu = USE_GPU
 
 if args is None:
     args = {}
@@ -91,6 +94,10 @@ adata = read_anndata(
     dask=True,
 )
 logging.info(adata.__str__())
+
+if adata.n_obs > 2e6:
+    use_gpu = False
+    sc = scanpy
 
 # add metadata
 if 'preprocessing' not in adata.uns:
@@ -153,9 +160,15 @@ else:
             _ad = _ad[batch_mask, _ad.var['nonzero_genes']].copy()
             _ad = dask_compute(_ad, layers='X', verbose=False)
             
+            if _ad.n_obs > 1e6:
+                use_gpu = False
+                sc = scanpy
+            elif USE_GPU:
+                use_gpu = True
+                sc = rsc
             
-            if USE_GPU:
-                sc.get.anndata_to_GPU(_ad)
+            if use_gpu:
+                rsc.get.anndata_to_GPU(_ad)
 
             sc.pp.highly_variable_genes(_ad, **args)
             
@@ -169,7 +182,7 @@ else:
         # default gene selection
         logging.info(f'Select features for all cells with arguments: {args}...')
         adata = dask_compute(adata)
-        if USE_GPU:
+        if use_gpu:
             sc.get.anndata_to_GPU(adata)
         sc.pp.highly_variable_genes(adata, **args)
         adata.var[hvg_column_name] = adata.var['highly_variable']
