@@ -167,6 +167,17 @@ else:
             neighbors_args, # TODO: custom parameters
             use_gpu,
         ):
+            import warnings
+            warnings.filterwarnings("ignore")
+            
+            # adata = read_anndata(file, **read_kwargs, verbose=False)
+            # adata.obsm[use_rep] = read_slot(
+            #     file=file,
+            #     group=get_store(file),
+            #     slot_name=f'obsm/{use_rep}',
+            #     verbose=False
+            # )
+            
             # logging.info(f'Subsetting to {prev_cluster_key}={prev_cluster_value}...')
             sub_adata = adata[adata.obs[prev_cluster_key] == prev_cluster_value].copy()
             
