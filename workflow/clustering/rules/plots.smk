@@ -30,6 +30,7 @@ use rule plots from preprocessing as clustering_plot_umap_clusters with:
         color=get_cluster_keys,
         legend_loc='on data',
         # outlier_factor=10,
+    retries: 0
     resources:
         partition=mcfg.get_resource(profile='cpu',resource_key='partition'),
         qos=mcfg.get_resource(profile='cpu',resource_key='qos'),
@@ -54,6 +55,7 @@ use rule plot_evaluation from clustering as clustering_plot_evaluation with:
         covariates=lambda wildcards: mcfg.get_from_parameters(wildcards, 'umap_colors', default=[])
     conda:
         get_env(config, 'scanpy')
+    retries: 1
     threads:
         lambda wildcards: max(1, min(10, len(mcfg.get_from_parameters(wildcards, 'umap_colors', default=[]))))
     resources:
@@ -62,9 +64,14 @@ use rule plot_evaluation from clustering as clustering_plot_evaluation with:
         gpu=mcfg.get_resource(profile='cpu',resource_key='gpu'),
         mem_mb=lambda w, attempt: get_mem_mb(attempt=attempt, profile='cpu'),
 
+
 rule plots_all:
     input:
         mcfg.get_output_files(rules.clustering_plot_umap_clusters.output),
         mcfg.get_output_files(rules.clustering_plot_umap.output),
-        mcfg.get_output_files(rules.clustering_plot_evaluation.output),
+    localrule: True
+
+rule plot_evaluation_all:
+    input:
+        mcfg.get_output_files(rules.clustering_plot_evaluation.output)
     localrule: True

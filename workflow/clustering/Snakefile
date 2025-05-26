@@ -59,9 +59,14 @@ include: 'rules/postprocessing.smk'
 include: 'rules/plots.smk'
 
 
+rule cluster_all:
+    input:
+        mcfg.get_output_files(rules.clustering_merge.output)
+    localrule: True
+
 rule all:
     input:
-        mcfg.get_output_files(rules.clustering_merge.output),
+        rules.cluster_all.input,
         rules.plots_all.input
     default_target: True
     localrule: True
