@@ -23,6 +23,7 @@ def plot_stacked_bar(
     fig_height_min=5,
     fig_height_factor=0.3,
     n_legend_categories=50,
+    return_fig=False,
 ):
     """
     Plot a stacked bar chart of the counts of a covariate by a category.
@@ -105,7 +106,8 @@ def plot_stacked_bar(
     title = f'{count_type.capitalize()} of {covariate_key} by {category_key}{title_suffix}'
     ax.set_title(title)
     
-    return plt.gcf()
+    if return_fig:
+        return fig
 
 
 def plot_violin(
@@ -115,6 +117,7 @@ def plot_violin(
     fig_width: float = 8,
     fig_height_min: float = 5,
     fig_height_factor: float = 0.3,
+    return_fig: bool = False,
 ):
     """
     Plot a violin plot of the distribution of a covariate by a category.
@@ -164,4 +167,5 @@ def plot_violin(
             ha='left',
         )
     
-    return plt.gcf()
+    if return_fig:
+        return plt.gcf()

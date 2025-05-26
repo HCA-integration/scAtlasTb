@@ -37,16 +37,17 @@ def apply_clustering(
     resolution: float,
     cpu_kwargs: dict = None,
     n_cell_cpu: int = 300_000,
-    max_clusters: bool = None,
+    max_cluster_factor: int = 50,
     recompute_neighbors: bool = False,
     neighbors_args: dict = {},
+    use_gpu: bool = USE_GPU,
     **kwargs,
 ):
     """
     :param adata: anndata object
     :param cpu_kwargs: clustering parameters for CPU implementation
     :param n_cell_cpu: number of cells to use CPU implementation
-    :param max_clusters: maximum number of clusters to determine if number of clusters are correct
+    :param max_cluster_factor: factor to calculate maximum number of clusters to determine if number of clusters are correct
     """
     algorithm_map = {
         'louvain': louvain,
@@ -62,13 +63,13 @@ def apply_clustering(
     if not cpu_kwargs:
         cpu_kwargs = dict()
     
-    if not USE_GPU:
+    if not use_gpu:
         kwargs |= cpu_kwargs
     
     if recompute_neighbors:
         neighbors(adata, **neighbors_args)
     
-    if USE_GPU:
+    if use_gpu:
         # following observations from https://github.com/rapidsai/cugraph/issues/4072#issuecomment-2074822898
         adata.obsp['connectivities'] = adata.obsp['connectivities'].astype('float64')
 
@@ -80,11 +81,11 @@ def apply_clustering(
     cluster_func = algorithm_map.get(algorithm, KeyError(f'Unknown clustering algorithm: {algorithm}'))
     cluster_func(adata, **kwargs)
     
-    if not max_clusters:
-        max_clusters = max(1, int(50 * resolution))
+    # heuristic to check if number of clusters is reasonable
+    max_clusters = max(1, int(max_cluster_factor * resolution))
     n_clusters = adata.obs[cluster_key].nunique()
     
-    if USE_GPU and n_clusters > max_clusters:
+    if use_gpu and n_clusters > max_clusters:
         # fallback when too many clusters are computed (assuming this is a bug in the rapids implementation)
         logging.info(
             f'Cluster {cluster_key} has {n_clusters} custers, which is more than {max_clusters}. '
@@ -103,6 +104,7 @@ algorithm = snakemake.wildcards.algorithm
 level = int(snakemake.wildcards.level)
 threads = snakemake.threads
 overwrite = snakemake.params.get('overwrite', False)
+max_cluster_factor = snakemake.params.get('max_cluster_factor', 50)
 
 # set parameters for clustering
 cluster_key = f'{algorithm}_{resolution}_{level}'
@@ -113,6 +115,8 @@ kwargs = dict(
 cpu_kwargs = dict(flavor='igraph')
 if algorithm == 'leiden':
     cpu_kwargs |= dict(n_iterations=2)
+
+logging.info(f'Using GPU: {USE_GPU}')
 
 # check if clusters have already been computed
 store = get_store(input_file)
@@ -146,11 +150,14 @@ else:
             adata,
             cpu_kwargs=cpu_kwargs,
             recompute_neighbors=False,
+            use_gpu=USE_GPU,
+            max_cluster_factor=max_cluster_factor,
             **kwargs,
         )
     else:
         from joblib import Parallel, delayed
         from tqdm import tqdm
+        import gc
         
         def cluster_subset(
             adata,
@@ -159,23 +166,39 @@ else:
             prev_cluster_key,
             prev_cluster_value,
             neighbors_args, # TODO: custom parameters
+            use_gpu,
         ):
+            import warnings
+            warnings.filterwarnings("ignore")
+            
+            # adata = read_anndata(file, **read_kwargs, verbose=False)
+            # adata.obsm[use_rep] = read_slot(
+            #     file=file,
+            #     group=get_store(file),
+            #     slot_name=f'obsm/{use_rep}',
+            #     verbose=False
+            # )
+            
             # logging.info(f'Subsetting to {prev_cluster_key}={prev_cluster_value}...')
-            sub_adata = adata[adata.obs[prev_cluster_key] == prev_cluster_value].copy()
+            adata = adata[adata.obs[prev_cluster_key] == prev_cluster_value].copy()
             
-            if sub_adata.n_obs < 2 * neighbors_args.get('n_neighbors', 15):
-                prev_cluster_clean = sub_adata.obs[prev_cluster_key].astype(str).apply(lambda x: x.split('_')[-1])
-                return sub_adata.obs[prev_cluster_key].str.cat(prev_cluster_clean, sep='_')
+            if adata.n_obs < 2 * neighbors_args.get('n_neighbors', 15):
+                prev_cluster_clean = adata.obs[prev_cluster_key].astype(str).apply(lambda x: x.split('_')[-1])
+                return adata.obs[prev_cluster_key].str.cat(prev_cluster_clean, sep='_')
             
-            sub_adata = apply_clustering(
-                sub_adata,
+            adata = apply_clustering(
+                adata,
                 resolution=resolution,
                 key_added=key_added,
                 cpu_kwargs=cpu_kwargs,
+                max_cluster_factor=max_cluster_factor,
                 neighbors_args=neighbors_args,
                 recompute_neighbors=True,
+                use_gpu=use_gpu,
             )
-            return sub_adata.obs[[prev_cluster_key, key_added]].agg('_'.join, axis=1)
+            
+            return adata.obs[[prev_cluster_key, key_added]].agg('_'.join, axis=1)
+        
         
         neighbors_args = snakemake.params.get('neighbors_args', {})
         use_rep = neighbors_args.get('use_rep', 'X_pca')
@@ -198,17 +221,24 @@ else:
         
         logging.info(f'Will recompute neighbors with {neighbors_args}')
         logging.info(f'{algorithm} clustering with {kwargs} for clusters from {cluster_key}...')
-            
-        results = Parallel(n_jobs=threads)(
-            delayed(cluster_subset)(
-                adata,
-                prev_cluster_key=prev_cluster_key,
-                prev_cluster_value=prev_cluster,
-                neighbors_args=neighbors_args,
-                **kwargs
+        
+        results = list(
+            tqdm(
+                Parallel(return_as='generator', n_jobs=threads)(
+                    delayed(cluster_subset)(
+                        adata,
+                        prev_cluster_key=prev_cluster_key,
+                        prev_cluster_value=prev_cluster,
+                        neighbors_args=neighbors_args,
+                        use_gpu=USE_GPU,
+                        **kwargs
+                    ) for prev_cluster in cluster_labels
+                ),
+                desc=f'Cluster with {threads} threads',
+                total=len(cluster_labels),
             )
-            for prev_cluster in tqdm(cluster_labels, desc=f'Cluster with {threads} threads', miniters=1)
         )
+        gc.collect()
 
         for clusters in results:
             adata.obs.loc[clusters.index, cluster_key] = clusters

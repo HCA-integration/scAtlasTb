@@ -5,6 +5,8 @@ logging.basicConfig(level=logging.INFO)
 from pathlib import Path
 import pandas.api.types as ptypes
 from matplotlib import pyplot as plt
+import matplotlib
+matplotlib.use('Agg') # non-interactive backend for parallel plotting
 import seaborn as sns
 from tqdm import tqdm
 import traceback
@@ -40,8 +42,14 @@ def call_plot(covariate, cluster_key, obs_df, output_dir):
         logging.info(f'Column "{covariate}" not found in obs, skip...')
         return
 
+    if obs_df[covariate].dtype == 'object':
+        obs_df[covariate] = obs_df[covariate].astype(str).astype('category')
+
     try:
         if obs_df[covariate].dtype == 'category':
+            if obs_df[covariate].nunique() > 100:
+                logging.info(f'Skipping {cluster_key}--{covariate}, too many values')
+                return
             score = nmi(obs_df, cluster_key, covariate)
             fig = plot_stacked_bar(
                 obs_df,
@@ -49,12 +57,14 @@ def call_plot(covariate, cluster_key, obs_df, output_dir):
                 covariate_key=covariate,
                 count_type='proportion',
                 title_suffix=f' (NMI: {score:.3f})',
+                return_fig=True,
             )
         elif ptypes.is_numeric_dtype(obs_df[covariate]):
             fig = plot_violin(
                 obs_df,
                 category_key=cluster_key,
                 covariate_key=covariate,
+                return_fig=True,
             )
         else:
             raise ValueError(f'Invalid covariate type: {obs_df[covariate].dtype}, must be category or numeric')
