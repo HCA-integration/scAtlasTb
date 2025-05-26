@@ -37,7 +37,7 @@ def apply_clustering(
     resolution: float,
     cpu_kwargs: dict = None,
     n_cell_cpu: int = 300_000,
-    max_clusters: bool = None,
+    max_cluster_factor: int = 50,
     recompute_neighbors: bool = False,
     neighbors_args: dict = {},
     **kwargs,
@@ -46,7 +46,7 @@ def apply_clustering(
     :param adata: anndata object
     :param cpu_kwargs: clustering parameters for CPU implementation
     :param n_cell_cpu: number of cells to use CPU implementation
-    :param max_clusters: maximum number of clusters to determine if number of clusters are correct
+    :param max_cluster_factor: factor to calculate maximum number of clusters to determine if number of clusters are correct
     """
     algorithm_map = {
         'louvain': louvain,
@@ -80,8 +80,8 @@ def apply_clustering(
     cluster_func = algorithm_map.get(algorithm, KeyError(f'Unknown clustering algorithm: {algorithm}'))
     cluster_func(adata, **kwargs)
     
-    if not max_clusters:
-        max_clusters = max(1, int(50 * resolution))
+    # heuristic to check if number of clusters is reasonable
+    max_clusters = max(1, int(max_cluster_factor * resolution))
     n_clusters = adata.obs[cluster_key].nunique()
     
     if USE_GPU and n_clusters > max_clusters:
@@ -103,6 +103,7 @@ algorithm = snakemake.wildcards.algorithm
 level = int(snakemake.wildcards.level)
 threads = snakemake.threads
 overwrite = snakemake.params.get('overwrite', False)
+max_cluster_factor = snakemake.params.get('max_cluster_factor', 50)
 
 # set parameters for clustering
 cluster_key = f'{algorithm}_{resolution}_{level}'
@@ -146,6 +147,8 @@ else:
             adata,
             cpu_kwargs=cpu_kwargs,
             recompute_neighbors=False,
+            use_gpu=USE_GPU,
+            max_cluster_factor=max_cluster_factor,
             **kwargs,
         )
     else:
@@ -172,6 +175,7 @@ else:
                 resolution=resolution,
                 key_added=key_added,
                 cpu_kwargs=cpu_kwargs,
+                max_cluster_factor=max_cluster_factor,
                 neighbors_args=neighbors_args,
                 recompute_neighbors=True,
             )
