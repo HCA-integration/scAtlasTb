@@ -14,6 +14,7 @@ mcfg = ModuleConfig(
         'backed',
         'threads',
         'stride',
+        'slots',
     ],
     mandatory_wildcards=['dataset'],
     dtypes=dict(
@@ -45,6 +46,7 @@ rule merge:
         dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=False),
         backed=lambda wildcards: mcfg.get_from_parameters(wildcards, 'backed', default=False),
         stride=lambda wildcards: mcfg.get_from_parameters(wildcards, 'stride', default=500_000),
+        slots=lambda wildcards: mcfg.get_from_parameters(wildcards, 'slots', default={}),
     conda:
         get_env(config, 'scanpy', env_dir='envs')
     threads:

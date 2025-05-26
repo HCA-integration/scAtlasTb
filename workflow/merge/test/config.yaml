@@ -23,6 +23,11 @@ DATASETS:
       stride: 500_000
       dask: true
       backed: true
+      slots:
+        X: X
+        obs: obs
+        var: var
+        layers: layers
   test:
     input:
       merge:
