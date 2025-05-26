@@ -24,13 +24,7 @@ mcfg = PreprocessingConfig(
         'raw_counts',
         'scale',
         'umap',
-        'backed',
-        'dask',
     ],
-    dtypes={
-        'backed': bool,
-        'dask': bool,
-    },
 )
 paramspace = mcfg.get_paramspace()
 

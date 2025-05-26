@@ -13,9 +13,10 @@ DATASETS:
         zarr: test/out/preprocessing/dataset~no_gpu/file_id~h5ad/normalized.zarr
     preprocessing:
       raw_counts: layers/counts
-      scale: true
       highly_variable_genes:
         n_top_genes: 100
+      pca:
+        dask: true
       assemble:
         - counts
         - normalize
@@ -38,11 +39,12 @@ DATASETS:
         h5ad: test/input/pbmc68k.h5ad
         zarr: test/out/preprocessing/dataset~extra_hvgs/file_id~h5ad/normalized.zarr
     preprocessing:
+      scale: true
       extra_hvgs:
         overwrite_args:
           batch_key: batch
         union_over:
-          - bulk_labels
+          - na_column
           - phase
         remove_genes:
           - .*orf.*

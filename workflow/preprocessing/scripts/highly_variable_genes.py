@@ -18,8 +18,6 @@ from utils.misc import dask_compute
 input_file = snakemake.input[0]
 output_file = snakemake.output[0]
 args = snakemake.params.get('args', {})
-# dask = snakemake.params.get('dask', False) and not USE_GPU
-# backed = snakemake.params.get('backed', False) and dask and not USE_GPU
 
 if args is None:
     args = {}

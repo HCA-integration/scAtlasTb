@@ -24,9 +24,8 @@ DATASETS:
     input:
       preprocessing:
         blood: test/input/load_data/merged/organ/blood.zarr
+        schulte: test/input/load_data/filtered/SchulteSchrepping2020.zarr
     preprocessing:
-      dask: false
-      backed: false
       raw_counts: X
       scale: false
       extra_hvgs:
@@ -52,6 +51,8 @@ DATASETS:
       highly_variable_genes:
         batch_key: dataset
         n_top_genes: 2000
+      pca:
+        dask: true
       assemble:
         - counts
         - normalize
@@ -71,7 +72,7 @@ DATASETS:
     preprocessing:
       raw_counts: layers/counts
       normalize:
-        target_sum: 1e4
+        target_sum: 10_000
       scale: true
       highly_variable_genes:
         n_top_genes: 100
@@ -102,33 +103,14 @@ DATASETS:
       preprocessing:
         pbmc: test/input/empty.zarr
 
-  test_backed: # should just go with in-memory reading
-    input:
-      preprocessing:
-        pbmc: test/input/pbmc68k.h5ad
-    preprocessing:
-      backed: true
-      raw_counts: layers/counts
-      assemble:
-        - umap
-
   test_dask:
     input:
       preprocessing:
         pbmc: test/input/pbmc68k.h5ad
     preprocessing:
-      dask: true
       raw_counts: layers/counts
-      assemble:
-        - umap
-
-  test_dask_backed:
-    input:
-      preprocessing:
-        pbmc: test/input/pbmc68k.h5ad
-    preprocessing:
-      dask: true
-      backed: true
-      raw_counts: layers/counts
+      pca:
+        # zero_center: None
+        dask: true
       assemble:
         - umap

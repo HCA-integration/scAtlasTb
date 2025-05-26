@@ -23,6 +23,7 @@ rule filter_genes:
         zarr=rules.preprocessing_normalize.output.zarr,
     output:
         zarr=directory(mcfg.out_dir / paramspace.wildcard_pattern / 'filtered_genes.zarr'),
+    threads: 5
     resources:
         partition=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='partition',attempt=attempt),
         qos=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='qos',attempt=attempt),
@@ -41,8 +42,6 @@ use rule highly_variable_genes from preprocessing as preprocessing_highly_variab
         zarr=directory(mcfg.out_dir / paramspace.wildcard_pattern / 'highly_variable_genes.zarr'),
     params:
         args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'highly_variable_genes', default={}),
-        backed=lambda wildcards: mcfg.get_from_parameters(wildcards, 'backed'),
-        dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask'),
     resources:
         partition=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='partition',attempt=attempt),
         qos=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='qos',attempt=attempt),
@@ -74,8 +73,6 @@ use rule pca from preprocessing as preprocessing_pca with:
     params:
         args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'pca', default={}),
         scale=lambda wildcards: mcfg.get_from_parameters(wildcards, 'scale', default=False),
-        backed=lambda wildcards: mcfg.get_from_parameters(wildcards, 'backed'),
-        dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask'),
     resources:
         partition=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='partition',attempt=attempt),
         qos=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='qos',attempt=attempt),
@@ -144,6 +141,6 @@ use rule assemble from preprocessing as preprocessing_assemble with:
         zarr=directory(mcfg.out_dir / paramspace.wildcard_pattern / 'preprocessed.zarr')
     resources:
         mem_mb=mcfg.get_resource(profile='cpu',resource_key='mem_mb'),
-    retries: 1
+    retries: 0
     conda:
         get_env(config, 'scanpy')
