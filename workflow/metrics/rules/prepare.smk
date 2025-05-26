@@ -33,6 +33,9 @@ use rule cluster from clustering as metrics_cluster with:
         zarr=rules.prepare.output.zarr,
     output:
         zarr=directory(mcfg.out_dir / 'prepare' / paramspace.wildcard_pattern / 'cluster_resolutions' / '{algorithm}--{resolution}--{level}.zarr'),
+    params:
+        clustering_args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'clustering', default={}).get('kwargs', {}),
+        overwrite=lambda wildcards: mcfg.get_from_parameters(wildcards, 'clustering', default={}).get('overwrite', True),
     conda:
         get_env(config, 'scanpy') # force clustering on CPU
     resources:
