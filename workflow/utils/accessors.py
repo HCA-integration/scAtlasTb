@@ -5,7 +5,6 @@ from dask import array as da
 
 from .io import to_memory
 from .misc import dask_compute
-from .processing import _filter_genes
 
 
 # deprecated
@@ -49,6 +48,47 @@ def select_neighbors(adata, output_type):
     adata.obsp['connectivities'] = adata.obsp[adata.uns[neighbors_key]['connectivities_key']]
     adata.obsp['distances'] = adata.obsp[adata.uns[neighbors_key]['distances_key']]
     return adata
+
+
+def _filter_batch(adata, batch_key=None):
+    """
+    Filter cells from batches with too few cells
+    """
+    mask = np.ones(adata.n_obs, dtype=bool)
+    if batch_key is not None:
+        cells_per_batch = adata.obs[batch_key].value_counts()
+        if cells_per_batch.min() < 2:
+            mask = adata.obs[batch_key].isin(cells_per_batch[cells_per_batch > 1].index)
+    return mask
+
+
+def _filter_genes(adata, verbose=True, **kwargs):
+    import scanpy as sc
+    from dask import array as da
+    from tqdm.dask import TqdmCallback
+    from contextlib import nullcontext
+        
+    # if isinstance(adata.X, da.Array):
+    #     import sparse
+        
+    #     min_cells = kwargs.get('min_cells', 0)
+        
+    #     with TqdmCallback(
+    #         desc=f"Determine genes with >= {min_cells} cells",
+    #         miniters=10,
+    #         mininterval=5,
+    #     ):
+    #         X = X.map_blocks(sparse.COO)
+    #         mask = (X != 0).sum(axis=0) >= min_cells
+    #         mask = mask.compute().todense()
+    #     return mask
+
+    X = adata.X
+    context = TqdmCallback(desc='Filter genes', miniters=1) if verbose and isinstance(X, da.Array) else nullcontext()
+    
+    with context:
+        gene_subset, _ = sc.pp.filter_genes(X, **kwargs)
+    return gene_subset
 
 
 def subset_hvg(

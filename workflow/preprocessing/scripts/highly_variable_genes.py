@@ -12,7 +12,8 @@ from dask import config as da_config
 da_config.set(num_workers=snakemake.threads)
 
 from utils.io import read_anndata, write_zarr_linked
-from utils.processing import _filter_batch, sc, USE_GPU
+from utils.accessors import _filter_batch
+from utils.processing import sc, USE_GPU
 
 input_file = snakemake.input[0]
 output_file = snakemake.output[0]

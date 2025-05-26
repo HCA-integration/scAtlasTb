@@ -31,6 +31,7 @@ adata = read_anndata(input_file, **kwargs)
 logging.info(adata.__str__())
 var = adata.var.copy()
 
+logging.info('Determine nonzero genes...')
 adata.var['nonzero_genes'] = _filter_genes(adata, min_cells=1)
 
 write_zarr_linked(

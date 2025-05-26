@@ -16,7 +16,8 @@ import anndata as ad
 import scanpy
 
 from utils.io import read_anndata, write_zarr_linked
-from utils.processing import _filter_batch, sc, USE_GPU
+from utils.accessors import _filter_batch
+from utils.processing import sc, USE_GPU
 rsc = sc
 
 def match_genes(var_df, gene_list, column=None):
