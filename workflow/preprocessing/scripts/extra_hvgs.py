@@ -95,7 +95,7 @@ logging.info(adata.__str__())
 # add metadata
 if 'preprocessing' not in adata.uns:
     adata.uns['preprocessing'] = {}
-adata.uns['preprocessing'][hvg_column_name] = args
+adata.uns['preprocessing'][hvg_column_name] = args | extra_hvg_args
 
 if adata.n_obs == 0:
     logging.info('No data, write empty file...')
