@@ -40,6 +40,7 @@ def apply_clustering(
     max_cluster_factor: int = 50,
     recompute_neighbors: bool = False,
     neighbors_args: dict = {},
+    use_gpu: bool = USE_GPU,
     **kwargs,
 ):
     """
@@ -62,13 +63,13 @@ def apply_clustering(
     if not cpu_kwargs:
         cpu_kwargs = dict()
     
-    if not USE_GPU:
+    if not use_gpu:
         kwargs |= cpu_kwargs
     
     if recompute_neighbors:
         neighbors(adata, **neighbors_args)
     
-    if USE_GPU:
+    if use_gpu:
         # following observations from https://github.com/rapidsai/cugraph/issues/4072#issuecomment-2074822898
         adata.obsp['connectivities'] = adata.obsp['connectivities'].astype('float64')
 
@@ -84,7 +85,7 @@ def apply_clustering(
     max_clusters = max(1, int(max_cluster_factor * resolution))
     n_clusters = adata.obs[cluster_key].nunique()
     
-    if USE_GPU and n_clusters > max_clusters:
+    if use_gpu and n_clusters > max_clusters:
         # fallback when too many clusters are computed (assuming this is a bug in the rapids implementation)
         logging.info(
             f'Cluster {cluster_key} has {n_clusters} custers, which is more than {max_clusters}. '
@@ -114,6 +115,8 @@ kwargs = dict(
 cpu_kwargs = dict(flavor='igraph')
 if algorithm == 'leiden':
     cpu_kwargs |= dict(n_iterations=2)
+
+logging.info(f'Using GPU: {USE_GPU}')
 
 # check if clusters have already been computed
 store = get_store(input_file)
@@ -162,6 +165,7 @@ else:
             prev_cluster_key,
             prev_cluster_value,
             neighbors_args, # TODO: custom parameters
+            use_gpu,
         ):
             # logging.info(f'Subsetting to {prev_cluster_key}={prev_cluster_value}...')
             sub_adata = adata[adata.obs[prev_cluster_key] == prev_cluster_value].copy()
@@ -178,6 +182,7 @@ else:
                 max_cluster_factor=max_cluster_factor,
                 neighbors_args=neighbors_args,
                 recompute_neighbors=True,
+                use_gpu=use_gpu,
             )
             return sub_adata.obs[[prev_cluster_key, key_added]].agg('_'.join, axis=1)
         
