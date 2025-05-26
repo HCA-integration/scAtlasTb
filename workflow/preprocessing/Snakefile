@@ -14,6 +14,7 @@ mcfg = PreprocessingConfig(
     config_params=[
         'assemble',
         'colors',
+        'gene_id_column',
         'highly_variable_genes',
         'extra_hvgs',
         'lineage',

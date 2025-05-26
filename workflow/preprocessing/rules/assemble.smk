@@ -9,8 +9,7 @@ use rule normalize from preprocessing as preprocessing_normalize with:
         zarr=directory(mcfg.out_dir / paramspace.wildcard_pattern / 'normalized.zarr'),
     params:
         raw_counts=lambda wildcards: mcfg.get_from_parameters(wildcards, 'raw_counts'),
-        backed=lambda wildcards: mcfg.get_from_parameters(wildcards, 'backed'),
-        dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask'),
+        gene_id_column=lambda wildcards: mcfg.get_from_parameters(wildcards, 'gene_id_column'),
     resources:
         partition=mcfg.get_resource(profile='cpu',resource_key='partition'),
         qos=mcfg.get_resource(profile='cpu',resource_key='qos'),

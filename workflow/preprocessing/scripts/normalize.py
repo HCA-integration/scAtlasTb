@@ -26,6 +26,7 @@ from utils.misc import apply_layers, ensure_sparse
 input_file = snakemake.input[0]
 output_file = snakemake.output[0]
 layer = snakemake.params.get('raw_counts', 'X')
+gene_id_column = snakemake.params.get('gene_id_column')
 args = snakemake.params.get('args', {})
 dask = snakemake.params.get('dask', False) and not rapids
 backed = snakemake.params.get('backed', False) and dask and not rapids
@@ -42,6 +43,12 @@ adata = read_anndata(
 )
 logging.info(adata.__str__())
 
+if gene_id_column is not None:
+    adata.var_names = adata.var[gene_id_column]
+adata.var_names = adata.var_names.astype(str).values
+adata.var_names_make_unique()
+
+# deal with empty files
 if adata.n_obs == 0:
     logging.info('No data, write empty file...')
     adata.X = np.zeros(adata.shape)
@@ -94,7 +101,7 @@ write_zarr_linked(
     adata,
     input_file,
     output_file,
-    files_to_keep=['uns', 'layers/normcounts'],
+    files_to_keep=['uns', 'var', 'layers/normcounts'],
     slot_map={
         'X': 'layers/normcounts',
         'layers/counts': layer,
