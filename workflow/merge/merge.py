@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 logging.basicConfig(level=logging.INFO)
 import gc
 import faulthandler
@@ -7,6 +8,7 @@ from scipy.sparse import issparse
 import tqdm.dask as tdask
 from tqdm import tqdm
 import pandas as pd
+import yaml
 import scanpy as sc
 from anndata.experimental import AnnCollection
 from anndata import AnnData
@@ -72,11 +74,19 @@ if len(files) == 1:
     exit(0)
 
 # subset to non-empty datasets
+def check_cells(file):
+    if file.endswith('.zarr'):
+        zattr_path = Path(file) / slots.get('X', 'X') / '.zattrs'
+        with open(zattr_path, 'r') as f:
+            zattrs = yaml.safe_load(f)
+        return 'shape' in zattrs
+        # return zattrs['shape'][0] > 0
+    return read_anndata(file, obs='obs', verbose=False).n_obs > 0
 files = {
     file_id: file
     for file_id, file
     in zip(files.keys(), files)
-    if read_anndata(file, obs='obs', verbose=False).n_obs > 0
+    if check_cells(file)
 }
 
 if len(files) == 0:
