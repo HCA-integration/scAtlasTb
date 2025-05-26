@@ -128,7 +128,7 @@ for key, value in meta.items():
 # save barcodes in separate column
 if 'barcode' not in adata.obs.columns:
     adata.obs['barcode'] = adata.obs_names
-adata.obs_names = adata.uns['dataset'] + '-' + adata.obs.reset_index(drop=True).index.astype(str)
+adata.obs_names = adata.obs[['barcode', 'tech_id']].astype(str).agg('-'.join, axis=1)
 
 # schemas translation
 schemas_df = pd.read_table(schema_file).dropna()

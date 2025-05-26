@@ -107,9 +107,6 @@ else:
         del _adata
         gc.collect()
 
-# set new indices
-adata.obs_names = dataset + '-' + adata.obs.reset_index(drop=True).index.astype(str)
-
 # merge lost annotations
 var_map = adatas[0].var
 uns = adatas[0].uns
