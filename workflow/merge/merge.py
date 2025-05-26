@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 logging.basicConfig(level=logging.INFO)
 import gc
 import faulthandler
@@ -7,6 +8,7 @@ from scipy.sparse import issparse
 import tqdm.dask as tdask
 from tqdm import tqdm
 import pandas as pd
+import yaml
 import scanpy as sc
 from anndata.experimental import AnnCollection
 from anndata import AnnData
@@ -33,16 +35,20 @@ def read_adata(
     dask=False,
     stride=10_000,
     chunks=(-1, -1),
+    log=True,
+    **slots
 ):
     if file_id is None:
         file_id = file
-    logging.info(f'Read {file}...')
+    if log:
+        logging.info(f'Read {file}...')
     adata = read_anndata(
         file,
         backed=backed,
         dask=dask,
         stride=stride,
         chunks=chunks,
+        **slots,
         verbose=False,
     )
     adata.obs['file_id'] = file_id
@@ -65,18 +71,31 @@ merge_strategy = snakemake.params.get('merge_strategy', 'inner')
 keep_all_columns = snakemake.params.get('keep_all_columns', False)
 backed = snakemake.params.get('backed', False)
 dask = snakemake.params.get('dask', False)
-stride = snakemake.params.get('stride', 10_000)
+stride = snakemake.params.get('stride', 500_000)
+slots = snakemake.params.get('slots', {})
+if slots is None:
+    slots = {}
+    
+logging.info(f'Read slots: {slots}')
 
 if len(files) == 1:
     link_zarr(in_dir=files[0], out_dir=out_file)
     exit(0)
 
 # subset to non-empty datasets
+def check_cells(file):
+    if file.endswith('.zarr'):
+        zattr_path = Path(file) / slots.get('X', 'X') / '.zattrs'
+        with open(zattr_path, 'r') as f:
+            zattrs = yaml.safe_load(f)
+        return 'shape' in zattrs
+        # return zattrs['shape'][0] > 0
+    return read_anndata(file, obs='obs', verbose=False).n_obs > 0
 files = {
     file_id: file
     for file_id, file
     in zip(files.keys(), files)
-    if read_anndata(file, obs='obs', verbose=False).n_obs > 0
+    if check_cells(file)
 }
 
 if len(files) == 0:
@@ -88,16 +107,17 @@ adatas = []
 
 if dask:
     logging.info('Read all files with dask...')
-    
-    for file_id, file_path in files.items():
+    for file_id, file_path in tqdm(files.items(), desc='Read files', miniters=1):
         _ad = read_adata(
             file_path,
             file_id=file_id,
             backed=backed,
             dask=dask,
-            stride=stride
+            stride=stride,
+            **slots,
+            log=False,
         )
-        logging.info(f'{file_id} shape: {_ad.shape}')
+        # logging.info(f'{file_id} shape: {_ad.shape}')
         
         #with tdask.TqdmCallback(desc='Persist'):
             # _ad = apply_layers(_ad, func=lambda x: x.persist())
@@ -114,8 +134,11 @@ if dask:
     
     #if backed:
     #    with tdask.TqdmCallback(desc='Persist'): # ProgressBar():
-    #        adata = apply_layers(adata, func=lambda x: x.rechunk((stridee, -1)).persist() if isinstance(x, da.Array) else x)
+    #        adata = apply_layers(adata, func=lambda x: x.rechunk((stride, -1)).persist() if isinstance(x, da.Array) else x)
     #         adata = apply_layers(adata, func=lambda x: x.persist() if isinstance(x, da.Array) else x)
+    
+    # with tdask.TqdmCallback(desc='Rechunk'):
+    #     adata  = apply_layers(adata, func=lambda x: x.rechunk((stride, -1)))
     
 elif backed:
     logging.info('Read all files in backed mode...')
@@ -145,7 +168,13 @@ else:
     adata = None
     for file_id, file_path in tqdm(files.items()):
         logging.info(f'Read {file_path}...')
-        _ad = read_adata(file_path, file_id=file_id, backed=backed, dask=dask)
+        _ad = read_adata(
+            file_path,
+            file_id=file_id,
+            **slots,
+            backed=backed,
+            dask=dask
+        )
         logging.info(f'{file_id} shape: {_ad.shape}')
         
         if adata is None:
