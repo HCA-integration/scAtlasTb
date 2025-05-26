@@ -30,6 +30,13 @@ use rule neighbors from preprocessing as clustering_compute_neighbors with:
         gpu=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='gpu',attempt=attempt),
 
 
+def get_profile(wildcards):
+    use_gpu = mcfg.get_from_parameters(wildcards, 'use_gpu', default=False)
+    if use_gpu: # and wildcards.level == '1':
+        return 'gpu'
+    return 'cpu'
+
+
 use rule cluster from clustering as clustering_cluster with:
     input:
         zarr=get_neighbors_file,
@@ -42,9 +49,9 @@ use rule cluster from clustering as clustering_cluster with:
     threads:
         lambda wildcards: 4 * int(wildcards.level) - 3
     conda:
-        'scanpy'
+        get_env(config, 'scanpy', gpu_env='rapids_singlecell')
     resources:
-        partition=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='partition',attempt=attempt),
-        qos=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='qos',attempt=attempt),
-        mem_mb=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='mem_mb',attempt=attempt, factor=1),
-        gpu=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='gpu',attempt=attempt),
+        partition=lambda w, attempt: mcfg.get_resource(profile=get_profile(w), resource_key='partition', attempt=attempt, attempt_to_cpu=2),
+        qos=lambda w, attempt: mcfg.get_resource(profile=get_profile(w), resource_key='qos', attempt=attempt, attempt_to_cpu=2),
+        mem_mb=lambda w, attempt: mcfg.get_resource(profile=get_profile(w), resource_key='mem_mb', attempt=attempt, attempt_to_cpu=2),
+        gpu=lambda w, attempt: mcfg.get_resource(profile=get_profile(w), resource_key='gpu', attempt=attempt, attempt_to_cpu=2),

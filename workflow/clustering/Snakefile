@@ -20,11 +20,17 @@ mcfg = ClusteringConfig(
         'resolutions',
         'hierarchy',
         'algorithm',
+        'use_gpu',
     ],
     # wildcard_names=['algorithm', 'resolution'],
     rename_config_params={'resolutions': 'resolution'},
     explode_by=['algorithm', 'resolution'],
-    dtypes={'recompute_neighbors': bool, 'recompute_umap': bool, 'resolution': str},
+    dtypes={
+        'recompute_neighbors': bool,
+        'recompute_umap': bool,
+        'resolution': str,
+        'use_gpu': bool,
+    },
 )
 paramspace = mcfg.get_paramspace()
 
