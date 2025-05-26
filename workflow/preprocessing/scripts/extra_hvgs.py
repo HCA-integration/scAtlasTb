@@ -124,23 +124,35 @@ else:
         logging.info(f'Compute highly variable genes per {union_over} with args={args}...')
         if isinstance(union_over, str):
             union_over = [union_over]
-        adata.obs['union_over'] = adata.obs[union_over] \
-            .astype(str) \
-            .apply(lambda x: '--'.join(x), axis=1) \
-            .astype('category')
+        union_values = adata.obs[union_over].astype(str) \
+            .replace(['nan', 'unknown'], np.nan).dropna() \
+            .apply(lambda x: '--'.join(x), axis=1)
         
-        for group in tqdm(adata.obs['union_over'].unique()):
+        # remove groups with fewer than min_cells
+        min_cells = 10
+        value_counts = union_values.value_counts()
+        remove_groups = value_counts[value_counts < min_cells]
+        union_values = union_values[~union_values.isin(remove_groups.index)]
+        
+        # set union_over values in adata.obs
+        adata.obs['union_over'] = union_values
+        adata.obs['union_over'] = adata.obs['union_over'].astype('category')
+        
+        logging.info(adata.obs['union_over'].value_counts(dropna=False))
+        logging.info(f'Removed groups with fewer than {min_cells} cells:\n{remove_groups}')
+        
+        for group in tqdm(
+            adata.obs['union_over'].dropna().unique(),
+            miniters=1,
+            desc='Computing HVGs per group',
+        ):
             _ad = adata[adata.obs['union_over'] == group].copy()
             
             # filter genes and cells that would break HVG function
             batch_mask = _filter_batch(_ad, batch_key=args.get('batch_key'))
             _ad = _ad[batch_mask, _ad.var['nonzero_genes']].copy()
-            _ad = dask_compute(_ad, layers='X')
+            _ad = dask_compute(_ad, layers='X', verbose=False)
             
-            min_cells = 10
-            if _ad.n_obs < min_cells:
-                logging.info(f'Group={group} has fewer than {min_cells} cells, skipping...')
-                continue
             
             if USE_GPU:
                 sc.get.anndata_to_GPU(_ad)
@@ -150,7 +162,9 @@ else:
             # get union of gene sets
             adata.var[hvg_column_name] = adata.var[hvg_column_name] | _ad.var['highly_variable']
             del _ad
-        del adata.obs['union_over']
+        
+        logging.info(f'Computed {adata.var[hvg_column_name].sum()} highly variable genes.')
+    
     else:
         # default gene selection
         logging.info(f'Select features for all cells with arguments: {args}...')
