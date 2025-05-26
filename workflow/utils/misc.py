@@ -188,11 +188,13 @@ def dask_compute(adata, layers: [str, list] = None, verbose: bool = True, **kwar
     
     def compute_layer(x, persist=False):
         from tqdm.dask import TqdmCallback
+        from contextlib import nullcontext
         
         if not isinstance(x, da.Array):
             return x
         
-        with TqdmCallback(miniters=10, mininterval=5):
+        context = TqdmCallback(desc='Dask compute', miniters=10, mininterval=5) if verbose else nullcontext()
+        with context:
             if persist:
                 x = x.persist()
             x = x.compute()

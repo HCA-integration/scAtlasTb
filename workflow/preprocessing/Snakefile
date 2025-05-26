@@ -14,6 +14,7 @@ mcfg = PreprocessingConfig(
     config_params=[
         'assemble',
         'colors',
+        'gene_id_column',
         'highly_variable_genes',
         'extra_hvgs',
         'lineage',
@@ -23,13 +24,7 @@ mcfg = PreprocessingConfig(
         'raw_counts',
         'scale',
         'umap',
-        'backed',
-        'dask',
     ],
-    dtypes={
-        'backed': bool,
-        'dask': bool,
-    },
 )
 paramspace = mcfg.get_paramspace()
 

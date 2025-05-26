@@ -182,7 +182,7 @@ adata.uns = read_anndata(file, uns='uns').uns
 add_wildcards(adata, snakemake.wildcards, 'preprocessing')
 write_zarr_linked(
     adata=adata,
-    in_dir=None,
+    in_dir=file_map[0][1],
     out_dir=output_file,
     files_to_keep=['uns/wildcards'],
     slot_map=slot_map,

@@ -63,7 +63,10 @@ def read_and_subset(
     if filter_zero_genes:
         logging.info('Filter all zero genes...')
         # filter out which genes are all 0
-        all_zero_genes = _filter_genes(adata, min_cells=50)
+        _ad = adata[:, adata.var[new_var_column]].copy()
+        all_zero_mask = _filter_genes(_ad, min_cells=1)
+        all_zero_genes = _ad.var_names[all_zero_mask].tolist()
+        del _ad
         adata.var[new_var_column] = adata.var[new_var_column] & ~adata.var_names.isin(all_zero_genes)
     
     if save_subset:
