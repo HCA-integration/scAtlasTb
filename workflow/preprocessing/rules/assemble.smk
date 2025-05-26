@@ -10,6 +10,7 @@ use rule normalize from preprocessing as preprocessing_normalize with:
     params:
         raw_counts=lambda wildcards: mcfg.get_from_parameters(wildcards, 'raw_counts'),
         gene_id_column=lambda wildcards: mcfg.get_from_parameters(wildcards, 'gene_id_column'),
+        args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'normalize', default={}),
     resources:
         partition=mcfg.get_resource(profile='cpu',resource_key='partition'),
         qos=mcfg.get_resource(profile='cpu',resource_key='qos'),

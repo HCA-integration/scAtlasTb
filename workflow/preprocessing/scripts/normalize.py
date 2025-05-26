@@ -71,7 +71,7 @@ if rapids:
     # adata.X = adata.X.astype('float32')
     sc.get.anndata_to_GPU(adata)
 
-logging.info('normalize_total with args={args}...')
+logging.info(f'normalize_total with args={args}...')
 sc.pp.normalize_total(adata, **args)
 logging.info('log-transform...')
 sc.pp.log1p(adata)
@@ -90,7 +90,7 @@ adata.layers['normcounts'] = adata.X
 if 'preprocessing' not in adata.uns:
     adata.uns['preprocessing'] = {}
 
-adata.uns['preprocessing']['normalization'] = 'default'
+adata.uns['preprocessing']['normalization'] = args
 adata.uns['preprocessing']['log-transformed'] = True
 # scanpy.pp.log1p was supposed to add it but it's not saved
 adata.uns["log1p"] = {"base": None}
