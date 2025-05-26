@@ -7,13 +7,7 @@ def get_neighbors_file(wildcards):
             allow_missing=True
         )[0]
     if mcfg.get_from_parameters(wildcards, 'recompute_neighbors', default=False):
-        return expand(
-            rules.clustering_compute_neighbors.output.zarr,
-            algorithm='None',
-            resolution='None',
-            level=1,
-            allow_missing=True,
-        )[0]
+        return rules.clustering_compute_neighbors.output.zarr
     return mcfg.get_input_file(**wildcards)
 
 
@@ -21,7 +15,7 @@ use rule neighbors from preprocessing as clustering_compute_neighbors with:
     input:
         zarr=lambda wildcards: mcfg.get_input_file(**wildcards),
     output:
-        zarr=directory(mcfg.out_dir / 'neighbors' / paramspace.wildcard_pattern / 'algorithm~{algorithm}' /  'resolution~{resolution}' / 'level~{level}.zarr'),
+        zarr=directory(mcfg.out_dir / 'neighbors' / f'{paramspace.wildcard_pattern}.zarr'),
     params:
         args=lambda wildcards: mcfg.get_from_parameters(
             {k: v for k, v in wildcards.items() if k not in ['algorithm', 'resolution']},
