@@ -88,6 +88,11 @@ if 'color' in params:
                 # adata.obs[color] = column.codes if len(column.categories) > 102 else column
     del params['color']
 
+n_gene_colors = adata.var_names.isin(colors).sum()
+if n_gene_colors > 0:
+    logging.info(f'Subset to {n_gene_colors} requested genes...')
+    dask_compute(adata[:, adata.var_names.isin(colors)].copy(), layers='X')
+
 logging.info('Remove outliers...')
 outlier_factor = params.pop('outlier_factor', 0)
 adata = remove_outliers(adata, 'max', factor=outlier_factor, rep=basis)
@@ -97,11 +102,6 @@ logging.info('Shuffle cells...')
 n_cells = adata.n_obs # save original number of cells
 if n_cells > 1e6:
     adata = adata[adata.obs.sample(frac=0.7).index]
-
-logging.info('Subset to requested genes...')
-adata = adata[:, adata.var_names.isin(colors)].copy()
-if adata.var_names.isin(colors).sum() > 0:
-    dask_compute(adata, layers='X')
 
 # set minimum point size
 default_size = 200_000 / adata.n_obs
