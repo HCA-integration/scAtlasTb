@@ -57,13 +57,17 @@ In the configuration, you need to specify a TSV file with the mapping as well as
 
 ```yaml
 ...
-      new_columns:  # mapping setup for new columns
-        file:  test/input/mapping.tsv  # TSV file with cell label mapping
-        order:  # order of which label column should be matched to which
+      new_columns:
+        file:  test/input/mapping.tsv  # mapping file
+        order:
           - cell_type  # first entry MUST be an existing column in the anndata object
-          - harmonized_label  # first remapping level (mapping 'cell_type' to 'harmonized_label')
-          - lineage  # second remapping level (mapping 'harmonized_label' to 'lineage')
+          - harmonized_label  # metadata that hierarchically to first entry ('cell_type')
+          - lineage  # metadata that hierarchically to first entry ('cell_type')
 ```
+
+* `file`: the path to the mapping file in a tabular format.
+* `order`: a list of columns in the mapping file that should be matched to the existing columns in the AnnData object.
+  The first entry must be an existing column in the AnnData object, and the subsequent entries are the new columns to be created based on the mapping.
 
 The new column mapping file must be in TSV format with at least one column in the anndata object.
 The columns must include at least all columns that are specified in the `order` list.
@@ -80,8 +84,6 @@ CD4+/CD25 T Reg	lymphoid
 
 Alternatively, you can map values via index (`.obs_names`) of the AnnData object.
 In that case, the first entry of the `order` list must be the name of the index column in the mapping file.
-You can specify which column in the mapping file gets read as the index by specifying `index_col` in the configuration.
-If `index_col` is not specified, the pipeline assumes that the index column is called `'index'` and will only run in index mode if that column exists in the mapping file.
 
 ```yaml
 ...
@@ -92,6 +94,9 @@ If `index_col` is not specified, the pipeline assumes that the index column is c
           - index # first entry MUST be the index column in the mapping file
           - relabel_by_index
 ```
+
+* `index_col`: the name of the index column in the mapping file that should be used as index.
+  If not specified, the pipeline assumes that the index column is called `'index'` and will only run in index mode if that column exists in the mapping file.
 
 Note, that if the index in the mapping file does not match the index in your AnnData object, the pipeline will raise an error.
 
@@ -124,13 +129,16 @@ This is most useful when you want more granular categories in a single column, e
       
 ```
 
-The merge column mapping file must be in TSV format with the following columns:
+* `file`: the path to the mapping file in a TSV format.
+* `sep`: the separator used to merge the column values. The default is `'-'`, but you can specify any separator you like.
+
+The merge column mapping file (`file`) must be in TSV format with the following columns:
 
 * `file_id`: input file id that is used in the pipeline to match which file to add the new column to
 * `column_name`: new column name
 * `columns`: columns to merge, separated by `,` (no whitespaces)
 
-Example for `test/input/pbmc68k.h5ad`:
+Example for `test/input/merge_test.tsv`:
 
 ```
 file_id	column_name	columns
