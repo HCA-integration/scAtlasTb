@@ -1,33 +1,31 @@
-# Label Harmonisation
+# Relabel Module
 
-## Testing
+This module is used to relabel and merge columns in an AnnData object based on a configuration file.
+It is useful for reproducibly ingesting or mapping obs-level metadata based on existing columns or the index of `.obs`.
 
-Activate the snakemake environment and call `test/run_test.sh` with run specific Snakemake parameters.
+## Config file
 
-```
-conda activate snakemake
-bash test/run_test.sh -n  # dry run
-bash test/run_test.sh -c2  # actual run with max 2 cores
-```
-
-## Input
-
-### Config file
+Here is an example config showcasing all possible options of the `relabel` module.
 
 ```yaml
 DATASETS:
+  
   dataset_name:  # can replace with a representative name
+    
     input:
       relabel:
         file_1: test/input/pbmc68k.h5ad
         file_2: test/input/pbmc68k.h5ad
+    
     relabel:
+      
       new_columns:  # mapping setup for new columns
         file:  test/input/mapping.tsv  # TSV file with cell label mapping
         order:  # order of which label column should be matched to which
           - cell_type  # first entry MUST be an existing column in the anndata object
           - harmonized_label  # first remapping level (mapping 'cell_type' to 'harmonized_label')
           - lineage  # second remapping level (mapping 'harmonized_label' to 'lineage')
+      
       merge_columns:  # mapping setup for merging existing columns
         file:  test/input/merge_test.tsv  # TSV file with cell label mapping
         sep: '-'  # separator for merging columns
@@ -41,14 +39,27 @@ DATASETS:
             '8': 'CD19+ B'
 ```
 
-### Mapping files
+## Different mapping settings
 
-#### New columns
+### Mapping new columns: `new_columns`
+
+Adding new columns to the AnnData object requires a mapping file that specifies how to map existing columns to new ones.
+In the configuration, you need to specify a TSV file with the mapping as well as the order of the columns to be matched.
+
+```yaml
+...
+      new_columns:  # mapping setup for new columns
+        file:  test/input/mapping.tsv  # TSV file with cell label mapping
+        order:  # order of which label column should be matched to which
+          - cell_type  # first entry MUST be an existing column in the anndata object
+          - harmonized_label  # first remapping level (mapping 'cell_type' to 'harmonized_label')
+          - lineage  # second remapping level (mapping 'harmonized_label' to 'lineage')
+```
 
 The new column mapping file must be in TSV format with at least one column in the anndata object.
-The columns must include all columns that are specified in the `order` list.
+The columns must include at least all columns that are specified in the `order` list.
 
-Example for `test/input/pbmc68k.h5ad`:
+Example for `test/input/mapping.tsv`:
 
 ```
 bulk_labels	lineage
@@ -58,7 +69,18 @@ CD56+ NK	lymphoid
 CD4+/CD25 T Reg	lymphoid
 ```
 
-#### Merge existing columns
+### Merge existing columns: `merge_columns`
+
+The values of existing columns can be merged into a new column.
+This is most useful when you want more granular categories in a single column, e.g. when a batch consists of a sample + pool.
+
+```yaml
+...
+      merge_columns:  # mapping setup for merging existing columns
+        file:  test/input/merge_test.tsv  # TSV file with cell label mapping
+        sep: '-'  # separator for merging columns
+      
+```
 
 The merge column mapping file must be in TSV format with the following columns:
 
