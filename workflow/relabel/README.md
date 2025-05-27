@@ -5,7 +5,7 @@ It is useful for reproducibly ingesting or mapping obs-level metadata based on e
 
 ## Config file
 
-Here is an example config showcasing all possible options of the `relabel` module.
+**TL;DR:** Here is an example config showcasing some possible options of the `relabel` module.
 
 ```yaml
 DATASETS:
@@ -13,24 +13,29 @@ DATASETS:
   dataset_name:  # can replace with a representative name
     
     input:
+      # input file mapping for relabel module
       relabel:
         file_1: test/input/pbmc68k.h5ad
         file_2: test/input/pbmc68k.h5ad
     
+    # module configuration
     relabel:
       
-      new_columns:  # mapping setup for new columns
-        file:  test/input/mapping.tsv  # TSV file with cell label mapping
-        order:  # order of which label column should be matched to which
-          - cell_type  # first entry MUST be an existing column in the anndata object
-          - harmonized_label  # first remapping level (mapping 'cell_type' to 'harmonized_label')
-          - lineage  # second remapping level (mapping 'harmonized_label' to 'lineage')
+      # mapping setup for adding new columns
+      new_columns:
+        file:  test/input/mapping.tsv
+        order:
+          - cell_type
+          - harmonized_label
+          - lineage
       
-      merge_columns:  # mapping setup for merging existing columns
-        file:  test/input/merge_test.tsv  # TSV file with cell label mapping
-        sep: '-'  # separator for merging columns
+      # mapping setup for merging existing columns
+      merge_columns:
+        file:  test/input/merge_test.tsv
+        sep: '-'
       
-      selective_update:
+      # mapping setup for selective update of existing columns
+      selective_update: # 
         base_column: bulk_labels
         new_column: bulk_labels_new
         update_map:
@@ -39,7 +44,11 @@ DATASETS:
             '8': 'CD19+ B'
 ```
 
-## Different mapping settings
+## Mapping modes
+
+This module supports different modes of mapping metadata to the AnnData object.
+You decide on any number of mapping modes in a single setup to map different metadata columns in a single run.
+In the following, the different mapping modes are explained.
 
 ### Mapping new columns: `new_columns`
 
@@ -77,10 +86,10 @@ If `index_col` is not specified, the pipeline assumes that the index column is c
 ```yaml
 ...
       new_columns:
-        index_col: index
-        file: test/input/mapping_index_test.tsv
+        index_col: index # column in the mapping file that should be used as index
+        file: test/input/mapping_index_test.tsv # mapping file with metadata mapped to index
         order:
-          - index
+          - index # first entry MUST be the index column in the mapping file
           - relabel_by_index
 ```
 
@@ -95,7 +104,7 @@ Parquet files are fully [compatible with Pandas](https://pandas.pydata.org/panda
 ...
       new_columns:
         index_col: index
-        file: test/input/mapping_index_test.parquet
+        file: test/input/mapping_index_test.parquet # use parquet file for mapping
         order:
           - index
           - relabel_by_index
