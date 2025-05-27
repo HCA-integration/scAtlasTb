@@ -13,6 +13,15 @@ DATASETS:
           - cell_type
           - harmonized_label
           - lineage
+      selective_update:
+        base_column: lineage
+        new_column: lineage
+        update_map:
+          harmonized_label: test/input/mapping_blood.tsv
+          author_annotation:
+            Neutrophil: nan
+            Platelet: nan
+  
   test_relabel:
     input:
       relabel:
@@ -43,3 +52,15 @@ DATASETS:
     relabel:
       rename_columns:
         bulk_labels: new_name
+
+  test_selective_update:
+    input:
+      relabel: test/input/pbmc68k.h5ad
+    relabel:
+      selective_update:
+        base_column: bulk_labels
+        new_column: bulk_labels_new # new column to be created
+        update_map:
+          louvain:
+            '6': Dendritic
+            '8': 'CD19+ B'

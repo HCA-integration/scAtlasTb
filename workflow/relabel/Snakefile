@@ -8,7 +8,13 @@ from utils.ModuleConfig import ModuleConfig
 mcfg = ModuleConfig(
     module_name='relabel',
     config=config,
-    config_params=['rename_columns', 'new_columns', 'merge_columns'],
+    config_params=[
+        'rename_columns',
+        'new_columns',
+        'merge_columns',
+        'selective_update',
+        'threads',
+    ],
 )
 paramspace = mcfg.get_paramspace()
 
@@ -39,6 +45,7 @@ rule relabel:
         rename_columns=lambda wildcards: mcfg.get_from_parameters(wildcards, 'rename_columns', default={}),
         mapping_order=lambda wildcards: mcfg.get_from_parameters(wildcards, 'new_columns', default={}).get('order'),
         merge_sep=lambda wildcards: mcfg.get_from_parameters(wildcards, 'merge_columns', default={}).get('sep', '-'),
+        selective_update=lambda wildcards: mcfg.get_from_parameters(wildcards, 'selective_update', default=None),
     conda:
         get_env(config, 'scanpy', env_dir='envs')
     resources:
