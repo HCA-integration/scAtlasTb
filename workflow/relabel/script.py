@@ -4,10 +4,80 @@ from tqdm import tqdm
 from tqdm.dask import TqdmCallback
 from pathlib import Path
 import pandas as pd
+from dask import dataframe as dd
 from pprint import pformat
-import anndata
+from dask import config as da_config
 
-from utils.io import read_anndata, write_zarr_linked, link_zarr_partial
+da_config.set(num_workers=snakemake.threads)
+logging.info(f"Dask using {da_config.get('num_workers')} workers")
+
+
+from utils.io import read_anndata, write_zarr_linked
+from utils.misc import dask_compute
+
+
+def convert_dtypes(col):
+    # check if can be cast to boolean
+    if set(col.dropna().str.lower()) <= {"true", "false"}:
+        bool_map = {"true": True, "false": False}
+        return col.str.lower().map(bool_map).astype('boolean')
+    try:
+        return pd.to_numeric(col)
+    except Exception:
+        return col
+
+
+def read_table(file, index_name, obs_names, usecols):
+    kwargs = dict(
+        usecols=usecols,
+        comment='#',
+        na_values=['nan', 'NaN', 'NA', 'na', ''],
+        keep_default_na=True,
+        engine='c',
+        dtype=str,
+        low_memory=False,
+        blocksize='200MB',
+    )
+    
+    # define file reader
+    if file.endswith('.csv'):
+        read_func = dd.read_csv
+    elif file.endswith('.tsv'):
+        read_func = dd.read_table
+    elif file.endswith('.parquet'):
+        read_func = pd.read_parquet
+        kwargs = {}
+    else:
+        raise ValueError(f'Unsupported file type: {file}')
+    
+    df = read_func(file, **kwargs)
+    
+    # load to memory
+    if isinstance(df, dd.DataFrame):
+        if index_name in df.columns:
+            # subset to entries in adata.obs
+            overlapping_idx = df[index_name].isin(obs_names)
+            df = df.loc[overlapping_idx, :].copy()
+        with TqdmCallback(desc=f'Loading {file}', total=df.shape[0], miniters=1, leave=True):
+            df = df.compute()
+    
+    if index_name in df.columns:
+        df = df.set_index(index_name)
+    if df.index.name == index_name and index_name is not None:
+        # make sure shape matches adata.obs
+        index_old = df.index
+        df = df.reindex(obs_names)
+    
+        # check that values aren't all NaN
+        if df.empty or df.isna().all().all():
+            raise ValueError(
+                'No matching data found in mapping file.\n'
+                f'Mapping file index:\n{index_old}\nobs_names:\n{obs_names}\n'
+                f'Mapping file "{file}" might be mismatched with adata.obs'
+            )
+    
+    return df.apply(convert_dtypes)
+    
 
 input_file = snakemake.input.anndata
 input_new_cols = snakemake.input.get('new_columns')
@@ -18,41 +88,55 @@ rename_columns = snakemake.params.get('rename_columns')
 selective_update = snakemake.params.get('selective_update')
 
 logging.info('Read adata...')
-if input_file.endswith('.zarr'):
-    adata = read_anndata(input_file, obs='obs')
-else:
-    adata = anndata.read_h5ad(input_file)  # read complete file to convert to zarr
-if adata.obs_names.name in (None, ''):
-    adata.obs_names.name = 'index'
+kwargs = dict(dask=True, backed=True)
+if input_file.endswith(('.zarr', '.zarr/')):
+    kwargs |= dict(obs='obs')
+adata = read_anndata(input_file, **kwargs)
 
 # merge new columns
-if rename_columns is not None:
-    logging.info(f'Rename columns...')
-    # adata.obs = adata.obs.rename(columns=rename_columns)
-    
-    for old_col, new_col in rename_columns.items():
+if rename_columns:
+    logging.info(f'Rename columns:\n{pformat(rename_columns)}')
+    for old_col, new_col in tqdm(rename_columns.items(), desc='Renaming'):
         if old_col not in adata.obs.columns:
             adata.obs[old_col] = 'nan'
         else:
             adata.obs[new_col] = adata.obs[old_col]
 
-if input_new_cols is not None:
+if input_new_cols:
+    index_col = snakemake.params.get('index_col', 'index')
     mapping_order = snakemake.params.get('mapping_order')
-    logging.info(f'Mapping order:\n{mapping_order}')
-    label_mapping = pd.read_table(input_new_cols, comment='#')
+    old_index_name = adata.obs.index.name or 'index'
     
+    if index_col in adata.obs.columns:
+        adata.obs[index_col] = adata.obs[index_col].astype(str)
+        adata.obs = adata.obs.reset_index().set_index(index_col)
+    else:
+        adata.obs_names.name = index_col
+    
+    label_mapping = read_table(
+        file=input_new_cols,
+        index_name=index_col,
+        obs_names=adata.obs_names,
+        usecols=mapping_order
+    )    
+    logging.info(f'\n{pformat(label_mapping)}')
+    
+    logging.info(f'Mapping order: {pformat(mapping_order)}')
     label_key = None
-    for mapping_label in mapping_order:
+    
+    for mapping_label in tqdm(mapping_order, desc='Mapping new columns'):
+        
         if label_key is None:
-            if mapping_label == adata.obs_names.name:
-                adata.obs.reset_index(inplace=True)
-                label_key = mapping_label
-            assert mapping_label in adata.obs.columns, f'"{mapping_label}" not found in adata.obs.columns. ' \
+            assert mapping_label in adata.obs.columns.tolist() + [index_col], \
+                f'"{mapping_label}" not found in adata.obs. ' \
                 'Please make sure the first entry in the mapping order is a column in adata.obs.'
             label_key = mapping_label
-            continue
+            continue        
         
-        logging.info(f'mapping "{label_key}" to "{mapping_label}"...')
+        if label_key == index_col:
+            adata.obs[mapping_label] = label_mapping[mapping_label]
+            # Note: keep label_key as index
+            continue
         
         # get unique mapping
         df = label_mapping[[label_key, mapping_label]].drop_duplicates()
@@ -65,31 +149,45 @@ if input_new_cols is not None:
         
         # apply mapping
         map_dict = df.set_index(label_key)[mapping_label].to_dict()
-        logging.info(f'Mapping:\n{pformat(map_dict)}')
         adata.obs[mapping_label] = pd.Series(adata.obs[label_key].map(map_dict), dtype="category")
         
-        logging.info(f'Number of unmapped entries: {adata.obs[mapping_label].isna().sum()}')
-        logging.info(pformat(adata.obs[[mapping_label, label_key]].value_counts(dropna=False, sort=False)))
+        # check mapping success
+        n_na = adata.obs[mapping_label].isna().sum()
+        if n_na > 0:
+            logging.info(f'Number of unmapped entries: {n_na}')
 
-        # set current mapping label as new label key
-        # label_key = mapping_label
+    value_counts = adata.obs[
+        [x for x in mapping_order if x != index_col]
+    ].value_counts(dropna=False, sort=False)
+    # sort by unique values per column
+    value_counts = value_counts.sort_index(level=list(range(value_counts.index.nlevels)))
+    logging.info(f'New columns:\n{pformat(value_counts)}')
+
+    if old_index_name in adata.obs.columns:
+        logging.info(f'Reset index "{old_index_name}"...')
+        adata.obs = adata.obs.reset_index().set_index(old_index_name)
 
 # merge existing columns
-if input_merge_cols is not None:
+if input_merge_cols:
     sep = snakemake.params.get('merge_sep', '-')
-    logging.info(f'Merge existing columns with sep="{sep}"...')
-    
     merge_config_df = pd.read_table(input_merge_cols, comment='#')
-    for col in ['file_id', 'column_name', 'columns']:
-        assert col in merge_config_df.columns, f'"{col}" not found in {input_merge_cols}\n{merge_config_df}'
-    
     merge_config_df = merge_config_df[merge_config_df['file_id'] == file_id]
-    assert not merge_config_df.duplicated().any(), f'Duplicated rows in {input_merge_cols} for {file_id}\n{merge_config_df.duplicated()}'
+    logging.info(f'Merge columns:\n{pformat(merge_config_df)}')
     
-    for _, row in merge_config_df.iterrows():
+    # check if required columns are present
+    for col in ['file_id', 'column_name', 'columns']:
+        assert col in merge_config_df.columns, \
+            f'"{col}" not found in {input_merge_cols}\n{merge_config_df}'    
+    assert not merge_config_df.duplicated().any(), \
+        f'Duplicated rows in {input_merge_cols} for {file_id}\n{merge_config_df[merge_config_df.duplicated()]}'
+    
+    for _, row in tqdm(
+        merge_config_df.iterrows(),
+        total=merge_config_df.shape[0],
+        desc=f'Merge values with sep="{sep}"',
+    ):
         col_name = row['column_name']
         cols = row['columns'].split(',')
-        logging.info(f'merge {col_name} from {cols}...')
         adata.obs[col_name] = adata.obs[cols].apply(
             lambda x: sep.join(x.values.astype(str)), axis=1
         )
@@ -127,6 +225,7 @@ if selective_update:
 
 
 logging.info(f'Write to {output_file}...')
+dask_compute(adata)
 write_zarr_linked(
     adata,
     in_dir=input_file,

@@ -22,17 +22,17 @@ paramspace = mcfg.get_paramspace()
 def relabel_input_files(wildcards):
     input_files = {'anndata': mcfg.get_input_file(**wildcards)}
     
-    new_column_config = mcfg.get_for_dataset(wildcards.dataset, query=[mcfg.module_name, 'new_columns'])
+    new_column_config = mcfg.get_from_parameters(wildcards, 'new_columns')
     if isinstance(new_column_config, dict):
         assert 'file' in new_column_config, f'new_columns config must contain a file key for {wildcards}'
         assert 'order' in new_column_config, f'new_columns config must contain a order key for {wildcards}'
         input_files['new_columns'] = new_column_config.get('file')
     
-    merge_column_config = mcfg.get_for_dataset(wildcards.dataset, query=[mcfg.module_name, 'merge_columns'])
+    merge_column_config = mcfg.get_from_parameters(wildcards, 'merge_columns')
     if isinstance(merge_column_config, dict):
         assert 'file' in merge_column_config, f'merge_columns config must contain a file key for {wildcards}'
         input_files['merge_columns'] = merge_column_config.get('file')
-
+    
     return input_files
 
 
@@ -44,10 +44,13 @@ rule relabel:
     params:
         rename_columns=lambda wildcards: mcfg.get_from_parameters(wildcards, 'rename_columns', default={}),
         mapping_order=lambda wildcards: mcfg.get_from_parameters(wildcards, 'new_columns', default={}).get('order'),
+        index_col=lambda wildcards: mcfg.get_from_parameters(wildcards, 'new_columns', default={}).get('index_col'),
         merge_sep=lambda wildcards: mcfg.get_from_parameters(wildcards, 'merge_columns', default={}).get('sep', '-'),
         selective_update=lambda wildcards: mcfg.get_from_parameters(wildcards, 'selective_update', default=None),
     conda:
         get_env(config, 'scanpy', env_dir='envs')
+    threads:
+        lambda wildcards: mcfg.get_from_parameters(wildcards, 'threads', default=1, as_type=int),
     resources:
         partition=lambda w: mcfg.get_resource(profile='cpu',resource_key='partition'),
         qos=lambda w: mcfg.get_resource(profile='cpu',resource_key='qos'),

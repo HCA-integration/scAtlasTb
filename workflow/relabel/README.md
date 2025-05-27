@@ -69,6 +69,39 @@ CD56+ NK	lymphoid
 CD4+/CD25 T Reg	lymphoid
 ```
 
+Alternatively, you can map values via index (`.obs_names`) of the AnnData object.
+In that case, the first entry of the `order` list must be the name of the index column in the mapping file.
+You can specify which column in the mapping file gets read as the index by specifying `index_col` in the configuration.
+If `index_col` is not specified, the pipeline assumes that the index column is called `'index'` and will only run in index mode if that column exists in the mapping file.
+
+```yaml
+...
+      new_columns:
+        index_col: index
+        file: test/input/mapping_index_test.tsv
+        order:
+          - index
+          - relabel_by_index
+```
+
+Note, that if the index in the mapping file does not match the index in your AnnData object, the pipeline will raise an error.
+
+#### Mapping file format
+
+The file format needs to be tabular and can be either one of TSV, CSC, or Parquet.
+Parquet files are fully [compatible with Pandas](https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html#parquet) and are more computationally efficient than text-based files, both in storage and processing speed.
+
+```yaml
+...
+      new_columns:
+        index_col: index
+        file: test/input/mapping_index_test.parquet
+        order:
+          - index
+          - relabel_by_index
+```
+
+
 ### Merge existing columns: `merge_columns`
 
 The values of existing columns can be merged into a new column.

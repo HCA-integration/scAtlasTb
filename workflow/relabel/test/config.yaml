@@ -42,7 +42,9 @@ DATASETS:
       relabel: test/input/pbmc68k.h5ad
     relabel:
       new_columns:
-        file:  test/input/mapping_index_test.tsv
+        index_col: index
+        # file: test/input/mapping_index_test.tsv
+        file: test/input/mapping_index_test.parquet
         order:
           - index
           - relabel_by_index
