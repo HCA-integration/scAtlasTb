@@ -33,6 +33,14 @@ def relabel_input_files(wildcards):
         assert 'file' in merge_column_config, f'merge_columns config must contain a file key for {wildcards}'
         input_files['merge_columns'] = merge_column_config.get('file')
     
+    selective_update_config = mcfg.get_from_parameters(wildcards, 'selective_update')
+    if isinstance(selective_update_config, dict):
+        files = {
+            value for value in selective_update_config.get('update_map', {}).values()
+            if isinstance(value, str)
+        }
+        input_files['selective_update'] = list(files)
+
     return input_files
 
 
