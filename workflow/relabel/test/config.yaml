@@ -1,8 +1,17 @@
 output_dir: test/out
 images: test/images
 
+defaults:
+  datasets:
+    - blood_relabel
+    - test_relabel
+    - test_relabel_index
+    - test_rename_columns
+    - test_selective_update
+    # - test_fail
 
 DATASETS:
+  
   blood_relabel:
     input:
       relabel: test/input/load_data/filtered/SchulteSchrepping2020.zarr
@@ -37,6 +46,7 @@ DATASETS:
       merge_columns:
         file:  test/input/merge_test.tsv
         sep: '-'
+
   test_relabel_index:
     input:
       relabel: test/input/pbmc68k.h5ad
@@ -48,6 +58,7 @@ DATASETS:
         order:
           - index
           - relabel_by_index
+
   test_rename_columns:
     input:
       relabel: test/input/pbmc68k.h5ad
@@ -66,3 +77,14 @@ DATASETS:
           louvain:
             '6': Dendritic
             '8': 'CD19+ B'
+
+  test_fail:
+    input:
+      relabel: test/input/load_data/filtered/SchulteSchrepping2020.zarr
+    relabel:
+      new_columns:
+        index_col: index
+        file: test/input/mapping_index_test.parquet
+        order:
+          - index
+          - relabel_by_index
