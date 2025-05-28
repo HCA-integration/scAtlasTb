@@ -1,16 +1,16 @@
-# Single Cell Atlasing Toolbox :toolbox:
+# Single Cell Atlasing Toolbox 🧰
 
 **Toolbox of Snakemake pipelines for easy-to-use analyses and benchmarks for building integrated atlases**
 
-- [:rocket: Getting Started](#getting-started)
-- [:gear: Configure Your Workflow](#configure-your-workflow)
-- [:gear: Advanced Configuration](#advanced-configuration)
-- [:hammer_and_wrench: Troubleshooting](#troubleshooting)
+- [🚀 Getting Started](#getting-started)
+- [⚙️ Configure Your Workflow](#configure-your-workflow)
+- [⚙️ Advanced Configuration](#advanced-configuration)
+- [🛠️ Troubleshooting](#troubleshooting)
 
 This toolbox provides multiple modules that can be easily combined into custom workflows that leverage the file management of [Snakemake](https://snakemake.readthedocs.io/en/v7.31.1/).
 This allows for an efficient and scalable way to run analyses on large datasets that can be easily configured by the user.
 
-## :toolbox: Which Modules does the Toolbox Support?
+## 🧰 Which Modules does the Toolbox Support?
 
 The modules are located under `workflow/` and can be run independently or combined into a more complex workflow.
 
@@ -36,7 +36,7 @@ The modules are located under `workflow/` and can be run independently or combin
 | `uncollect`            | Distribute slots of an anndata object to multiple anndata objects         |
 | `cell_type_prediction` | Predict cell types from reference model e.g. celltypist                   |
 
-## :eyes: TL;DR What does a full workflow look like?
+## 👀 TL;DR What does a full workflow look like?
 
 The heart of the configuration is captured in a YAML (or JSON) configuration file.
 Here is an example of a workflow configuration in `configs/example_config.yaml` containing the `preprocessing`, `integration` and `metrics` modules:
@@ -130,9 +130,9 @@ Reasons:
 This was a dry-run (flag -n). The order of jobs does not reflect the order of execution.
 ```
 
-:sparkling_heart: Beautiful, right? Read on to learn how to set up your own workflow!
+💖 Beautiful, right? Read on to learn how to set up your own workflow!
 
-## :rocket: Getting started
+## 🚀 Getting started
 <a name="getting-started"></a>
 
 ### 1. Installation
@@ -159,7 +159,7 @@ git clone https://github.com/HCA-integration/scAtlasTb.git
 
 The modules are tested and developed using task-specific conda environments, which should be quick to set up when using [mamba](https://mamba.readthedocs.io).
 
-> :memo: **Note** If you use conda, but have never used mamba, consider installing the mamba package into your base environment and use it for all installation commands.
+> 📝  **Note** If you use conda, but have never used mamba, consider installing the mamba package into your base environment and use it for all installation commands.
 You can still replace all mamba commands with conda commands if you don't want to install mamba.
 
 #### Install conda environments
@@ -172,7 +172,7 @@ bash envs/install_all_environments.sh -h # help message for customization
 bash envs/install_all_environments.sh
 ```
 
-> :memo: **Notes**
+> 📝 **Notes**
 > 1. The script will create new environments for each file in the `envs` directory if they don't yet exist and update any pre-existing environments.
 > 2. The environment names correspond the their respective file names and are documented under the `name:` directive in the `envs/<env_name>.yaml` file.
 > 3. If an environment creation fails, the script will skip that environment and you might need to troubleshoot the installation manually.
@@ -208,16 +208,16 @@ If the dryrun was successful, you can let Snakemake compute the different steps 
 bash run_example.sh preprocessing_all integration_all metrics_all -c 10
 ```
 
-> You have now successfully called the example pipeline! :tada:
+> You have now successfully called the example pipeline! 🎉  
 > Read on to learn how to configure your own workflow.
 
-## :gear: Configure Your Workflow
+## ⚙️ Configure Your Workflow
 <a name="configure-your-workflow"></a>
 
 Configuring your workflow requires configuring global settings as well as subworkflows consisting of modules.
 The global configuration allows you to set output locations, computational resources and other settings that are used across all modules, while module settings affect the behaviour of a module in the scope of a given task
 
-> :memo: **Note** The recommended way to manage your workflow configuration files is to save them outside of the toolbox directory in a directory dedicated to your project. That way you can guarantee the separatation of the toolbox and your own configuration.
+> 📝 **Note** The recommended way to manage your workflow configuration files is to save them outside of the toolbox directory in a directory dedicated to your project. That way you can guarantee the separatation of the toolbox and your own configuration.
 
 You can find example configuration files under `configs/`.
 
@@ -285,7 +285,7 @@ DATASETS: # TODO: rename to TASKS
     ...
  ```
 
-> :warning: **Warning** There can only be one instance of a module as a key in the input mapping (in the backend this is a dictionary). But you can reuse the same module output as input for multiple other modules. The order of the entries in the input mapping doesn't matter. 
+> ⚠️ **Warning** There can only be one instance of a module as a key in the input mapping (in the backend this is a dictionary). But you can reuse the same module output as input for multiple other modules. The order of the entries in the input mapping doesn't matter. 
 
 ### 4. Module configuration
 
@@ -373,7 +373,7 @@ snakemake \
   ...
 ```
 
-> :bulb: **Tip** Check out the [snakemake documentation](https://snakemake.readthedocs.io/en/v7.31.1/executing/cli.html) for more commandline arguments.
+> 💡 **Tip** Check out the [snakemake documentation](https://snakemake.readthedocs.io/en/v7.31.1/executing/cli.html) for more commandline arguments.
 
 ### 6. Call the Snakemake pipeline
 
@@ -532,10 +532,10 @@ bash run_pipeline.sh preprocessing_all integration_all metrics_all -c 10
 You can also use [Snakemake profiles](#snakemake_profiles) to dispatch your pipeline with extra configurations such as Snakemake presets or [cluster execution](#cluster_execution).
 
 > You have now successfully set up and configured your pipeline!
-> Give it a spin and feel free to edit the configs to your custom workflow! :tada:
+> Give it a spin and feel free to edit the configs to your custom workflow! 🎉
 
 
-## :gear: Advanced configuration
+## ⚙️ Advanced configuration
 <a name="advanced-configuration"></a>
 
 ### Set defaults
@@ -684,7 +684,7 @@ If you don't have have GPU nodes, you can configure the gpu resources to be the 
 
 You can find detailed information on cluster execution in the [Snakemake documentation](https://snakemake.readthedocs.io/en/v7.31.1/executing/cluster.html).
 
-## :hammer_and_wrench: Troubleshooting
+## 🛠️ Troubleshooting
 <a name="troubleshooting"></a>
 
 ### Conda environment installation fails
