@@ -32,19 +32,14 @@ modules/metrics
 ```
 
 ```{toctree}
-:caption: Workflows
-:name: workflows
+:caption: Example workflows
+:name: example_workflows
 :hidden:
 :maxdepth: 1
 
-workflows/load_data
-workflows/exploration
-workflows/subset
-workflows/relabel
-workflows/preprocessing
-workflows/label_harmonization
-workflows/label_transfer
+workflows/qc
+workflows/batch_analysis
 workflows/integration
-workflows/metrics
-workflows/common
+workflows/clustering
+workflows/label_harmonization
 ```
