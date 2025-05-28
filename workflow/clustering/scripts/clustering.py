@@ -108,10 +108,10 @@ max_cluster_factor = snakemake.params.get('max_cluster_factor', 50)
 
 # set parameters for clustering
 cluster_key = f'{algorithm}_{resolution}_{level}'
-kwargs = dict(
+kwargs = snakemake.params.get('clustering_args', {}) | dict(
     resolution=resolution,
     key_added=cluster_key,
-) | snakemake.params.get('clustering_args', {})
+)
 cpu_kwargs = dict(flavor='igraph')
 if algorithm == 'leiden':
     cpu_kwargs |= dict(n_iterations=2)
