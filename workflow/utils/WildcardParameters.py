@@ -403,16 +403,30 @@ class WildcardParameters:
                 columns=[parameter_key],
                 verbose=verbose,
             )
-            assert params_sub.shape[0] > 0, 'No wildcard combination found'
+            assert not params_sub.empty, 'No wildcard combination found'
             if single_value:
-                assert params_sub.shape[0] == 1, f'More than 1 row after subsetting\n{params_sub}'
+                assert params_sub.shape[0] == 1, f'More than 1 row after subsetting'
         
         except AssertionError as e:
+            columns = list(query_dict.keys())+[parameter_key]
+            
+            if params_sub.empty:
+                params_sub = self.wildcards_df[columns]
+            else:
+                # params_sub = self.subset_by_query(query_dict, columns, verbose=False)
+                params_sub = self.subset_by_query(query_dict, verbose=False)
+                # remove columns that are the same for all rows
+                n_unique_columns = params_sub.nunique() > 1
+                non_unique_columns = n_unique_columns[n_unique_columns].index.tolist()
+                # subset to columns
+                non_unique_columns = [col for col in non_unique_columns if col not in columns]
+                params_sub = params_sub[columns + non_unique_columns]
+            
             raise AssertionError(
                 f'{e} for:\n\tparameter_key="{parameter_key}"\n\twildcards_sub={wildcards_sub}'
                 f'\nquery_dict:\n{pformat(query_dict)}'
-                f'\n{self.wildcards_df[list(query_dict.keys())+[parameter_key]]}'
-                f'\n{self.wildcards_df[list(query_dict.keys())+[parameter_key]].dtypes}'
+                f'\n{params_sub}'
+                f'\n{params_sub.dtypes}'
                 f'\nall columns: {self.wildcards_df.columns.tolist()}'
             ) from e
         
