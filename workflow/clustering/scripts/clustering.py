@@ -46,6 +46,7 @@ def apply_clustering(
     }
     
     kwargs |= dict(resolution=resolution)
+    key_added = kwargs.get('key_added', algorithm)
     
     if not cpu_kwargs:
         cpu_kwargs = dict()
@@ -70,12 +71,12 @@ def apply_clustering(
     
     # heuristic to check if number of clusters is reasonable
     max_clusters = max(1, int(max_cluster_factor * resolution))
-    n_clusters = adata.obs[cluster_key].nunique()
+    n_clusters = adata.obs[key_added].nunique()
     
     if use_gpu and n_clusters > max_clusters:
         # fallback when too many clusters are computed (assuming this is a bug in the rapids implementation)
         logging.info(
-            f'Cluster {cluster_key} has {n_clusters} custers, which is more than {max_clusters}. '
+            f'Cluster {key_added} has {n_clusters} custers, which is more than {max_clusters}. '
             'Falling back to scanpy implementation...'
         )
         cluster_func = alt_algorithm_map[algorithm]
@@ -134,6 +135,7 @@ if 'snakemake' in globals():
     
 else:
     import argparse
+    import json
     
     parser = argparse.ArgumentParser(description='Run clustering on anndata file.')
     parser.add_argument('input_file', type=str, help='Input anndata file')
@@ -144,9 +146,9 @@ else:
     parser.add_argument('--threads', type=int, default=1, help='Number of threads to use')
     parser.add_argument('--overwrite', action='store_true', help='Overwrite existing clustering results')
     parser.add_argument('--max_cluster_factor', type=int, default=50, help='Maximum cluster factor for heuristic check (GPU only)')
-    parser.add_argument('--clustering_args', type=dict, default={}, help='Additional clustering arguments')
+    parser.add_argument('--clustering_args', type=json.loads, default={}, help='Additional clustering arguments')
     parser.add_argument('--neighbors_key', type=str, default='neighbors', help='Key for neighbors in adata.uns')
-    parser.add_argument('--neighbors_args', type=dict, default={}, help='Additional arguments for neighbors computation')
+    parser.add_argument('--neighbors_args', type=json.loads, default={}, help='Additional arguments for neighbors computation')
     args = parser.parse_args()
     
     input_file = args.input_file
@@ -163,10 +165,7 @@ else:
 
 # set parameters for clustering
 cluster_key = f'{algorithm}_{resolution}_{level}'
-kwargs = clustering_args | dict(
-    resolution=resolution,
-    key_added=cluster_key,
-)
+kwargs = dict(resolution=resolution, key_added=cluster_key) | clustering_args
 
 if 'flavor' in kwargs:
     # if user defines flavor, force clustering on CPU
