@@ -8,7 +8,27 @@
 :hidden:
 :maxdepth: 1
 
-references.md
+getting_started/installation.md
+getting_started/quickstart.md
+getting_started/configure_workflow.md
+getting_started/call_pipeline.md
+```
+
+```{toctree}
+:caption: Modules
+:name: modules
+:hidden:
+:maxdepth: 1
+
+modules/load_data
+modules/exploration
+modules/subset
+modules/relabel
+modules/preprocessing
+modules/label_harmonization
+modules/label_transfer
+modules/integration
+modules/metrics
 ```
 
 ```{toctree}
