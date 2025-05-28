@@ -7,7 +7,7 @@ class MetricNotDefinedError(RuntimeError):
 
 
 def get_metric_input(wildcards):
-    if mcfg.get_from_parameters(wildcards, 'clustering', default=False):
+    if mcfg.get_from_parameters(wildcards, 'needs_clustering', default=False):
         return rules.metrics_cluster_collect.output.zarr
     if mcfg.get_from_parameters(wildcards, 'use_gene_set', default=False):
         return rules.score_genes.output.zarr
