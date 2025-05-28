@@ -19,19 +19,6 @@ except Exception as e:
 from utils.io import read_anndata, write_zarr_linked, get_store, read_slot
 
 
-def check_and_set_neighbors_key(adata, neighbors_key):
-    neighbors = adata.uns.get(neighbors_key, {})
-    neighbors |= {
-        'connectivities_key': neighbors.get('connectivities_key', 'connectivities'),
-        'distances_key': neighbors.get('distances_key', 'distances'),
-        'params': neighbors.get('params', {'use_rep': 'X_pca', 'method': None}),
-    }
-    adata.uns[neighbors_key] = neighbors
-    
-    adata.obsp['connectivities'] = adata.obsp[neighbors['connectivities_key']]
-    adata.obsp['distances'] = adata.obsp[neighbors['distances_key']]
-
-
 def apply_clustering(
     adata,
     resolution: float,
@@ -112,9 +99,15 @@ kwargs = snakemake.params.get('clustering_args', {}) | dict(
     resolution=resolution,
     key_added=cluster_key,
 )
-cpu_kwargs = dict(flavor='igraph')
+
+if 'flavor' in kwargs:
+    # if user defines flavor, force clustering on CPU
+    USE_GPU = False
+
+# use user kwargs for cpu_kwargs, if provided
+cpu_kwargs = dict(flavor=kwargs.pop('flavor', 'igraph'))
 if algorithm == 'leiden':
-    cpu_kwargs |= dict(n_iterations=2)
+    cpu_kwargs |= dict(n_iterations=kwargs.pop('n_iterations', 2))
 
 logging.info(f'Using GPU: {USE_GPU}')
 
