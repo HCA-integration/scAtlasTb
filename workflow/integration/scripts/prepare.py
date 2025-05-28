@@ -55,7 +55,7 @@ def read_and_subset(
     
     logging.info('Determine var_mask...')
     subsetted = False
-    if var_column not in adata.var:
+    if var_column is None or var_column == 'None':
         adata.var[new_var_column] = True
     else:
         adata.var[new_var_column] = adata.var[var_column]
