@@ -1,4 +1,4 @@
-metric	metric_type	output_types	input_type	comparison	clustering	use_covariate	use_gene_set	env	resources	threads
+metric	metric_type	output_types	input_type	comparison	needs_clustering	use_covariate	use_gene_set	env	resources	threads
 asw_batch	batch_correction	full,embed	embed	False	False	False	False	scib_accel	cpu	1
 graph_connectivity	batch_correction	full,embed,knn	knn	False	False	False	False	scib	cpu	1
 ilisi	batch_correction	full,embed,knn	knn	False	False	False	False	scib	cpu	1
