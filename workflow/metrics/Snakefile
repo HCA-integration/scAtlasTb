@@ -31,6 +31,7 @@ mcfg = MetricsConfig(
         'corrected',
         'raw_counts',
         'overwrite_file_id',
+        'clustering',
         'cluster_algorithm',
         'covariates',
         'gene_sets',
