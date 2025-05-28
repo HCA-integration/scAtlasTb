@@ -62,7 +62,10 @@ def _filter_batch(adata, batch_key=None):
     return mask
 
 
-def _filter_genes(adata, verbose=True, **kwargs):
+def _filter_genes(adata, verbose=True, return_varnames=False, **kwargs):
+    """
+    :return: boolean mask of genes that pass the filter
+    """
     import scanpy as sc
     from dask import array as da
     from tqdm.dask import TqdmCallback
@@ -88,6 +91,10 @@ def _filter_genes(adata, verbose=True, **kwargs):
     
     with context:
         gene_subset, _ = sc.pp.filter_genes(X, **kwargs)
+    
+    if return_varnames:
+        gene_subset = adata.var_names[gene_subset]
+    
     return gene_subset
 
 
@@ -124,9 +131,8 @@ def subset_hvg(
             with TqdmCallback(desc=f"Determine genes with < {min_cells} cells"):
                 low_count_mask = low_count_mask.compute().todense()
         else:
-            low_count_genes = _filter_genes(adata, min_cells=min_cells)
-            low_count_mask = np.isin(adata.var_names, low_count_genes)
-        adata.var[var_column] = adata.var[var_column] & ~low_count_mask
+            filtered_mask = _filter_genes(adata, min_cells=min_cells)
+        adata.var[var_column] &= filtered_mask
     
     if adata.var[var_column].sum() == adata.var.shape[0]:
         warnings.warn('All genes are highly variable, not subsetting')
