@@ -8,9 +8,9 @@ dependencies:
   - r-reticulate
   - r-anndata
   - bioconductor-gloscope
-  - python=3.10
-  - anndata>=0.10.0
-  - scanpy >=1.10.0
+  - python=3.12
+  - anndata>=0.11
+  - scanpy >=1.11
   - hdf5=1.14.2
   - dask
   - dask-ml

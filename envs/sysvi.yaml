@@ -15,6 +15,7 @@ dependencies:
   - zarr=2
   - scipy<1.15
   - hdf5=1.14.2
+  - faiss-cpu
   - dask
   - sparse
   - pip
@@ -25,4 +26,5 @@ dependencies:
     - jax<=0.4.28
     - jaxlib<=0.4.28
     - git+https://github.com/Hrovatin/scvi-tools.git
-    - git+https://github.com/lueckenlab/patient_representation.git@main
+    - faiss-cpu<=1.9
+    - patpy
