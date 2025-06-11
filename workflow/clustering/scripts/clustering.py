@@ -46,6 +46,7 @@ def apply_clustering(
     }
     
     kwargs |= dict(resolution=resolution)
+    key_added = kwargs.get('key_added', algorithm)
     
     if not cpu_kwargs:
         cpu_kwargs = dict()
@@ -70,12 +71,12 @@ def apply_clustering(
     
     # heuristic to check if number of clusters is reasonable
     max_clusters = max(1, int(max_cluster_factor * resolution))
-    n_clusters = adata.obs[cluster_key].nunique()
+    n_clusters = adata.obs[key_added].nunique()
     
     if use_gpu and n_clusters > max_clusters:
         # fallback when too many clusters are computed (assuming this is a bug in the rapids implementation)
         logging.info(
-            f'Cluster {cluster_key} has {n_clusters} custers, which is more than {max_clusters}. '
+            f'Cluster {key_added} has {n_clusters} custers, which is more than {max_clusters}. '
             'Falling back to scanpy implementation...'
         )
         cluster_func = alt_algorithm_map[algorithm]
@@ -84,21 +85,87 @@ def apply_clustering(
     return adata
 
 
-input_file = snakemake.input[0]
-output_file = snakemake.output[0]
-resolution = float(snakemake.wildcards.resolution)
-algorithm = snakemake.wildcards.algorithm
-level = int(snakemake.wildcards.level)
-threads = snakemake.threads
-overwrite = snakemake.params.get('overwrite', False)
-max_cluster_factor = snakemake.params.get('max_cluster_factor', 50)
+def cluster_subset(
+    adata,
+    resolution,
+    key_added,
+    prev_cluster_key,
+    prev_cluster_value,
+    neighbors_args, # TODO: custom parameters
+    use_gpu,
+):
+    """
+    Wrapper for calling apply_clustering function in parallel
+    """
+    import warnings
+    warnings.filterwarnings("ignore")
+    
+    adata = adata[adata.obs[prev_cluster_key] == prev_cluster_value].copy()
+    
+    if adata.n_obs < 2 * neighbors_args.get('n_neighbors', 15):
+        prev_cluster_clean = adata.obs[prev_cluster_key].astype(str).apply(lambda x: x.split('_')[-1])
+        return adata.obs[prev_cluster_key].str.cat(prev_cluster_clean, sep='_')
+    
+    adata = apply_clustering(
+        adata,
+        resolution=resolution,
+        key_added=key_added,
+        cpu_kwargs=cpu_kwargs,
+        max_cluster_factor=max_cluster_factor,
+        neighbors_args=neighbors_args,
+        recompute_neighbors=True,
+        use_gpu=use_gpu,
+    )
+    
+    return adata.obs[[prev_cluster_key, key_added]].agg('_'.join, axis=1)
+
+
+if 'snakemake' in globals():
+    input_file = snakemake.input[0]
+    output_file = snakemake.output[0]
+    resolution = float(snakemake.wildcards.resolution)
+    algorithm = snakemake.wildcards.algorithm
+    level = int(snakemake.wildcards.level)
+    threads = snakemake.threads
+    overwrite = snakemake.params.get('overwrite', False)
+    max_cluster_factor = snakemake.params.get('max_cluster_factor', 50)
+    clustering_args = snakemake.params.get('clustering_args', {})
+    neighbors_key = snakemake.params.get('neighbors_key', 'neighbors')
+    neighbors_args = snakemake.params.get('neighbors_args', {})
+    
+else:
+    import argparse
+    import json
+    
+    parser = argparse.ArgumentParser(description='Run clustering on anndata file.')
+    parser.add_argument('input_file', type=str, help='Input anndata file')
+    parser.add_argument('output_file', type=str, help='Output anndata file')
+    parser.add_argument('--resolution', type=float, default=1.0, help='Clustering resolution')
+    parser.add_argument('--algorithm', type=str, choices=['louvain', 'leiden'], default='leiden', help='Clustering algorithm')
+    parser.add_argument('--level', type=int, default=1, help='Hierarchical clustering level')
+    parser.add_argument('--threads', type=int, default=1, help='Number of threads to use')
+    parser.add_argument('--overwrite', action='store_true', help='Overwrite existing clustering results')
+    parser.add_argument('--max_cluster_factor', type=int, default=50, help='Maximum cluster factor for heuristic check (GPU only)')
+    parser.add_argument('--clustering_args', type=json.loads, default={}, help='Additional clustering arguments')
+    parser.add_argument('--neighbors_key', type=str, default='neighbors', help='Key for neighbors in adata.uns')
+    parser.add_argument('--neighbors_args', type=json.loads, default={}, help='Additional arguments for neighbors computation')
+    args = parser.parse_args()
+    
+    input_file = args.input_file
+    output_file = args.output_file
+    resolution = args.resolution
+    algorithm = args.algorithm
+    level = args.level
+    threads = args.threads
+    overwrite = args.overwrite
+    max_cluster_factor = args.max_cluster_factor
+    clustering_args = args.clustering_args
+    neighbors_key = args.neighbors_key
+    neighbors_args = args.neighbors_args
 
 # set parameters for clustering
 cluster_key = f'{algorithm}_{resolution}_{level}'
-kwargs = snakemake.params.get('clustering_args', {}) | dict(
-    resolution=resolution,
-    key_added=cluster_key,
-)
+kwargs = dict(resolution=resolution, key_added=cluster_key) | clustering_args
 
 if 'flavor' in kwargs:
     # if user defines flavor, force clustering on CPU
@@ -129,7 +196,6 @@ else:
         adata = read_anndata(input_file, uns='uns', **read_kwargs)
         
         # select neighbors
-        neighbors_key = snakemake.params.get('neighbors_key', 'neighbors')
         neighbors = adata.uns.get(neighbors_key, {})
         conn_key = neighbors.get('connectivities_key', 'connectivities')
         dist_key = neighbors.get('distances_key', 'distances')
@@ -152,48 +218,6 @@ else:
         from tqdm import tqdm
         import gc
         
-        def cluster_subset(
-            adata,
-            resolution,
-            key_added,
-            prev_cluster_key,
-            prev_cluster_value,
-            neighbors_args, # TODO: custom parameters
-            use_gpu,
-        ):
-            import warnings
-            warnings.filterwarnings("ignore")
-            
-            # adata = read_anndata(file, **read_kwargs, verbose=False)
-            # adata.obsm[use_rep] = read_slot(
-            #     file=file,
-            #     group=get_store(file),
-            #     slot_name=f'obsm/{use_rep}',
-            #     verbose=False
-            # )
-            
-            # logging.info(f'Subsetting to {prev_cluster_key}={prev_cluster_value}...')
-            adata = adata[adata.obs[prev_cluster_key] == prev_cluster_value].copy()
-            
-            if adata.n_obs < 2 * neighbors_args.get('n_neighbors', 15):
-                prev_cluster_clean = adata.obs[prev_cluster_key].astype(str).apply(lambda x: x.split('_')[-1])
-                return adata.obs[prev_cluster_key].str.cat(prev_cluster_clean, sep='_')
-            
-            adata = apply_clustering(
-                adata,
-                resolution=resolution,
-                key_added=key_added,
-                cpu_kwargs=cpu_kwargs,
-                max_cluster_factor=max_cluster_factor,
-                neighbors_args=neighbors_args,
-                recompute_neighbors=True,
-                use_gpu=use_gpu,
-            )
-            
-            return adata.obs[[prev_cluster_key, key_added]].agg('_'.join, axis=1)
-        
-        
-        neighbors_args = snakemake.params.get('neighbors_args', {})
         use_rep = neighbors_args.get('use_rep', 'X_pca')
         neighbors_args['use_rep'] = use_rep
         
@@ -206,6 +230,7 @@ else:
             neighbors_args['use_rep'] = use_rep
             assert use_rep in store['obsm'].keys(), f'obsm key {use_rep} not found in {input_file}'
         
+        # read data
         adata = read_anndata(input_file, **read_kwargs)
         adata.obsm[use_rep] = read_slot(input_file, store, f'obsm/{use_rep}')
         
