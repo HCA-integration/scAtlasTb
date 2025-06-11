@@ -9,10 +9,12 @@ dependencies:
   - scanpy=1.10
   - hdf5=1.14.2
   - leidenalg
+  - faiss-cpu
   - dask<2024.8
   - dask-ml
   - sparse
   - zarr
   - pip
   - pip:
-    - git+https://github.com/lueckenlab/patient_representation.git@main
+    - faiss-cpu<=1.9
+    - patpy

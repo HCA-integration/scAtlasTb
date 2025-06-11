@@ -5,13 +5,14 @@ channels:
   # - nvidia
 dependencies:
   - python=3.11
-  - anndata=0.10
-  - scanpy=1.10
+  - anndata=0.11
+  - scanpy=1.11
   # - jaxlib=*=*cuda*
   # - jax<=0.4.28
   # - cuda-version>12.1
   # - cuda-nvcc>12.1
   # - scvi-tools
+  - faiss-cpu
   - zarr
   - scipy<1.15
   - hdf5=1.14.2
@@ -24,5 +25,6 @@ dependencies:
     - torchaudio
     - jax<=0.4.28
     - jaxlib<=0.4.28
+    - faiss-cpu<=1.9
     - scvi-tools
-    - git+https://github.com/lueckenlab/patient_representation.git@main
+    - patpy
