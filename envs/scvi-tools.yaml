@@ -12,10 +12,8 @@ dependencies:
   # - cuda-version>12.1
   # - cuda-nvcc>12.1
   # - scvi-tools
-  - faiss-cpu
-  - zarr
+  - zarr<3
   - scipy<1.15
-  - hdf5=1.14.2
   - dask
   - sparse
   - pip
@@ -25,6 +23,6 @@ dependencies:
     - torchaudio
     - jax<=0.4.28
     - jaxlib<=0.4.28
-    - faiss-cpu<=1.9
     - scvi-tools
+    - faiss-cpu<=1.9
     - patpy

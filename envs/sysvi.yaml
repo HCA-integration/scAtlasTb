@@ -12,10 +12,8 @@ dependencies:
   # - cuda-version>12.1
   # - cuda-nvcc>12.1
   # - scvi-tools
-  - zarr=2
+  - zarr<3
   - scipy<1.15
-  - hdf5=1.14.2
-  - faiss-cpu
   - dask
   - sparse
   - pip

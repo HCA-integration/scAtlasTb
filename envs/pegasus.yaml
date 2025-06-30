@@ -6,15 +6,37 @@ dependencies:
   - python=3.11
   - scanpy=1.11
   - anndata=0.11
-  - scipy<1.15
-  - hdf5=1.14.2
-  - pegasuspy=1.8
   - dask<2024.8
   - dask-ml
   - sparse
-  - zarr
-  - pandas<2.0
-  - numpy<2.0
+  - zarr<3
+  # - pandas<2.0
+  # - numpy<2.0
+  # - pegasuspy=1.8
+  - cython
+  - docopt
+  - demuxem
+  - hnswlib
+  - psutil
+  - threadpoolctl
+  - joblib>=0.14
+  - lightgbm>=2.2.1
+  - loompy
+  - leidenalg
+  - matplotlib>=3.7.0
+  - natsort
+  - pegasusio>=0.9.1
+  - pybind11
+  - scikit-learn>=0.23.2
+  - seaborn>=0.13.0
+  - statsmodels
+  - umap-learn>=0.5.2
+  - wordcloud
+  - xlsxwriter
+  - igraph
+  - pip
+  - pip:
+    - pegasuspy==1.10
   # - r-base=4.3
   # - rpy2
   # - r-glue

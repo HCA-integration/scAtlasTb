@@ -9,7 +9,7 @@ dependencies:
   # - cudatoolkit
   - scipy<=1.12
 #  - jax<0.4.14
-  - zarr
+  - zarr<3
   - hdf5=1.14.2
   - dask
   - sparse
