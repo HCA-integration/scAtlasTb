@@ -12,19 +12,11 @@ import pandas as pd
 from pandas.api.types import is_numeric_dtype, is_string_dtype, is_categorical_dtype
 from pprint import pformat
 from tqdm import tqdm
+from joblib import Parallel, delayed
 
 from utils.io import read_anndata, get_file_reader
 from utils.misc import ensure_dense, remove_outliers, dask_compute
 
-
-sc.set_figure_params(
-    frameon=False,
-    vector_friendly=True,
-    fontsize=9,
-    figsize=(6,6),
-    dpi=300,
-    dpi_save=300
-)
 
 input_file = snakemake.input[0]
 output_dir = Path(snakemake.output.plots)
@@ -33,25 +25,25 @@ output_dir.mkdir(exist_ok=True)
 params = dict(snakemake.params.items())
 basis = params['basis']
 wildcards_string = '\n'.join([f'{k}: {v}' for k, v in snakemake.wildcards.items()])
-logging.info(f'Wildcard string: {wildcards_string}...')
+logging.info(f'Wildcard string: {wildcards_string}')
 
 logging.info(f'Read file {input_file}...')
 kwargs = dict(
     obs='obs',
     obsm='obsm',
     var='var',
-    dask=True,
-    backed=True,
 )
 
 # check if .X exists
 read_func, _ = get_file_reader(input_file)
 if 'X' in read_func(input_file, 'r'):
-    kwargs |= {'X': 'X'}
+    kwargs |= dict(X='X', dask=True, backed=True)
 
 logging.info(f'Read {input_file}...')
 adata = read_anndata(input_file, **kwargs)
 assert basis in adata.obsm.keys(), f'"{basis}" not in adata.obsm'
+n_cells = adata.n_obs # save original number of cells
+obs_columns = adata.obs.columns.tolist()
 ensure_dense(adata, basis)
 
 if adata.n_obs == 0:
@@ -69,25 +61,24 @@ print('Remove categories with fewer than', min_cells_per_category, 'cells')
 
 # parse colors
 colors = params.get('color', [None])
+
+gene_colors = sorted([col for col in colors if col not in obs_columns])
+pattern = '|'.join(gene_colors)
+gene_colors = adata.var_names[adata.var_names.astype(str).str.contains(pat=pattern)].tolist()
+
 if 'color' in params:
     logging.info(f'Configured colors:\n{pformat(colors)}')
     colors = colors if isinstance(colors, list) else [colors]
-    # remove that are not in the data
-    columns = adata.obs.columns.tolist() + adata.var_names.tolist()
-    colors = [color for color in colors if color in columns]
+    colors = [color for color in colors if color in obs_columns]
     # filter colors with too few or too many categories
     logging.info(f'Colors after filtering:\n{pformat(colors)}')
     
-    # else:
-    if len(colors) == 0:
-        logging.info('No valid colors, skip...')
-        colors = [None]
-    else:
-        for color in colors:
-            if color not in adata.obs.columns:
-                continue
-            column = adata.obs[color]
-            if is_categorical_dtype(column) or is_string_dtype(column):
+    for color in colors:
+        if color not in obs_columns:
+            continue
+        column = adata.obs[color]
+
+        if is_categorical_dtype(column) or is_string_dtype(column):
             # parse data types
             column = column.astype(object) \
                 .replace(['NaN', 'None', '', 'nan', 'unknown'], float('nan')) \
@@ -101,22 +92,33 @@ if 'color' in params:
             # update column
             adata.obs[color] = column
             # adata.obs[color] = column.codes if len(column.categories) > 102 else column
+
+    if len(colors) == 0:
+        logging.info('No valid colors, skip...')
+        colors = [None]
+
     del params['color']
 
-n_gene_colors = adata.var_names.isin(colors).sum()
-if n_gene_colors > 0:
-    logging.info(f'Subset to {n_gene_colors} requested genes...')
-    dask_compute(adata[:, adata.var_names.isin(colors)].copy(), layers='X')
 
 logging.info('Remove outliers...')
 outlier_factor = params.pop('outlier_factor', 0)
 adata = remove_outliers(adata, 'max', factor=outlier_factor, rep=basis)
 adata = remove_outliers(adata, 'min', factor=outlier_factor, rep=basis)
 
+# match gene patterns
+n_gene_colors = len(gene_colors)
+if n_gene_colors > 0:
+    logging.info(f'Subset to {n_gene_colors} requested genes...')
+    adata = dask_compute(adata[:, adata.var_names.isin(gene_colors)].copy(), layers='X')
+    print(adata.var, flush=True)
+
 logging.info('Shuffle cells...')
-n_cells = adata.n_obs # save original number of cells
 if n_cells > 1e6:
     adata = adata[adata.obs.sample(frac=0.7).index]
+
+if adata.is_view:
+    logging.info('Convert view to copy...')
+    adata = adata.copy()
 
 # set minimum point size
 default_size = 200_000 / adata.n_obs
@@ -125,33 +127,52 @@ if size is None:
     size = default_size
 params['size'] = np.min([np.max([size, 0.4, default_size]), 200])
 
-logging.info('Parameters:\n' + pformat(params))
 
-for color in tqdm(set(colors)):
-    logging.info(f'Plot color "{color}"...')
+def plot_color(color, title, verbose=True):
     palette = None
-    if color in adata.obs.columns:
-        color_vec = adata.obs[color]
-        if is_categorical_dtype(color_vec):
-            if color_vec.nunique() > 102:
-                palette = 'turbo'
-            elif color_vec.nunique() > 20:
-                palette = sc.pl.palettes.godsnot_102
-        elif is_numeric_dtype(color_vec):
-            if color_vec.min() < 0:
-                palette = 'coolwarm'
-            else:
-                palette = 'plasma'
+    if title is None:
+        title = str(color)
+    colors = color if isinstance(color, list) else [color]
+
+    fig_params = dict(
+        frameon=False,
+        vector_friendly=True,
+        fontsize=9,
+        figsize=(6,6),
+        dpi=200,
+        dpi_save=200,
+        format='png',
+    )
+    
+    if len(colors) > 4:
+        fig_params = dict(frameon=False)
+    sc.set_figure_params(**fig_params)
+
+    # select palette according to obs column
+    for color in colors:
+        if color in adata.obs.columns:
+            color_vec = adata.obs[color]
+            if is_categorical_dtype(color_vec):
+                if color_vec.nunique() > 102:
+                    palette = 'turbo'
+                elif color_vec.nunique() > 20:
+                    palette = sc.pl.palettes.godsnot_102
+            elif is_numeric_dtype(color_vec):
+                if color_vec.min() < 0:
+                    palette = 'coolwarm'
+                else:
+                    palette = 'plasma'
+    
     try:
         fig = sc.pl.embedding(
             adata,
-            color=color,
+            color=colors,
             show=False,
             return_fig=True,
             palette=palette,
             **params
         )
-        fig.suptitle(f'{wildcards_string}\nn={n_cells}')
+
         legend = fig.get_axes()[0].get_legend()
         if palette == 'turbo':
             legend.remove()
@@ -160,11 +181,52 @@ for color in tqdm(set(colors)):
             fig_width, fig_height = fig.get_size_inches()
             fig_width = fig_width + (legend_bbox.width / fig.dpi)
             fig.set_size_inches((fig_width, fig_height))
-        fig.tight_layout()
+        
+        # set title & adjust figure layout
+        suptitle = fig.suptitle(f'{wildcards_string}\nn={n_cells}')
+        fig.canvas.draw()
+        bbox = suptitle.get_window_extent(renderer=fig.canvas.get_renderer())
+        bbox_inches = bbox.transformed(fig.transFigure.inverted())
+        fig.tight_layout(rect=[0, 0, 1, bbox_inches.y1 * 1.2])
+
+        if verbose:
+            logging.info(f'Plotting color "{title}" successful.')
+    
     except Exception as e:
-        logging.error(f'Failed to plot {color}: {e}')
+        logging.error(f'Failed to plot {title}: {e}')
         traceback.print_exc()
         plt.plot([])
     
-    out_path = output_dir / f'{color}.png'
-    plt.savefig(out_path, bbox_inches='tight')
+    out_path = output_dir / f'{title}.png'
+    
+    try:        
+        plt.savefig(out_path, bbox_inches='tight')
+    except Exception as e:
+        logging.error(f'Failed to save plot "{title}" to {out_path}: {e}')
+        traceback.print_exc()
+
+logging.info('Parameters:\n' + pformat(params))
+# Run plotting in parallel
+list(tqdm(
+    Parallel(return_as='generator')(delayed(plot_color)(
+        color,
+        title=color
+    ) for color in set(colors)),
+    desc="Plotting colors",
+    total=len(colors),
+))
+
+chunk_size = 24
+gene_colors = {
+    f'genes_group={idx}': gene_colors[i:i + chunk_size]
+    for idx, i in enumerate(range(0, len(gene_colors), chunk_size))
+}
+list(tqdm(
+    Parallel(return_as='generator')(delayed(plot_color)(
+        color,
+        title=title,
+        verbose=False
+    ) for title, color in gene_colors.items()),
+    desc="Plotting genes",
+    total=len(gene_colors),
+))
