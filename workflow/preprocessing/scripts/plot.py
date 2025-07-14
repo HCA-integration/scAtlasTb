@@ -59,7 +59,13 @@ if adata.n_obs == 0:
     exit()
 
 if 'feature_name' in adata.var.columns:
-    adata.var_names = adata.var['feature_name']
+    adata.var_names = adata.var['feature_name'].astype(str)
+
+# set minimum cells per category
+min_cells_per_category = params.pop('min_cells_per_category', 1e-4)
+if min_cells_per_category < 1:
+    min_cells_per_category *= n_cells
+print('Remove categories with fewer than', min_cells_per_category, 'cells')
 
 # parse colors
 colors = params.get('color', [None])
@@ -82,10 +88,19 @@ if 'color' in params:
                 continue
             column = adata.obs[color]
             if is_categorical_dtype(column) or is_string_dtype(column):
-                column = column.replace(['NaN', 'None', '', 'nan', 'unknown'], float('nan'))
-                column = pd.Categorical(column)
-                adata.obs[color] = column
-                # adata.obs[color] = column.codes if len(column.categories) > 102 else column
+            # parse data types
+            column = column.astype(object) \
+                .replace(['NaN', 'None', '', 'nan', 'unknown'], float('nan')) \
+                .astype('category')
+
+            # remove categories with too few cells
+            value_counts = column.value_counts()
+            categories_to_remove = value_counts[value_counts <= min_cells_per_category].index
+            column = column.cat.remove_categories(categories_to_remove)
+            
+            # update column
+            adata.obs[color] = column
+            # adata.obs[color] = column.codes if len(column.categories) > 102 else column
     del params['color']
 
 n_gene_colors = adata.var_names.isin(colors).sum()
