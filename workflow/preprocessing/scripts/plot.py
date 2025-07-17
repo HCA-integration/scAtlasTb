@@ -128,7 +128,7 @@ if size is None:
 params['size'] = np.min([np.max([size, 0.4, default_size]), 200])
 
 
-def plot_color(color, title, verbose=True):
+def plot_color(color, title, output_dir, verbose=True):
     palette = None
     if title is None:
         title = str(color)
@@ -215,10 +215,12 @@ logging.info('Parameters:\n' + pformat(params))
 list(tqdm(
     Parallel(return_as='generator')(delayed(plot_color)(
         color,
-        title=color
+        title=color,
+        output_dir=output_dir,
     ) for color in set(colors)),
     desc="Plotting colors",
     total=len(colors),
+    miniters=1,
 ))
 
 chunk_size = 24
@@ -226,12 +228,16 @@ gene_colors = {
     f'genes_group={idx}': gene_colors[i:i + chunk_size]
     for idx, i in enumerate(range(0, len(gene_colors), chunk_size))
 }
-list(tqdm(
-    Parallel(return_as='generator')(delayed(plot_color)(
-        color,
-        title=title,
-        verbose=False
-    ) for title, color in gene_colors.items()),
-    desc="Plotting genes",
-    total=len(gene_colors),
-))
+if gene_colors:
+    Path(output_dir / 'genes').mkdir(exist_ok=True)
+    list(tqdm(
+        Parallel(return_as='generator')(delayed(plot_color)(
+            color,
+            title=title,
+            output_dir=output_dir / 'genes',
+            verbose=False
+        ) for title, color in gene_colors.items()),
+        desc="Plotting genes",
+        total=len(gene_colors),
+        miniters=1,
+    ))
