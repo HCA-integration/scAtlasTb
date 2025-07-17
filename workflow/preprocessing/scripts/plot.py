@@ -187,7 +187,12 @@ def plot_color(color, title, verbose=True):
         fig.canvas.draw()
         bbox = suptitle.get_window_extent(renderer=fig.canvas.get_renderer())
         bbox_inches = bbox.transformed(fig.transFigure.inverted())
-        fig.tight_layout(rect=[0, 0, 1, bbox_inches.y1 * 1.2])
+
+        fontsize_inches = suptitle.get_size() / fig.dpi
+        top_margin = bbox_inches.y1 + fontsize_inches * 1.5
+        top_margin = min(top_margin, 1.0)  # clamp to avoid errors
+
+        fig.tight_layout(rect=[0, 0, 1, top_margin])
 
         if verbose:
             logging.info(f'Plotting color "{title}" successful.')
