@@ -16,6 +16,7 @@ from joblib import Parallel, delayed
 
 from utils.io import read_anndata, get_file_reader
 from utils.misc import ensure_dense, remove_outliers, dask_compute
+from utils.accessors import parse_gene_names
 
 
 input_file = snakemake.input[0]
@@ -62,9 +63,9 @@ print('Remove categories with fewer than', min_cells_per_category, 'cells')
 # parse colors
 colors = params.get('color', [None])
 
-gene_colors = sorted([col for col in colors if col not in obs_columns])
-pattern = '|'.join(gene_colors)
-gene_colors = adata.var_names[adata.var_names.astype(str).str.contains(pat=pattern)].tolist()
+gene_colors = [col for col in colors if col not in obs_columns]
+gene_colors = parse_gene_names(adata, gene_colors)
+gene_colors.sort()
 
 if 'color' in params:
     logging.info(f'Configured colors:\n{pformat(colors)}')
@@ -106,11 +107,13 @@ adata = remove_outliers(adata, 'max', factor=outlier_factor, rep=basis)
 adata = remove_outliers(adata, 'min', factor=outlier_factor, rep=basis)
 
 # match gene patterns
-n_gene_colors = len(gene_colors)
-if n_gene_colors > 0:
-    logging.info(f'Subset to {n_gene_colors} requested genes...')
+if gene_colors:
+    logging.info(f'Subset to {len(gene_colors)} requested genes...')
     adata = dask_compute(adata[:, adata.var_names.isin(gene_colors)].copy(), layers='X')
     print(adata.var, flush=True)
+else:
+    del adata.X
+    del adata.var
 
 logging.info('Shuffle cells...')
 if n_cells > 1e6:
