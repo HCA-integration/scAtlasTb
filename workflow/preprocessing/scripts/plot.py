@@ -6,6 +6,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 from matplotlib import pyplot as plt
+import matplotlib as mpl
 import scanpy as sc
 import numpy as np
 import pandas as pd
@@ -131,10 +132,10 @@ if size is None:
 params['size'] = np.min([np.max([size, 0.4, default_size]), 200])
 
 
-def plot_color(color, title, output_dir, verbose=True):
+def plot_color(color, file_name, output_dir, title='', verbose=True):
     palette = None
-    if title is None:
-        title = str(color)
+    if file_name is None:
+        file_name = str(color)
     colors = color if isinstance(color, list) else [color]
 
     fig_params = dict(
@@ -150,6 +151,7 @@ def plot_color(color, title, output_dir, verbose=True):
     if len(colors) > 4:
         fig_params = dict(frameon=False)
     sc.set_figure_params(**fig_params)
+    mpl.rcParams['figure.constrained_layout.use'] = True
 
     # select palette according to obs column
     for color in colors:
@@ -175,6 +177,10 @@ def plot_color(color, title, output_dir, verbose=True):
             palette=palette,
             **params
         )
+        # set title
+        suptitle_text = f'{title}\nn={n_cells}'
+        n_lines = suptitle_text.count('\n') + 1
+        fig.suptitle(suptitle_text, fontsize=12)
 
         legend = fig.get_axes()[0].get_legend()
         if palette == 'turbo':
@@ -184,42 +190,32 @@ def plot_color(color, title, output_dir, verbose=True):
             fig_width, fig_height = fig.get_size_inches()
             fig_width = fig_width + (legend_bbox.width / fig.dpi)
             fig.set_size_inches((fig_width, fig_height))
-        
-        # set title & adjust figure layout
-        suptitle = fig.suptitle(f'{wildcards_string}\nn={n_cells}')
-        fig.canvas.draw()
-        bbox = suptitle.get_window_extent(renderer=fig.canvas.get_renderer())
-        bbox_inches = bbox.transformed(fig.transFigure.inverted())
-
-        fontsize_inches = suptitle.get_size() / fig.dpi
-        top_margin = bbox_inches.y1 + fontsize_inches * 1.5
-        top_margin = min(top_margin, 1.0)  # clamp to avoid errors
-
-        fig.tight_layout(rect=[0, 0, 1, top_margin])
 
         if verbose:
-            logging.info(f'Plotting color "{title}" successful.')
+            logging.info(f'Plotting color "{file_name}" successful.')
     
     except Exception as e:
-        logging.error(f'Failed to plot {title}: {e}')
+        logging.error(f'Failed to plot {file_name}: {e}')
         traceback.print_exc()
         plt.plot([])
     
-    out_path = output_dir / f'{title}.png'
+    out_path = output_dir / f'{file_name}.png'
     
     try:        
         plt.savefig(out_path, bbox_inches='tight')
     except Exception as e:
-        logging.error(f'Failed to save plot "{title}" to {out_path}: {e}')
+        logging.error(f'Failed to save plot "{file_name}" to {out_path}: {e}')
         traceback.print_exc()
+
 
 logging.info('Parameters:\n' + pformat(params))
 # Run plotting in parallel
 list(tqdm(
     Parallel(return_as='generator')(delayed(plot_color)(
         color,
-        title=color,
+        file_name=color,
         output_dir=output_dir,
+        title=wildcards_string,
     ) for color in set(colors)),
     desc="Plotting colors",
     total=len(colors),
@@ -236,8 +232,9 @@ if gene_colors:
     list(tqdm(
         Parallel(return_as='generator')(delayed(plot_color)(
             color,
-            title=title,
+            file_name=title,
             output_dir=output_dir / 'genes',
+            title=wildcards_string,
             verbose=False
         ) for title, color in gene_colors.items()),
         desc="Plotting genes",
