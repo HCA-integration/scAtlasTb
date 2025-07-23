@@ -6,6 +6,8 @@
 
 # -- Path setup --------------------------------------------------------------
 import sys
+import os
+import shutil
 from datetime import datetime
 from importlib.metadata import metadata
 from pathlib import Path
@@ -16,11 +18,11 @@ sys.path.insert(0, str(HERE / "extensions"))
 
 # -- Project information -----------------------------------------------------
 
-project_name = 'hca_pipelines'
+project_name = 'scAtlasTb'
 author = 'Michaela Mueller'
 copyright = f"{datetime.now():%Y}, {author}."
-version = 'v0.1'
-repository_url = f"https://github.com/lueckenlab/hca_pipelines"
+version = 'dev'
+repository_url = f"https://github.com/HCA-integration/scAtlasTb.git"
 
 # The full version, including alpha/beta/rc tags
 release = version
@@ -32,7 +34,7 @@ needs_sphinx = "4.0"
 
 html_context = {
     "display_github": True,  # Integrate GitHub
-    "github_user": "lueckenlab",  # Username
+    "github_user": "mumichae",  # Username
     "github_repo": project_name,  # Repo name
     "github_version": "main",  # Version
     "conf_py_path": "/docs/",  # Path in the checkout to the docs root
@@ -44,6 +46,7 @@ html_context = {
 # They can be extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
     "myst_nb",
+    "sphinxemoji.sphinxemoji",
     "sphinx_copybutton",
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
