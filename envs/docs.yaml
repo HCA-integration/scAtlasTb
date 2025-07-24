@@ -12,3 +12,8 @@ dependencies:
   - ipykernel
   - ipython
   - sphinx-copybutton
+  - sphinx-autosummary-accessors
+  - sphinxcontrib-napoleon
+  - pip
+  - pip:
+      - sphinxemoji
