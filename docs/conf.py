@@ -7,6 +7,7 @@
 # -- Path setup --------------------------------------------------------------
 import sys
 import os
+from pdf2image import convert_from_path
 import shutil
 from datetime import datetime
 from importlib.metadata import metadata
@@ -124,6 +125,18 @@ nitpick_ignore = [
 ]
 
 
+def convert_pdfs(app):
+    base_dir = os.path.join(app.confdir, '_static', 'images')
+    for root, _, files in os.walk(base_dir):
+        for f in files:
+            if f.lower().endswith('.pdf'):
+                pdf_file = os.path.join(root, f)
+                png_file = os.path.splitext(pdf_file)[0] + '.png'
+                if not os.path.exists(png_file):
+                    images = convert_from_path(pdf_file, first_page=1, last_page=1)
+                    images[0].save(png_file, 'PNG')
+
+
 def setup(app):
     """App setup hook."""
     app.add_config_value(
@@ -137,3 +150,4 @@ def setup(app):
         },
         True,
     )
+    app.connect('builder-inited', convert_pdfs)
