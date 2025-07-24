@@ -4,10 +4,9 @@ build:
     os: ubuntu-22.04
     tools:
         python: "3.11"
-python:
-  install:
-    - method: "conda"
-      environment: envs/docs.yaml
+
+conda:
+  environment: envs/docs.yaml
 
 sphinx:
     configuration: docs/conf.py
