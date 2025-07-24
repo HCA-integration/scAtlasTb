@@ -20,7 +20,7 @@ Set up your configuration file
 .. code-block:: yaml
 
     output_dir: data/out
-    images: imag
+    images: images
     user_gpu: false
 
     DATASETS:

@@ -40,6 +40,7 @@ modules/metrics
 workflows/qc
 workflows/batch_analysis
 workflows/integration
+workflows/metrics
 workflows/clustering
 workflows/label_harmonization
 ```
