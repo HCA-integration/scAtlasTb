@@ -58,7 +58,7 @@ logging.info(f'file_value_map: {pformat(file_value_map)}')
 split_files = values
 logging.info(f'splits: {split_files}')
 
-for split_file in split_files:
+for i, split_file in enumerate(split_files):
     split = file_value_map.get(split_file, split_file)
     out_file = out_dir / f"value~{split_file}.zarr"
     
@@ -103,3 +103,8 @@ for split_file in split_files:
             files_to_keep=['uns']+exclude_slots
         )
     del adata_sub
+    logging.info(f'Finished {i+1} out of {len(split_files)}.')
+
+logging.info(f'Finished splitting data by {split_key}.')
+# touch done file
+Path(snakemake.output.done).touch()
