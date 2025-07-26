@@ -10,19 +10,19 @@ from utils.io import read_anndata, link_zarr
 input_zarr = snakemake.input.zarr
 output_dir = snakemake.output[0]
 batch_key = snakemake.params.get('batch_key')
-max_cells_per_group = snakemake.params.get('max_cells_per_group', 100_000)
+chunk_size = snakemake.params.get('chunk_size', 100_000)
 
-def group_batches(adata, batch_key, max_cells_per_group=100_000):
-    value_counts = adata.obs[batch_key].value_counts(dropna=False)
+def group_batches(adata, batch_key, chunk_size=100_000):
+    value_counts = adata.obs[batch_key].value_counts(sort=False, dropna=False)
     logging.info(f'Value counts: {value_counts}')
 
-    # Group batches such that each group has <= max_cells_per_group cells
+    # Group batches such that each group has <= chunk_size cells (or size of 1 batch)
     groups = []
     current_group = []
     current_count = 0
 
     for batch, count in value_counts.items():
-        if current_count + count > max_cells_per_group and current_group:
+        if current_count + count > chunk_size and current_group:
             groups.append(current_group)
             current_group = [batch]
             current_count = count
@@ -46,7 +46,7 @@ if batch_key not in adata.obs.columns:
     logging.info(f'No batch key found in obs columns, setting dummy batch.')
     Path(output_dir / 'no_batch.txt').write_text('no_batch')
 else:
-    groups = group_batches(adata, batch_key, max_cells_per_group=max_cells_per_group)
+    groups = group_batches(adata, batch_key, chunk_size=chunk_size)
     value_counts = adata.obs[batch_key].value_counts(dropna=False)
     for i, group in enumerate(groups):
         group_file = output_dir / f"group_{i + 1}.txt"

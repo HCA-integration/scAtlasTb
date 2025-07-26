@@ -11,6 +11,7 @@ DATASETS:
     doublets:
       counts: X
       batch: donor
+      chunk_size: 10_000
   test:
     input:
       doublets:
