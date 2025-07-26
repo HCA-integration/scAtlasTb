@@ -6,7 +6,7 @@ from matplotlib import image as mpimg
 import seaborn as sns
 from tqdm import tqdm
 import traceback
-import concurrent.futures
+from joblib import Parallel, delayed
 import scanpy as sc
 from pprint import pformat
 import logging
@@ -27,6 +27,7 @@ output_joint.mkdir(parents=True, exist_ok=True)
 
 logging.info(f'Read {input_zarr}...')
 adata = read_anndata(input_zarr, obs='obs', uns='uns')
+print(adata, flush=True)
 
 # get parameters
 file_id = snakemake.wildcards.file_id
@@ -145,7 +146,7 @@ kde_plot_kwargs = dict(
     alpha=.8,
 )
 # adjust parameters for large datasets
-if adata.n_obs > 1e5:
+if adata.n_obs > 5e4:
     kde_plot_kwargs |= dict(
         bw_adjust=2,
         gridsize=50,
@@ -158,7 +159,7 @@ coordinates = [
 
 # # subset to max of 300k cells due to high computational cost
 density_data = adata.obs.sample(n=int(min(300_000, adata.n_obs)), random_state=42)
-density_data = adata.obs
+# density_data = adata.obs
 
 for x, y, log_x, log_y in coordinates:
     logging.info(f'Joint QC plots per {x} vs {y}...')
@@ -242,28 +243,28 @@ for x, y, log_x, log_y in coordinates:
     # for hue in tqdm(hues):
     #     call_plot(adata.obs, x, y, log_x, log_y, hue, scatter_plot_kwargs, density_png)
     
-    with concurrent.futures.ProcessPoolExecutor(max_workers=threads) as executor:
-        futures = [
-            executor.submit(
-                call_plot,
-                df=adata.obs,
-                x=x,
-                y=y,
-                log_x=log_x,
-                log_y=log_y,
-                hue=hue,
-                scatter_plot_kwargs=scatter_plot_kwargs,
-                density_png=density_png,
-                density_log_png=density_log_png,
-            ) for hue in hues
-        ]
-        
-        for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures)):
-            try:
-                future.result()
-            except Exception as e:
-                logging.error(f"Exception occurred: {e}")
-                traceback.print_exc()
+    
+    def safe_call_plot(*args, **kwargs):
+        try:
+            return call_plot(*args, **kwargs)
+        except Exception as e:
+            logging.error(f"Error in plot job: {e}")
+            traceback.print_exc()
+            return None
+    
+    Parallel(n_jobs=threads)(
+        delayed(safe_call_plot)(
+            df=adata.obs,
+            x=x,
+            y=y, 
+            log_x=log_x,
+            log_y=log_y,
+            hue=hue,
+            scatter_plot_kwargs=scatter_plot_kwargs,
+            density_png=density_png,
+            density_log_png=density_log_png
+        ) for hue in tqdm(hues)
+    )
     
     # remove redundant plots
     density_png.unlink()
