@@ -11,7 +11,6 @@ from pprint import pformat
 from scipy.sparse import csr_matrix, coo_matrix
 import sparse
 from dask import array as da
-import tqdm.dask as tdask
 from dask import config as da_config
 da_config.set(num_workers=snakemake.threads)
 
@@ -89,8 +88,7 @@ for split_file in split_files:
         )
     
     if write_copy:
-        with tdask.TqdmCallback(desc='Copy subset'):
-            adata_sub = dask_compute(adata_sub.copy())
+        adata_sub = dask_compute(adata_sub.copy())
         logging.info(f'Write to {out_file}...')
         write_zarr(adata_sub, out_file)
     else:
