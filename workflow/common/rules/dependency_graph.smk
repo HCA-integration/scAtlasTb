@@ -1,12 +1,20 @@
+import json
+
+
+class PathEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Path):
+            return str(obj)
+        return super().default(obj)
+
+
 rule save_config:
     output:
         json='.snakemake/{images}_{target}/config.json'
     localrule: True
     run:
-        import json
-
-        with open(output.json,'w') as f:
-            json.dump(config,f)
+        with open(output.json, 'w') as f:
+            json.dump(config, f, cls=PathEncoder, indent=2)
 
 
 rule rulegraph:
