@@ -41,7 +41,7 @@ rule split:
         lambda wildcards: mcfg.get_input_file(wildcards.dataset, wildcards.file_id),
     output:
         splits=directory(mcfg.out_dir / 'splits' / split_pattern),
-        done=touch(mcfg.out_dir / 'splits' / f'{split_pattern}.done'),
+        done=mcfg.out_dir / 'splits' / f'{split_pattern}.done',
     params:
         values=lambda wildcards: mcfg.get_from_parameters(wildcards, 'value', single_value=False),
         backed=lambda wildcards: mcfg.get_from_parameters(wildcards, 'backed'),

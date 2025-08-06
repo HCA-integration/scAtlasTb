@@ -44,6 +44,10 @@ if sample_key is None or sample_key == 'None':
     print('Using index as sample key...', flush=True)
     sample_key = 'index'
     adata.obs[sample_key] = adata.obs.index
+sample_keys = [x.strip() for x in sample_key.split(',')]
+if len(sample_keys) > 1:
+    sample_key = '--'.join(sample_keys)
+    adata.obs[sample_key] = adata.obs[sample_keys].agg('-'.join, axis=1)
 
 # read setup file
 with open(setup_file, 'r') as f:

@@ -13,7 +13,8 @@ mcfg = ModuleConfig(
     config=config,
     config_params=[
         'counts',
-        'batch'
+        'batch',
+        'chunk_size',
     ],
     rename_config_params={'batch': 'batch_key'}
 )
