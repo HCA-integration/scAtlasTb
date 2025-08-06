@@ -1,10 +1,19 @@
 # Single Cell Atlasing Toolbox 🧰
 
-**Toolbox of Snakemake pipelines for easy-to-use analyses and benchmarks for building integrated atlases**
+[![Documentation][badge-docs]][documentation]
 
+[badge-tests]: https://img.shields.io/github/actions/
+[badge-docs]: https://img.shields.io/readthedocs/scAtlasTb-utils
+
+**Toolbox of Snakemake pipelines for easy-to-use analyses and benchmarks for building integrated atlases**
 
 This toolbox provides multiple modules that can be easily combined into custom workflows that leverage the file management of [Snakemake](https://snakemake.readthedocs.io/en/v7.31.1/).
 This allows for an efficient and scalable way to run analyses on large datasets that can be easily configured by the user.
+
+## Getting started
+
+Please refer to the [documentation][].
+
 
 ## 🧰 Which Modules does the Toolbox Support?
 
@@ -126,4 +135,20 @@ Reasons:
 This was a dry-run (flag -n). The order of jobs does not reflect the order of execution.
 ```
 
-💖 Beautiful, right? Chek out the [documentation]() to learn how to set up your own workflow!
+💖 Beautiful, right? Chek out the [documentation][] to learn how to set up your own workflow!
+
+## Release notes
+
+See the [changelog][].
+
+## Contact
+
+If you found a bug, please use the [issue tracker][].
+
+## Citation
+
+> t.b.a
+
+[issue tracker]: https://github.com/HCA-integration/scAtlasTb/issues
+[documentation]: https://scatlastb.readthedocs.io
+[changelog]: https://scatlastb-utils.readthedocs.io/en/latest/changelog.html
