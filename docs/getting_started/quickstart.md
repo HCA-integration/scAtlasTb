@@ -1,4 +1,4 @@
-# Quickstart
+# 🚀 Quickstart
 
 Activate the snakemake environment
 

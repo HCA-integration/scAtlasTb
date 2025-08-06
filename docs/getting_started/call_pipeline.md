@@ -1,4 +1,4 @@
-# Call the pipeline
+# ▶️ Call the pipeline
 
 ## Create a wrapper script
 

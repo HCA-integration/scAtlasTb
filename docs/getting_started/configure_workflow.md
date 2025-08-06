@@ -1,4 +1,4 @@
-# Configure Your Workflow
+# 🔧 Configure Your Workflow
 <a name="configure-your-workflow"></a>
 
 Configuring your workflow requires configuring global settings as well as subworkflows consisting of modules.
