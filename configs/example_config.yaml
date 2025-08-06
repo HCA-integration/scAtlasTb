@@ -1,5 +1,6 @@
   output_dir: data/out
   images: images
+  use_gpu: false
 
   DATASETS:
 
@@ -9,7 +10,7 @@
       input:
         preprocessing:
           file_1: data/pbmc68k.h5ad
-        integration: preprocessing # all outputs of module will automatically be used as input
+        integration: preprocessing
         metrics: integration
       
       # module configuration
@@ -25,22 +26,60 @@
       
       # module configuration
       integration:
-        raw_counts: raw/X
-        norm_counts: X
+        raw_counts: layers/counts
+        norm_counts: layers/normcounts
         batch: batch
         methods:
           unintegrated:
+          bbknn:
+          combat:
+          harmony_pytorch:
+          harmonypy:
           scanorama:
             batch_size: 100
           scvi:
             max_epochs: 10
             early_stopping: true
+          drvi:
+            max_epochs: 10
+            early_stopping: true
+            devices: 1
+            accelerator: cpu
+          sysvi:
+            max_epochs: 10
+            early_stopping: true
+            system_key: phase
 
       # module configuration
       metrics:
-        unintegrated: layers/norm_counts
+        unintegrated: layers/normcounts
         batch: batch
         label: bulk_labels
         methods:
-          - nmi
+          - asw_batch
           - graph_connectivity
+          - ilisi
+          - pcr_comparison
+          - ari
+          - asw_label
+          - cell_cycle
+          - clisi
+          - isolated_label_asw
+          - isolated_label_f1
+          - nmi
+          - morans_i_random
+          - ari_leiden_y
+          - ari_kmeans_y
+          - nmi_leiden_y
+          - nmi_kmeans_y
+          - asw_label_y
+          - asw_batch_y
+          - ilisi_y
+          - clisi_y
+          - isolated_label_asw_y
+          - kbet_y
+          - kbet_pg
+          - graph_connectivity_y
+          - pcr_random
+          - pcr
+          - pcr_genes

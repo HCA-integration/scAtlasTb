@@ -24,3 +24,4 @@ dependencies:
   - r-dynutils
   - r-rdpack
   - r-vctrs=0.6.4
+  - r-patchwork
