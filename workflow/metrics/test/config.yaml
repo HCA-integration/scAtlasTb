@@ -2,6 +2,7 @@ output_dir: test/out
 images: test/images
 
 use_gpu: false
+use_gpu: false
 
 resources:
   cpu:
@@ -28,7 +29,6 @@ defaults:
       - graph_connectivity
       - isolated_label_asw
       - isolated_label_f1
-      - pcr_comparison
       - pcr_comparison
       # - pcr_y  # broken function
       - kbet_pg
