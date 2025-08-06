@@ -212,23 +212,23 @@ use rule * from metrics as metrics_ *
 use rule * from marker_genes as marker_genes_ *
 
 
-rule all:
-    input: rules.dependency_graph.input
-    default_target: True
+modules = list({
+    _module
+    for _dict in config['DATASETS'].values()
+    for _module in _dict.get('input', {}).keys()
+})
 
-
-def get_modules_from_config(config):
-    modules = set()
-    for dataset in config['DATASETS']:
-        modules.update(config['DATASETS'][dataset]['input'].keys())
-    return list(modules)
-
-modules = get_modules_from_config(config)
 
 rule dependency_graph:
     input:
         expand(
             rules.common_dependency_graph.input,
+            zip,
             images=config['images'],
-            target=[f'{_module}_all' for _module in modules] + ['all']
+            module=modules,
+            target=[f'{_module}_all' for _module in modules],
         )
+
+rule all:
+    input: rules.dependency_graph.input
+    default_target: True
