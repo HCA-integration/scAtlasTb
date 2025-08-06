@@ -7,7 +7,7 @@ from pprint import pformat
 import logging
 from tqdm import tqdm
 import traceback
-import concurrent.futures
+from joblib import Parallel, delayed
 
 logging.basicConfig(level=logging.INFO)
 
@@ -114,21 +114,18 @@ logging.info('Plot compositions...')
 # for group_key in tqdm(groups):
 #     plot_composition(adata, group_key, plot_dir=output_plots)
 
-with concurrent.futures.ProcessPoolExecutor(max_workers=threads) as executor:
-    futures = [
-        executor.submit(
-            plot_composition,
-            adata,
-            group_key=group_key,
-            plot_dir=output_plots
-        ) for group_key in groups
-    ]
-    for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures)):
-        try:
-            future.result()
-        except Exception as e:
-            logging.error(f"Exception occurred: {e}")
-            traceback.print_exc()
+def plot_composition_safe(group_key):
+    try:
+        plot_composition(adata, group_key, plot_dir=output_plots)
+    except Exception as e:
+        logging.error(f"Exception occurred while processing group '{group_key}': {e}")
+        traceback.print_exc()
+
+logging.info('Plot compositions...')
+Parallel(n_jobs=threads)(
+    delayed(plot_composition_safe)(group_key)
+    for group_key in tqdm(groups)
+)
 
 logging.info('Plot violin plots per QC metric...')
 n_cols = len(threshold_keys)

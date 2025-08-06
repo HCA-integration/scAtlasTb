@@ -68,6 +68,7 @@ rule dependency_graph:
         expand(
             rules.common_dependency_graph.input,
             images=mcfg.image_dir,
+            module=mcfg.module_name,
             target='all'
         )
     localrule: True

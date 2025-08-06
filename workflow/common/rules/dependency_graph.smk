@@ -10,7 +10,7 @@ class PathEncoder(json.JSONEncoder):
 
 rule save_config:
     output:
-        json='.snakemake/{images}_{target}/config.json'
+        json='.snakemake/config.json'
     localrule: True
     run:
         with open(output.json, 'w') as f:
@@ -19,7 +19,7 @@ rule save_config:
 
 rule rulegraph:
     input: rules.save_config.output.json
-    output: '{images}/rule_graphs/{target}.png'
+    output: '{images}/{module}/{target}/rule_graph.png'
     localrule: True
     shell:
         """
@@ -31,11 +31,11 @@ rule rulegraph:
 
 rule dag:
     input: rules.save_config.output.json
-    output: '{images}/job_graphs/{target}.png'
+    output: '{images}/{module}/{target}/job_graph.png'
     localrule: True
     shell:
         """
-        snakemake {wildcards.target} --configfile {input} --dag | \
+        snakemake {wildcards.target} --configfile {input} --filegraph | \
             sed -ne '/digraph snakemake_dag/,/}}/p' | \
             dot -Tpng -Grankdir=LR > {output}
         """

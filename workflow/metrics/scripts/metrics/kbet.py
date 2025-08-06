@@ -34,6 +34,7 @@ def kbet_pg(adata, output_type, batch_key, label_key, n_threads=1, **kwargs):
     
     # prepare adata for pegasusio
     adata.X = csr_matrix(adata.shape)
+    adata.obs[batch_key] = adata.obs[batch_key].astype('category')
     
     cell_types = adata.obs[label_key].unique()
     scores = []

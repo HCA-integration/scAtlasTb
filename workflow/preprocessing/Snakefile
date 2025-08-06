@@ -30,7 +30,7 @@ paramspace = mcfg.get_paramspace()
 
 
 wildcard_constraints:
-    dataset='\w+',
+    dataset=r'\w+',
 
 
 module common:
@@ -67,6 +67,7 @@ rule dependency_graph:
         expand(
             rules.common_dependency_graph.input,
             images=mcfg.image_dir,
+            module=mcfg.module_name,
             target='all'
         )
     localrule: True
