@@ -42,7 +42,7 @@ kwargs = dict(
 
 exclude_slots = [
     slot for slot in ALL_SLOTS
-    if not slot in slots.keys()
+    if slot not in slots
 ]
 
 logging.info(f'Read anndata file {input_file}...')
