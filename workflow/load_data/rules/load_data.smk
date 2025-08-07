@@ -1,5 +1,3 @@
-DOWNLOAD_COLUMNS = ['url', 'dataset', 'collection_id', 'dataset_id', 'project_uuid']
-
 rule download:
     message:
         """

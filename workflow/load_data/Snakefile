@@ -25,6 +25,7 @@ DATASETS_COLUMNS = [
     'project_uuid',
 ]
 DOWNLOAD_COLUMNS = ['url', 'dataset', 'collection_id', 'dataset_id', 'project_uuid']
+
 if 'dataset_df' in config.keys():
     dataset_df = config['dataset_df']
 elif 'dataset_meta' in config.keys():
