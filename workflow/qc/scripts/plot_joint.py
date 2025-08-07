@@ -45,9 +45,9 @@ if adata.obs.shape[0] == 0:
 def create_figure(df, png_file, density_png, joint_title, **kwargs):
     g = plot_qc_joint(df, **kwargs)
     
-    # adjust legend position
+    # remove legend from joint plot image
     if g.ax_joint.legend_ is not None:
-        sns.move_legend(g.ax_joint, 'right')
+        g.ax_joint.get_legend().remove()
     
     # save plot temporarily
     plt.tight_layout()
@@ -58,12 +58,27 @@ def create_figure(df, png_file, density_png, joint_title, **kwargs):
     f, axes = plt.subplots(1, 2, figsize=(20, 10))
     axes[0].imshow(mpimg.imread(png_file))
     axes[1].imshow(mpimg.imread(density_png))
+
+    # move legend from joint plot to right of figure
+    handles, labels = g.ax_joint.get_legend_handles_labels()
+    markerscale = (80 / kwargs.get('s', 20)) ** 0.5
+    g.ax_joint.legend(markerscale=markerscale)
+    if handles and labels:
+        axes[0].legend(
+            handles=handles,
+            labels=labels,
+            markerscale=markerscale,
+            loc='center right',
+            bbox_to_anchor=(0, 0.5),
+            borderaxespad=0.5,
+        )
+    
     for ax in axes.ravel():
         ax.set_axis_off()
     plt.suptitle(joint_title, fontsize=16)
     
     # save final plot
-    plt.tight_layout()
+    plt.tight_layout(w_pad=0.05)
     plt.savefig(png_file, bbox_inches='tight')
     plt.close('all')
 
@@ -86,7 +101,11 @@ def call_plot(df, x, y, log_x, log_y, hue, scatter_plot_kwargs, density_png, den
     scatter_plot_kwargs |= dict(
         palette=palette,
         legend=legend,
-        marginal_kwargs=dict(palette=palette, legend=False),
+        marginal_kwargs=dict(
+            palette=palette,
+            legend=False,
+            stat='density',
+        ),
     )
     
     # plot joint QC on regular scale
@@ -135,8 +154,8 @@ thresholds = get_thresholds(
 logging.info(f'\n{pformat(thresholds)}')
 
 scatter_plot_kwargs = dict(
-    s=4,
-    alpha=.5,
+    s=8,
+    alpha=.8,
     linewidth=0,
 )
 
@@ -240,9 +259,6 @@ for x, y, log_x, log_y in coordinates:
     plt.tight_layout()
     plt.savefig(density_log_png, bbox_inches='tight')
 
-    # for hue in tqdm(hues):
-    #     call_plot(adata.obs, x, y, log_x, log_y, hue, scatter_plot_kwargs, density_png)
-    
     
     def safe_call_plot(*args, **kwargs):
         try:
