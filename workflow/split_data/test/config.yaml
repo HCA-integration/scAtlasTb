@@ -8,9 +8,12 @@ DATASETS:
         pbmc: test/input/pbmc68k.h5ad
         zarr: test/input/preprocessing/dataset~all/file_id~pbmc/preprocessed.zarr
     split_data:
-      exclude_slots:
-        - raw
-        - layers
+      slots:
+        X: X
+        obs: obs
+        var: var
+        obsm: obsm
+        obsp: obsp
       key: bulk_labels
       values:
         - CD4+_CD45RA+_CD25-_Naive_T

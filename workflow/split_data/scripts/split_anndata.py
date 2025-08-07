@@ -16,7 +16,7 @@ da_config.set(num_workers=snakemake.threads)
 
 from utils.accessors import adata_to_memory
 from utils.annotate import add_wildcards
-from utils.io import read_anndata, write_zarr, write_zarr_linked
+from utils.io import read_anndata, write_zarr, write_zarr_linked, ALL_SLOTS
 from utils.misc import dask_compute
 
 input_file = snakemake.input[0]
@@ -26,7 +26,7 @@ values = snakemake.params.get('values', [])
 backed = snakemake.params.get('backed', True)
 dask = snakemake.params.get('dask', True)
 write_copy = snakemake.params.get('write_copy', False)
-exclude_slots = snakemake.params.get('exclude_slots', [])
+slots = snakemake.params.get('slots', {})
 
 out_dir = Path(output_dir)
 if not out_dir.exists():
@@ -35,10 +35,15 @@ if not out_dir.exists():
 write_copy = write_copy or input_file.endswith('.h5ad')
 # kwargs = dict(obs='obs', var='var', uns='uns')
 kwargs = dict(
+    **slots,
     backed=backed,
     dask=dask,
-    exclude_slots=exclude_slots,
 )
+
+exclude_slots = [
+    slot for slot in ALL_SLOTS
+    if slot not in slots
+]
 
 logging.info(f'Read anndata file {input_file}...')
 adata = read_anndata(input_file, **kwargs)
