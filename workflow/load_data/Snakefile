@@ -14,12 +14,23 @@ from utils.environments import get_env
 
 module_name = 'load_data'
 
+DATASETS_COLUMNS = [
+    'dataset',
+    'study',
+    'organ',
+    'url',
+    'subset',
+    'collection_id',
+    'dataset_id',
+    'project_uuid',
+]
+DOWNLOAD_COLUMNS = ['url', 'dataset', 'collection_id', 'dataset_id', 'project_uuid']
 if 'dataset_df' in config.keys():
     dataset_df = config['dataset_df']
 elif 'dataset_meta' in config.keys():
     dataset_df = load_dataset_df(config['dataset_meta'])
 else:
-    dataset_df = pd.DataFrame(columns=['dataset', 'study', 'organ', 'url', 'subset'])
+    dataset_df = pd.DataFrame(columns=DATASETS_COLUMNS)
 out_dir = Path(config['output_dir']) / module_name
 image_dir = Path(config['images']) / module_name
 

@@ -1,4 +1,4 @@
-download_columns = ['url', 'dataset', 'collection_id', 'dataset_id', 'project_uuid']
+DOWNLOAD_COLUMNS = ['url', 'dataset', 'collection_id', 'dataset_id', 'project_uuid']
 
 rule download:
     message:
@@ -8,7 +8,7 @@ rule download:
     output:
         h5ad=out_dir / 'download' / '{dataset}.h5ad'
     params:
-        dataset_df=lambda w: dataset_df.query(f'dataset == "{w.dataset}"')[download_columns].reset_index(drop=True)
+        dataset_df=lambda w: dataset_df.query(f'dataset == "{w.dataset}"')[DOWNLOAD_COLUMNS].reset_index(drop=True)
     conda:
         get_env(config, 'scanpy', env_dir='../../../envs')
     script:
