@@ -45,6 +45,7 @@ rule scrublet:
         tsv=mcfg.out_dir / 'scatter' / params.wildcard_pattern / 'scrublet' / '{batch}.tsv',
     params:
         batch_key=lambda wildcards: mcfg.get_from_parameters(wildcards, 'batch_key', check_query_keys=False),
+        layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'counts', default='X'),
     conda:
         get_env(config, 'qc', gpu_env='rapids_singlecell')
     resources:
@@ -64,6 +65,7 @@ rule doubletdetection:
         tsv=mcfg.out_dir / 'scatter' / params.wildcard_pattern / 'doubletdetection' / '{batch}.tsv',
     params:
         batch_key=lambda wildcards: mcfg.get_from_parameters(wildcards, 'batch_key', check_query_keys=False),
+        layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'counts', default='X'),
     conda:
         get_env(config, 'qc')
     threads: 3
