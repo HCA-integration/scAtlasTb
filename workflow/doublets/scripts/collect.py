@@ -11,7 +11,8 @@ output_zarr = snakemake.output.zarr
 
 
 # read AnnData
-adata = read_anndata(input_anndata, obs='obs')
+kwargs = dict() if input_anndata.endswith('.h5ad') else dict(obs='obs', uns='uns')
+adata = read_anndata(input_anndata, **kwargs)
 
 if adata.n_obs == 0:
     adata.write_zarr(output_zarr)
