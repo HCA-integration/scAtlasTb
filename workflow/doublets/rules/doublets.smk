@@ -27,13 +27,13 @@ def get_from_checkpoint(wildcards, pattern=None):
     )
 
 
-def get_mem_mb(attempt, profile):
+def get_mem_mb(attempt, profile, factor=2):
     mem_mb = mcfg.get_resource(profile=profile, resource_key='mem_mb', attempt=attempt)
     try:
         mem_mb = int(mem_mb)
     except ValueError:
         return mem_mb
-    return min(100_000, int(mem_mb // 8))
+    return min(100, int(mem_mb // factor))
 
 
 rule scrublet:
