@@ -14,6 +14,7 @@ if input_anndata.endswith('.h5ad'):
     kwargs = {x: x for x in ALL_SLOTS} | dict(X=layer)
 else:
     kwargs = dict(obs='obs')
+
 adata = read_anndata(input_anndata, **kwargs)
 
 if adata.n_obs == 0:
