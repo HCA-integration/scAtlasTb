@@ -60,7 +60,7 @@ with open(batches_txt, 'r') as f:
 logging.info('Run doubletdetection...')
 results = (
     run_method(adata, batch_key, batch)
-    for batch in tqdm(batches, desc='Run scrublet', miniters=1)
+    for batch in tqdm(batches, desc='Run doubletdetection', miniters=1)
 )
 df = pd.concat(results)
 
