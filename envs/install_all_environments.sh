@@ -18,7 +18,7 @@ QUIET=""
 ENVS_DIR=$(dirname $0)
 DRYRUN=""
 
-while getopts "h:mnq" OPTION; do
+while getopts "hm:nq" OPTION; do
     case $OPTION in
         h) usage; exit 1;;
         m) MAMBA_CMD=$OPTARG;;
