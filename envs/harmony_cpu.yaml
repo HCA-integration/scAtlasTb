@@ -1,4 +1,4 @@
-name: scanorama
+name: harmony_cpu
 channels:
   - conda-forge
   - bioconda
@@ -6,9 +6,11 @@ dependencies:
   - python=3.11
   - anndata=0.11
   - scanpy=1.11
-  - scanorama>=1.7.4
   - zarr
   - scipy<1.15
   - hdf5=1.14.2
   - dask
+  - dask-ml
   - sparse
+  - harmony-pytorch
+  - harmonypy
