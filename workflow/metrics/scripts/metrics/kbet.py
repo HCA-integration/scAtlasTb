@@ -49,18 +49,18 @@ def kbet_pg(adata, output_type, batch_key, label_key, n_threads=1, **kwargs):
         mmdata_per_cell_type.append(_mmdata)
 
     # compute kBET scores
-    scores = Parallel(n_jobs=n_threads)(
-        delayed(compute_kbet)(
-            _mmdata,
-            attr=batch_key,
-            rep='emb',
-            K=50,
-            use_cache=False,
-            n_jobs=1,
-        ) for _mmdata in tqdm(
-            mmdata_per_cell_type,
-            desc=f'Compute per cell type with {n_threads} threads',
-            miniters=1,
-        )
-    )
+    scores = list(tqdm(
+        Parallel(n_jobs=n_threads)(
+            delayed(compute_kbet)(
+                _mmdata,
+                attr=batch_key,
+                rep='emb',
+                K=50,
+                use_cache=False,
+                n_jobs=1,
+            ) for _mmdata in mmdata_per_cell_type
+        ),
+        desc=f'Calculate kBET per cell type with {n_threads} threads',
+        miniters=1,
+    ))
     return np.nanmean(scores)
