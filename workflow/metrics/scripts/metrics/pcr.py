@@ -110,7 +110,7 @@ def cell_cycle(
         recompute_cc=False,
         organism=organism,
         verbose=False,
-        linreg_method='sklearn',
+        linreg_method='numpy',
         n_threads=n_threads,
     )
     # except ValueError as e:
