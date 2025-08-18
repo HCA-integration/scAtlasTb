@@ -35,6 +35,7 @@ gene_sets = params['gene_sets']
 n_random_permutations = params.get('n_permutations', 100)
 n_quantiles = params.get('n_quantiles', 2)
 var_key = 'metrics_features'
+MAX_OBS = int(params.get('MAX_OBS', 4e6))
 
 files_to_keep = ['obs', 'obsm']   # TODO: only overwrite specific obsm slots
 
@@ -85,9 +86,8 @@ if adata.var_names.duplicated().sum() > 0:
     adata = adata[:, ~adata.var_names.duplicated()]
 
 # subset adata if dataset too large TODO: move to prepare script?
-n_subset = int(4e6)
-if adata.n_obs > n_subset:
-    adata = get_bootstrap_adata(adata, size=n_subset)
+if adata.n_obs > MAX_OBS:
+    adata = get_bootstrap_adata(adata, size=MAX_OBS)
 
 # subset to HVGs (used for control genes) + genes of interest
 adata.var.loc[adata.var_names.isin(genes), var_key] = True

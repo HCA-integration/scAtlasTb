@@ -30,6 +30,8 @@ unintegrated_layer = params.get('unintegrated_layer', 'X')
 corrected_layer = params.get('corrected_layer', 'X')
 var_key = params.get('var_mask', 'highly_variable')
 
+PERSIST_MATRIX_THRESHOLD = params.get('PERSIST_MATRIX_THRESHOLD', 5e5)
+
 files_to_keep = ['raw', 'uns', 'var']
 
 # determine output types
@@ -150,7 +152,7 @@ adata_raw = read_anndata(
 )
 logging.info(f'Unintegrated data shape: {adata_raw.shape}') 
 
-if adata.n_obs > 5e5:
+if adata.n_obs > PERSIST_MATRIX_THRESHOLD:
     logging.info('Persist matrix...')
     adata_raw = apply_layers(adata_raw, lambda x: x.persist(), layers='X')
 else:
