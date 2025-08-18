@@ -23,12 +23,12 @@ defaults:
     var_mask: highly_variable
     save_subset: false
   datasets:
-    # - test
-    # - multi_wildcards
-    # - preprocessed
-    # - harmony
-    # - scarches
-    # - scvi_tools
+    - test
+    - multi_wildcards
+    - preprocessed
+    - harmony
+    - scarches
+    - scvi_tools
     - drvi
     - sysvi
 
@@ -163,10 +163,28 @@ DATASETS:
             - gene
             - gene-batch
           use_observed_lib_size: true
-          max_epochs: 100
+          max_epochs: 20
+          early_stopping: true
+        scvi_vitkl:
+          dispersion: gene-batch
+          use_observed_lib_size: false
+          n_hidden: 3000
+          n_layers: 1
+          n_latent: 700
+          library_n_hidden: 16
+          library_log_vars_weight: 0.05
+          scale_activation: softplus
+          use_additive_background: true
+          use_batch_in_decoder: false
+          regularise_dispersion: true
+          extra_encoder_kwargs:
+            dropout_on_input: true
+          extra_decoder_kwargs:
+            dropout_on_input: true
+          max_epochs: 20
           early_stopping: true
         scanvi:
-          max_epochs: 100
+          max_epochs: 20
           early_stopping: true
           categorical_covariate_keys:
             -
@@ -194,7 +212,7 @@ DATASETS:
           system_key: phase
           prior: vamp
           n_prior_components: 5
-          max_epochs: 100
+          max_epochs: 20
           early_stopping: true
       umap_colors:
         - bulk_labels
@@ -216,7 +234,7 @@ DATASETS:
             - [128, 128]
           decoder_dims:
             - [128, 128]
-          max_epochs: 100
+          max_epochs: 20
           early_stopping: true
       umap_colors:
         - bulk_labels
