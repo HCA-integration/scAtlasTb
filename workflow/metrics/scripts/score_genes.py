@@ -92,7 +92,10 @@ if adata.n_obs > n_subset:
 # subset to HVGs (used for control genes) + genes of interest
 adata.var.loc[adata.var_names.isin(genes), var_key] = True
 if not adata.var[var_key].all():
-    adata = adata[:, adata.var[var_key]].copy()
+# Subset to variables where var_key is True. If not all variables are selected, log a warning.
+if not adata.var[var_key].all():
+    logging.info(f"Subsetting to {adata.var[var_key].sum()} variables with {var_key}=True out of {adata.var.shape[0]}")
+adata = adata[:, adata.var[var_key]].copy()
 
 adata = dask_compute(adata, layers='X')
 
