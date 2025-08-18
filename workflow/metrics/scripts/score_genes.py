@@ -83,7 +83,10 @@ if len(genes) == 0:
 
 # deal with duplicate gene names
 if adata.var_names.duplicated().sum() > 0:
-    adata = adata[:, ~adata.var_names.duplicated()]
+    duplicated_gene_mask = adata.var_names.duplicated()
+    duplicated_gene_names = adata.var_names[duplicated_gene_mask]
+    logger.warning(f"Found and removed {duplicated_gene_mask.sum()} duplicate gene names: {list(duplicated_gene_names)}")
+    adata = adata[:, ~duplicated_gene_mask]
 
 # subset adata if dataset too large TODO: move to prepare script?
 if adata.n_obs > MAX_OBS:
