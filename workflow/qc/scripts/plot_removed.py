@@ -75,27 +75,40 @@ def plot_composition(adata, group_key, plot_dir):
     adata.obs[group_key] = pd.Categorical(adata.obs[group_key], categories=order)
 
     f, (ax1, ax2) = plt.subplots(1, 2, sharey=True, figsize=(14, 5 * (1 + n_groups/50)))
-    sns.histplot(
-        data=adata.obs,
-        y=group_key,
-        hue='qc_status',
-        palette='muted', # 'Set2',
-        edgecolor='white',
-        linewidth=0,
-        multiple="stack",
-        shrink=.9,
-        ax=ax1,
-    )
-    if n_groups < 50:
-        for container in ax1.containers:
-            ax1.bar_label(container)
-    
+
+    counts = adata.obs.groupby([group_key, 'qc_status'], observed=False).size().unstack(fill_value=0)
+    bottom = pd.Series(0, index=counts.index)
+    bars_per_group = {idx: [] for idx in counts.index}
+
+    # stacked barplot for QC status
+    for status in counts.columns:
+        widths = counts[status]
+        bars = ax1.barh(
+            counts.index,
+            widths,
+            left=bottom,
+            edgecolor='white',
+            linewidth=0,
+            label=status,
+            alpha=0.9,
+        )
+        bottom += widths
+        for idx, bar in zip(counts.index, bars):
+            bars_per_group[idx].append(bar)
+
+        ax1.legend(
+            title="QC Status",
+            loc="best",
+            frameon=False,
+        )
+
     sns.barplot(
         data=grouped_frac,
         x='fraction_removed',
         y=group_key,
         order=order,
         ax=ax2,
+        alpha=0.9,
     )
     if n_groups < 50:
         for container in ax2.containers:
@@ -106,6 +119,62 @@ def plot_composition(adata, group_key, plot_dir):
         ax2.spines[pos].set_visible(False)
     f.suptitle(f'Cells that passed QC\n{dataset}')
     f.tight_layout()
+    f.canvas.draw()
+
+    # Add labels per bar for ax1 plot
+    fontsize = 9
+    fontweight = 'bold'
+    renderer = ax1.figure.canvas.get_renderer()
+    for idx, bars in bars_per_group.items(): # iterate groups
+        bbox = ax1.get_window_extent()
+        x_min, x_max = ax1.get_xlim()
+        offset = counts.sum(1).max() / 100
+        
+        total_width = sum(bar.get_width() for bar in bars)
+        outside_x = total_width + offset
+        y_pos = bars[0].get_y() + bars[0].get_height() / 2
+
+        for bar in bars: # iterate bar in stack
+            label_text = str(int(bar.get_width()))
+
+            # Get text width in pixels
+            temp_text = ax1.text(0, 0, label_text, fontsize=fontsize, fontweight=fontweight)
+            text_width_px = temp_text.get_window_extent(renderer=renderer).width
+            temp_text.remove()
+
+            # Convert bar edges to pixel coordinates
+            left_px = ax1.transData.transform((bar.get_x(), 0))[0]
+            right_px = ax1.transData.transform((bar.get_x() + bar.get_width(), 0))[0]
+            bar_width_px = right_px - left_px
+
+            if bar_width_px >= text_width_px + 3:
+                # Inside white label at right edge of the bar
+                ax1.text(
+                    bar.get_x() + bar.get_width() - offset,
+                    y_pos,
+                    label_text,
+                    va='center',
+                    ha='right',
+                    fontsize=fontsize,
+                    fontweight=fontweight,
+                    color='white',
+                )
+            else:
+                # Outside label in bar's own color at end of full stack
+                ax1.text(
+                    outside_x + offset,
+                    y_pos,
+                    label_text,
+                    va='center',
+                    ha='left',
+                    fontsize=fontsize,
+                    fontweight=fontweight,
+                    color=bar.get_facecolor(),
+                )
+                # add spacing for next bar in group
+                outside_x += (text_width_px * (x_max - x_min) / bbox.width) + offset
+    
+    
     f.savefig(plot_dir / f'by={group_key}.png', bbox_inches='tight')
     plt.close()
 
