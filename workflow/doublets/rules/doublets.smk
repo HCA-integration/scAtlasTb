@@ -4,7 +4,6 @@ checkpoint split_batches:
     output:
         batches=directory(mcfg.out_dir / 'scatter' /  params.wildcard_pattern / '_batches'),
     params:
-        layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'counts', default='X'),
         batch_key=lambda wildcards: mcfg.get_from_parameters(wildcards, 'batch_key'),
         chunk_size=lambda wildcards: mcfg.get_from_parameters(wildcards, 'chunk_size', default=100_000),
     conda:
@@ -28,13 +27,13 @@ def get_from_checkpoint(wildcards, pattern=None):
     )
 
 
-def get_mem_mb(attempt, profile):
+def get_mem_mb(attempt, profile, factor=2):
     mem_mb = mcfg.get_resource(profile=profile, resource_key='mem_mb', attempt=attempt)
     try:
         mem_mb = int(mem_mb)
     except ValueError:
         return mem_mb
-    return min(100_000, int(mem_mb // 8))
+    return max(1_000, int(mem_mb // factor))
 
 
 rule scrublet:
@@ -45,6 +44,7 @@ rule scrublet:
         tsv=mcfg.out_dir / 'scatter' / params.wildcard_pattern / 'scrublet' / '{batch}.tsv',
     params:
         batch_key=lambda wildcards: mcfg.get_from_parameters(wildcards, 'batch_key', check_query_keys=False),
+        layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'counts', default='X'),
     conda:
         get_env(config, 'qc', gpu_env='rapids_singlecell')
     resources:
@@ -64,6 +64,7 @@ rule doubletdetection:
         tsv=mcfg.out_dir / 'scatter' / params.wildcard_pattern / 'doubletdetection' / '{batch}.tsv',
     params:
         batch_key=lambda wildcards: mcfg.get_from_parameters(wildcards, 'batch_key', check_query_keys=False),
+        layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'counts', default='X'),
     conda:
         get_env(config, 'qc')
     threads: 3
@@ -84,6 +85,8 @@ rule collect:
         doubletdetection=lambda wildcards: get_from_checkpoint(wildcards, rules.doubletdetection.output.tsv),
     output:
         zarr=directory(mcfg.out_dir / f'{params.wildcard_pattern}.zarr'),
+    params:
+        layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'counts', default='X'),
     localrule: True
     conda:
         get_env(config, 'scanpy')
