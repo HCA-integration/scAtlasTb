@@ -91,12 +91,9 @@ if adata.n_obs > n_subset:
 
 # subset to HVGs (used for control genes) + genes of interest
 adata.var.loc[adata.var_names.isin(genes), var_key] = True
-if not adata.var[var_key].all():
-# Subset to variables where var_key is True. If not all variables are selected, log a warning.
-if not adata.var[var_key].all():
-    logging.info(f"Subsetting to {adata.var[var_key].sum()} variables with {var_key}=True out of {adata.var.shape[0]}")
 adata = adata[:, adata.var[var_key]].copy()
 
+# Compute matrix
 adata = dask_compute(adata, layers='X')
 
 for set_name, gene_list in tqdm(gene_sets.items(), desc='Compute Gene scores', miniters=1):
