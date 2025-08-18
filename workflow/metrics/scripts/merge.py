@@ -52,7 +52,7 @@ for row, _dict in expanded_file_ids.to_dict('index').items():
         key = 'file_name'
         metrics_df.loc[row, key] = metrics_df.loc[row, 'file_id']
         ex_columns.add(key)
-        # continue
+        continue
     
     for _, value in _dict.items():
         if value is None:
@@ -67,7 +67,6 @@ for row, _dict in expanded_file_ids.to_dict('index').items():
 
         if check_existing(metrics_df, row, key):
             if key == 'file_name' and metrics_df.loc[row, key] != value:
-                # collect any unassigned values to file_name
                 value = metrics_df.loc[row, key] + '--' + value
             else:
                 # don't overwrite existing values
@@ -77,12 +76,12 @@ for row, _dict in expanded_file_ids.to_dict('index').items():
         metrics_df.loc[row, key] = value
         ex_columns.add(key)
 
-    if 'file_name' in metrics_df.columns:
-        # truncate file_name if too long
-        max_len = 20
-        if len(str(metrics_df.loc[row, 'file_name'])) > max_len:
-            metrics_df.loc[row, 'file_name'] = metrics_df.loc[row, 'file_name'][:max_len] + '...'
-
+if 'file_name' in metrics_df.columns:
+    # truncate file_name if too long
+    max_len = 40
+    metrics_df['file_name'] = metrics_df['file_name'].apply(
+        lambda x: x[:max_len] + '...' if isinstance(x, str) and len(x) > max_len else x
+    )
 
 # rename metric names
 metrics_df['metric'] = metrics_df['metric_name']
