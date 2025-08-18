@@ -168,8 +168,15 @@ def update_mask(mask_file, mask):
         return mask
     
     mask_old = np.load(mask_file)
+
+    if mask_old.shape == mask.shape:
+        # no need to update mask, since it has the same shape
+        return mask
+
+    # check if old mask can be subsetted with the new mask
     assert mask_old[mask_old].shape == mask.shape, \
-        f'{mask_old[mask_old].shape} != {mask.shape}\n {mask_file}'
+        f'Shape mismatch\n mask_old: {mask_old.shape}, mask_old[mask_old]: '\
+        f'{mask_old[mask_old].shape}, mask: {mask.shape}\n{mask_file}'
     
     mask_old[mask_old] &= mask
     return mask_old
@@ -255,7 +262,9 @@ def _subset_slot(slot_name, slot, mask_dir):
         return slot
     
     mask = np.load(mask_file)
-    
+    assert mask.shape[0] == slot.shape[0], \
+        f'Mask shape {mask.shape} does not match slot shape {slot.shape} for slot {slot_name}'
+
     if slot_name.startswith('obsp/') or slot_name.startswith('varp/'):
         # subset in both dimensions
         return slot[mask, :][:, mask].copy()
