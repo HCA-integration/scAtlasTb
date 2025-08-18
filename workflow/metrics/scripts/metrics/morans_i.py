@@ -9,6 +9,7 @@ from tqdm import tqdm
 from utils.misc import dask_compute
 from .bootstrap import bootstrap_metric
 # from utils.processing import sc as rsc
+from utils.accessors import parse_gene_names
 
 
 def _morans_i(adata, covariate, **kwargs) -> float:
@@ -56,7 +57,7 @@ def morans_i_categorical(adata, covariate, num_mappings=10) -> float:
     morans = []  # Initialize a list to store Moran's I values
     for perm in unique_permutations:
         mapping_dict = dict(zip(unique_categories, perm))
-        score = _morans_i(adata, covariate=adata.obs[covariate].map(mapping_dict))
+        score = _morans_i(adata, covariate=adata.obs[covariate].astype(str).map(mapping_dict))
         morans.append(score)
     
     # Calculate and return the mean of all Moran's I values
@@ -107,7 +108,7 @@ def morans_i_genes(adata, output_type, gene_set, **kwargs):
     scores = []
     
     for set_name, gene_list in tqdm(gene_set.items(), desc='Compute Moran\'s I for gene sets'):
-        gene_list = [g for g in gene_list if g in adata.var_names]
+        gene_list = parse_gene_names(adata, gene_list)
         
         gene_score_name = f'gene_score:{set_name}'
         random_gene_score_name = f'random_gene_scores:{len(gene_list)}'
@@ -139,5 +140,7 @@ def morans_i_genes(adata, output_type, gene_set, **kwargs):
         ])
         
     scores = [max(s, 0) for s in scores]  # ensure score is positive
+    for name, score in zip(metric_names, scores):
+        print(name, score, flush=True)
     
     return scores, metric_names
