@@ -10,6 +10,7 @@ from metrics.bootstrap import get_bootstrap_adata
 from utils.io import read_anndata, write_zarr_linked
 from utils.processing import sc
 from utils.misc import dask_compute
+from utils.accessors import parse_gene_names
 
 
 def bins_by_quantiles(matrix: [np.array, np.matrix], n_quantiles: int):
@@ -65,7 +66,7 @@ all_var_names = adata.var_names.copy()
 
 # filter all gene sets to genes in adata
 for set_name, gene_list in gene_sets.items():
-    gene_sets[set_name] = [g for g in gene_list if g in adata.var_names]
+    gene_sets[set_name] = parse_gene_names(adata, gene_list)
 
 # get all genes from gene sets
 genes = list(set().union(*gene_sets.values()))
