@@ -28,8 +28,8 @@ def write_metrics(filename, metric_names, scores, output_types, **kwargs):
 
 
 def rename_categories(adata, obs_col):
-    s = adata.obs[obs_col]
-    s = s.cat.rename_categories({i for i, _ in enumerate(s.cat.categories)})
+    s = adata.obs[obs_col].astype('category')
+ga     s = s.cat.rename_categories({i for i, _ in enumerate(s.cat.categories)})
     return s.to_numpy()
 
 
