@@ -99,7 +99,6 @@ def cell_cycle(
             adata_raw.obs.loc[batch_mask, 'S_score'] = ad_sub.obs['S_score']
             adata_raw.obs.loc[batch_mask, 'G2M_score'] = ad_sub.obs['G2M_score']
         except Exception as e:
-            import traceback
             print(f'Error in score_cell_cycle for batch={batch}, skipping\nError: {e}', flush=True)
             print(traceback.format_exc(), flush=True)
             adata_raw.obs.loc[batch_mask, 'S_score'] = 0
