@@ -10,6 +10,7 @@ from metrics.bootstrap import get_bootstrap_adata
 from utils.io import read_anndata, write_zarr_linked
 from utils.processing import sc
 from utils.misc import dask_compute
+from utils.accessors import parse_gene_names
 
 
 def bins_by_quantiles(matrix: [np.array, np.matrix], n_quantiles: int):
@@ -34,6 +35,7 @@ gene_sets = params['gene_sets']
 n_random_permutations = params.get('n_permutations', 100)
 n_quantiles = params.get('n_quantiles', 2)
 var_key = 'metrics_features'
+MAX_OBS = int(params.get('MAX_OBS', 4e6))
 
 files_to_keep = ['obs', 'obsm']   # TODO: only overwrite specific obsm slots
 
@@ -57,11 +59,15 @@ adata = read_anndata(
 # ).X
  
 if 'feature_name' in adata.var.columns:
-    adata.var_names = adata.var['feature_name']
+    adata.var['feature_id'] = adata.var_names
+    adata.var_names = adata.var['feature_name'].astype(str).values
+
+all_obs_names = adata.obs_names.copy()
+all_var_names = adata.var_names.copy()
 
 # filter all gene sets to genes in adata
 for set_name, gene_list in gene_sets.items():
-    gene_sets[set_name] = [g for g in gene_list if g in adata.var_names]
+    gene_sets[set_name] = parse_gene_names(adata, gene_list)
 
 # get all genes from gene sets
 genes = list(set().union(*gene_sets.values()))
@@ -75,17 +81,22 @@ if len(genes) == 0:
     )
     exit(0)
 
+# deal with duplicate gene names
+if adata.var_names.duplicated().sum() > 0:
+    duplicated_gene_mask = adata.var_names.duplicated()
+    duplicated_gene_names = adata.var_names[duplicated_gene_mask]
+    logger.warning(f"Found and removed {duplicated_gene_mask.sum()} duplicate gene names: {list(duplicated_gene_names)}")
+    adata = adata[:, ~duplicated_gene_mask]
 
 # subset adata if dataset too large TODO: move to prepare script?
-n_subset = int(4e6)
-if adata.n_obs > n_subset:
-    adata.obsp = read_anndata(input_file, obs='obs', obsp='obsp').obsp
-    files_to_keep.extend(['obsp'])
-    adata = get_bootstrap_adata(adata, size=n_subset)
+if adata.n_obs > MAX_OBS:
+    adata = get_bootstrap_adata(adata, size=MAX_OBS)
 
 # subset to HVGs (used for control genes) + genes of interest
 adata.var.loc[adata.var_names.isin(genes), var_key] = True
 adata = adata[:, adata.var[var_key]].copy()
+
+# Compute matrix
 adata = dask_compute(adata, layers='X')
 
 for set_name, gene_list in tqdm(gene_sets.items(), desc='Compute Gene scores', miniters=1):
@@ -131,9 +142,12 @@ adata = adata[:, genes].copy()
 
 logging.info(f'Write to {output_file}...')
 logging.info(adata.__str__())
+obs_mask = all_obs_names.isin(adata.obs_names)
+var_mask = all_var_names.isin(adata.var_names)
 write_zarr_linked(
     adata,
     in_dir=input_file,
     out_dir=output_file,
-    files_to_keep=files_to_keep+['X', 'var', 'varm', 'varp', 'layers'],
+    subset_mask=(obs_mask, var_mask),
+    files_to_keep=files_to_keep,
 )
