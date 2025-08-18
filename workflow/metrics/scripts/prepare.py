@@ -28,6 +28,7 @@ params = snakemake.params
 neighbor_args = params.get('neighbor_args', {})
 unintegrated_layer = params.get('unintegrated_layer', 'X')
 corrected_layer = params.get('corrected_layer', 'X')
+var_key = params.get('var_mask', 'highly_variable')
 
 files_to_keep = ['raw', 'uns', 'var']
 
@@ -69,13 +70,13 @@ n_obs = adata.n_obs
 force_neighbors = n_obs > adata.n_obs
 
 # set HVGs
-var_key = 'highly_variable' # TODO make configurable
 new_var_column = 'metrics_features'
-if var_key not in adata.var.columns:
-    logging.info(f'{var_key} key not in adata var, setting all to True')
-    adata.var[new_var_column] = True
-else:
+if var_key in adata.var.columns.values:
     adata.var[new_var_column] = adata.var[var_key]
+else:
+    logging.info(f'"{var_key}" not in adata var, setting all to True\n{pformat(adata.var.columns)}')
+    adata.var[new_var_column] = True
+logging.info(f'Set "{new_var_column}" from "{var_key}" in adata.var: {adata.var[new_var_column].sum()} HVGs')
 
 # logging.info('Filter all zero genes...')
 # all_zero_genes = _filter_genes(adata, min_cells=1)

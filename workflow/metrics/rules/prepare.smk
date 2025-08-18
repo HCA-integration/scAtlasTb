@@ -8,6 +8,7 @@ rule prepare:
         neighbor_args=lambda wildcards: mcfg.get_for_dataset(wildcards.dataset, ['preprocessing', 'neighbors'], default={}),
         unintegrated_layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'unintegrated', default='X'),
         corrected_layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'corrected', default='X'),
+        var_mask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'var_mask', default='highly_variable'),
     conda:
         get_env(config, 'scanpy', gpu_env='rapids_singlecell')
     resources:
