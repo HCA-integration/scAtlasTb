@@ -34,7 +34,7 @@ zarr.default_compressor = zarr.Blosc(shuffle=zarr.Blosc.SHUFFLE)
 
 
 def get_file_reader(file):
-    if file.endswith(('.zarr', '.zarr/')):
+    if file.endswith(('.zarr', '.zarr/', '.zarr/raw')):
         func = zarr.open
         file_type = 'zarr'
     elif file.endswith('.h5ad'):
@@ -603,7 +603,7 @@ def write_zarr_linked(
         in_dirs = []
     else:
         in_dir = Path(in_dir)
-        if not in_dir.name.endswith(('.zarr', '.zarr/')):
+        if not in_dir.name.endswith(('.zarr', '.zarr/', '.zarr/raw')):
             adata.write_zarr(out_dir)
             return
         in_dirs = [f.name for f in in_dir.iterdir()]
