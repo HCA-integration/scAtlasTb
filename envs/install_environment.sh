@@ -10,21 +10,21 @@ Install or update an environment
 OPTIONS:
    -h     Show this message
    -f     Environment YAML file
-   -m     Command to install conda packages, either 'mamba' or 'conda' (default: mamba)
+   -c     Command to install conda packages, either 'mamba' or 'conda' (default: conda)
    -q     Quiet installation
 EOF
 }
 
-MAMBA_CMD="mamba"
+CONDA_CMD="conda"
 QUIET="" # "-q"
 ENVS_DIR=$(dirname $0)
 EXECUTE=true
 
-while getopts "hf:m:nq" OPTION; do
+while getopts "hf:c:nq" OPTION; do
     case $OPTION in
         h) usage; exit 1;;
         f) FILE=$OPTARG;;
-        m) MAMBA_CMD=$OPTARG;;
+        c) CONDA_CMD=$OPTARG;;
         n) EXECUTE=false;;
         q) QUIET="-q";;
         ?) usage; exit;;
@@ -40,7 +40,7 @@ if [[ $FILE == "" ]]; then
 fi
 
 ENV=$(basename $FILE | cut -d. -f1)
-ALL_ENVS=$($MAMBA_CMD env list)
+ALL_ENVS=$($CONDA_CMD env list)
 
 if [[ $ALL_ENVS == *"$ENV"* ]]; then
     operation="update"
@@ -49,5 +49,5 @@ else
 fi
 echo "$operation $ENV from $FILE..."
 if $EXECUTE; then
-    $MAMBA_CMD env $operation $QUIET -f $FILE
+    $CONDA_CMD env $operation $QUIET --file $FILE
 fi
