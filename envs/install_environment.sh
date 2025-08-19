@@ -45,7 +45,7 @@ ALL_ENVS=$($MAMBA_CMD env list)
 if [[ $ALL_ENVS == *"$ENV"* ]]; then
     operation="update"
 else
-    operation="create"
+    operation="create -y"
 fi
 echo "$operation $ENV from $FILE..."
 if $EXECUTE; then
