@@ -62,44 +62,40 @@ if min_cells_per_category < 1:
 print('Remove categories with fewer than', min_cells_per_category, 'cells')
 
 # parse colors
-colors = params.get('color', [None])
+colors = params.pop('color', None)
+logging.info(f'Configured colors:\n{pformat(colors)}')
+colors = colors if isinstance(colors, list) else [colors]
 
+# get gene colors
 gene_colors = [col for col in colors if col not in obs_columns]
 gene_colors = parse_gene_names(adata, gene_colors)
 gene_colors.sort()
 
-if 'color' in params:
-    logging.info(f'Configured colors:\n{pformat(colors)}')
-    colors = colors if isinstance(colors, list) else [colors]
-    colors = [color for color in colors if color in obs_columns]
-    # filter colors with too few or too many categories
-    logging.info(f'Colors after filtering:\n{pformat(colors)}')
-    
-    for color in colors:
-        if color not in obs_columns:
-            continue
-        column = adata.obs[color]
+# filter colors that aren't in object
+colors = [color for color in colors if color in obs_columns]
+logging.info(f'Colors from obs after filtering:\n{pformat(colors)}')
 
-        if is_categorical_dtype(column) or is_string_dtype(column):
-            # parse data types
-            column = column.astype(object) \
-                .replace(['NaN', 'None', '', 'nan', 'unknown'], float('nan')) \
-                .astype('category')
+for color in colors:
+    column = adata.obs[color]
 
-            # remove categories with too few cells
-            value_counts = column.value_counts()
-            categories_to_remove = value_counts[value_counts <= min_cells_per_category].index
-            column = column.cat.remove_categories(categories_to_remove)
-            
-            # update column
-            adata.obs[color] = column
-            # adata.obs[color] = column.codes if len(column.categories) > 102 else column
+    if is_categorical_dtype(column) or is_string_dtype(column):
+        # parse data types
+        column = column.astype(object) \
+            .replace(['NaN', 'None', '', 'nan', 'unknown'], float('nan')) \
+            .astype('category')
 
-    if len(colors) == 0:
-        logging.info('No valid colors, skip...')
-        colors = [None]
+        # remove categories with too few cells
+        value_counts = column.value_counts()
+        categories_to_remove = value_counts[value_counts <= min_cells_per_category].index
+        column = column.cat.remove_categories(categories_to_remove)
+        
+        # update column
+        adata.obs[color] = column
+        # adata.obs[color] = column.codes if len(column.categories) > 102 else column
 
-    del params['color']
+if len(colors) == 0:
+    logging.info('No valid colors, skip...')
+    colors = [None]
 
 
 logging.info('Remove outliers...')
