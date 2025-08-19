@@ -174,6 +174,7 @@ def read_partial(
             keys = group[from_slot].keys()
             if from_slot == 'raw':
                 keys = [key for key in keys if key in ['X', 'var', 'varm']]
+            as_dask = from_slot in dask_slots and dask
             slots[to_slot] = {
                 sub_slot: read_slot(
                     file=file,
@@ -181,12 +182,12 @@ def read_partial(
                     slot_name=f'{from_slot}/{sub_slot}',
                     force_sparse_types=force_sparse_types,
                     force_slot_sparse=force_slot_sparse,
-                    backed=backed and from_slot in dask_slots,
-                    dask=dask and from_slot in dask_slots,
+                    backed=as_dask,
+                    dask=as_dask,
                     chunks=chunks,
                     stride=stride,
                     fail_on_missing=False,
-                    verbose=verbose,
+                    verbose=False,
                 )
                 for sub_slot in tqdm(keys, desc=f'Read {from_slot} slots as_dask={as_dask}', disable=not verbose)
             }
