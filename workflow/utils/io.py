@@ -557,12 +557,11 @@ def link_zarr(
             verbose=verbose,
         )
     
-    for slot in [x for x in ALL_SLOTS if x not in slots_to_link]:
-        set_mask_per_slot(
-            slot=slot,
-            mask=subset_mask,
-            out_dir=out_dir,
-        )
+    for slot in ALL_SLOTS:
+        if slot in slots_to_link or any([f'{slot}/' in x for x in slots_to_link]):
+            set_mask_per_slot(slot=slot, mask=subset_mask, out_dir=out_dir)
+        else:
+            set_mask_per_slot(slot=slot, mask=None, out_dir=out_dir)
     
     for out_slot, in_slot in slot_map:
         if out_slot in ['subset_mask', '.zattrs', '.zgroup'] or \
