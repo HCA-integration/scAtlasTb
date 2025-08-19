@@ -20,7 +20,7 @@ QUIET="" # "-q"
 ENVS_DIR=$(dirname $0)
 EXECUTE=true
 
-while getopts "h:f:m:nq" OPTION; do
+while getopts "hf:m:nq" OPTION; do
     case $OPTION in
         h) usage; exit 1;;
         f) FILE=$OPTARG;;
