@@ -1,13 +1,13 @@
 metric	metric_type	output_types	input_type	comparison	needs_clustering	use_covariate	use_gene_set	env	resources	threads
-asw_batch	batch_correction	full,embed	embed	False	False	False	False	scib_accel	cpu	1
+asw_batch	batch_correction	full,embed	embed	False	False	False	False	scib	cpu	1
 graph_connectivity	batch_correction	full,embed,knn	knn	False	False	False	False	scib	cpu	1
 ilisi	batch_correction	full,embed,knn	knn	False	False	False	False	scib	cpu	1
 pcr_comparison	batch_correction	full,embed	embed	True	False	False	False	scib	cpu	10
-ari	bio_conservation	full,embed,knn	knn	False	True	False	False	scib_accel	cpu	1
-asw_label	bio_conservation	full,embed	embed	False	False	False	False	scib_accel	cpu	1
+ari	bio_conservation	full,embed,knn	knn	False	True	False	False	scib	cpu	1
+asw_label	bio_conservation	full,embed	embed	False	False	False	False	scib	cpu	1
 cell_cycle	bio_conservation	full,embed	embed	True	False	False	False	scib	cpu	10
 clisi	bio_conservation	full,embed,knn	knn	False	False	False	False	scib	cpu	1
-isolated_label_asw	bio_conservation	full,embed	embed	False	False	False	False	scib_accel	cpu	1
+isolated_label_asw	bio_conservation	full,embed	embed	False	False	False	False	scib	cpu	1
 isolated_label_f1	bio_conservation	full,embed,knn	knn	False	True	False	False	scib	cpu	1
 nmi	bio_conservation	full,embed,knn	knn	False	True	False	False	scib	cpu	1
 kbet	batch_correction	full,embed,knn	knn	False	False	False	False	scib	cpu	1
