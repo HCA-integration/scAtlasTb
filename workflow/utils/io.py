@@ -18,6 +18,7 @@ from dask import config as da_config
 da_config.set(**{'array.slicing.split_large_chunks': False})
 
 from .subset_slots import subset_slot, set_mask_per_slot
+from .misc import dask_compute
 
 
 ALL_SLOTS = ['X', 'obs', 'var', 'obsm', 'varm', 'obsp', 'varp', 'layers', 'uns']
@@ -416,7 +417,7 @@ def read_anndata_or_mudata(file):
         return read_anndata(file)
 
 
-def write_zarr(adata, file):
+def write_zarr(adata, file, compute=False):
     def sparse_coo_to_csr(matrix):
         from dask import array as da
         import sparse
@@ -437,6 +438,9 @@ def write_zarr(adata, file):
             except (ValueError, TypeError):
                 # Convert non-NaN entries to string, preserve NaN values
                 adata.obs[col] = adata.obs[col].apply(lambda x: str(x) if pd.notna(x) else x).astype('category')
+    
+    if compute:
+        adata = dask_compute(adata)
     
     adata.write_zarr(file) # doesn't seem to work with dask array
 
