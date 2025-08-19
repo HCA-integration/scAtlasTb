@@ -211,7 +211,7 @@ def read_partial(
         adata = ad.AnnData(**slots)
     except Exception as e:
         shapes = {slot: x.shape for slot, x in slots.items() if hasattr(x, 'shape')}
-        message  = f'Error reading {file}\nshapes: {pformat(shapes)}'
+        message = f'Error reading {file}\nshapes: {pformat(shapes)}'
         raise ValueError(message) from e
     
     if verbose:
