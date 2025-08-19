@@ -12,6 +12,7 @@ import pandas as pd
 from scipy.sparse import csr_matrix
 from anndata.experimental import read_elem, sparse_dataset
 from pprint import pformat
+from tqdm import tqdm
 from dask import array as da
 from dask import config as da_config
 da_config.set(**{'array.slicing.split_large_chunks': False})
@@ -187,7 +188,7 @@ def read_partial(
                     fail_on_missing=False,
                     verbose=verbose,
                 )
-                for sub_slot in keys
+                for sub_slot in tqdm(keys, desc=f'Read {from_slot} slots as_dask={as_dask}', disable=not verbose)
             }
         else:
             slots[to_slot] = read_slot(
