@@ -10,8 +10,8 @@ dependencies:
   - dask-ml
   - sparse
   - zarr<3
-  # - pandas<2.0
-  # - numpy<2.0
+  - pandas<2.0
+  - numpy<2.0
   # - pegasuspy=1.8
   - cython
   - docopt
@@ -37,6 +37,8 @@ dependencies:
   - pip
   - pip:
     - pegasuspy==1.10
+    - numpy<2.0
+    - pandas<2.0
   # - r-base=4.3
   # - rpy2
   # - r-glue
