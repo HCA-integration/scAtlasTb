@@ -8,21 +8,14 @@ dependencies:
   - anndata=0.10
   - scanpy=1.10
   # - jaxlib=*=*cuda*
-  # - jax<=0.4.28
   # - cuda-version>12.1
   # - cuda-nvcc>12.1
-  # - scvi-tools
   - zarr<3
   - scipy<1.15
   - dask
   - sparse
   - pip
   - pip:
-    - torch
-    - torchvision
-    - torchaudio
-    - jax<=0.4.28
-    - jaxlib<=0.4.28
     - git+https://github.com/Hrovatin/scvi-tools.git
     - faiss-cpu<=1.9
     - patpy
