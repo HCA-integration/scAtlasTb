@@ -8,12 +8,10 @@ dependencies:
   - anndata=0.11
   - scanpy=1.11
   - zarr<3
-  - scipy<1.15
+  - scipy=1.12
   - dask
   - sparse
   - pip
   - pip:
     - torch
-    - torchvision
-    - torchaudio
     - drvi-py
