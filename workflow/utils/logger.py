@@ -13,7 +13,7 @@ import os, sys, re, warnings
 from pathlib import Path
 import logging
 
-## Config ## -------------------------------------------------------------------
+## Config variables ## ---------------------------------------------------------
 
 LOGGER_FORMAT = "[%(asctime)s] %(levelname)-8s %(name)s [%(filename)s:%(funcName)s:%(lineno)d] %(message)s"
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
@@ -27,7 +27,45 @@ LEVEL_COLORS = {
 }
 RESET = "\033[0m"
 
-# Configure the root logger
+## Functions ## ----------------------------------------------------------------
+
+def _repo_root() -> Path | None:
+    import subprocess
+    try:
+        out = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        ).stdout.strip()
+        p = Path(out)
+        return p if p.exists() else None
+    except Exception:
+        return None
+
+def _project_name(repo_root: Path | None, exclude: str = "_|-") -> str:
+    """Return styled project name from repo root or cwd."""
+    name = (repo_root or Path.cwd()).name or "App"
+    if re.findall(exclude, name): name = re.sub(exclude, " ", name).title()
+    return name
+
+def _hide_base_path(repo_root: Path | None, ignore: list[str] | None = None) -> str:
+    """Return a cwd string with some superfluous base paths removed."""
+    cwd = str(repo_root or Path.cwd().resolve())
+    # Build default ignore list if none provided
+    if ignore is None:
+        user = os.environ.get('USER', os.environ.get('USERNAME', ''))
+        ignore = [rf".*{re.escape(user)}"]
+        ignore.extend([r"\.os\.py", r".*mamba", r".*conda", r".*projects"])
+    # Apply filters sequentially
+    for pat in ignore: cwd = re.sub(pat, "", cwd)
+    # Fallback: collapse to last 2 parts if result is empty
+    if not cwd.strip(): cwd = str(Path(*Path.cwd().parts[-2:]))
+    return cwd
+
+
+## Configure the logger ## -----------------------------------------------------
 logging.basicConfig(
     format=LOGGER_FORMAT,
     datefmt=DATE_FORMAT,
@@ -38,20 +76,10 @@ for level, format in LEVEL_COLORS.items():
     logging.addLevelName(level, format + logging.getLevelName(level) + RESET)
 
 # Log the current working directory, removing user-specific and irrelevant paths
-base_paths = ".*" + os.environ.get('USER', os.environ.get('USERNAME'))
-base_paths = base_paths + "|.os.py|.*mamba|.*conda|.*projects"
-temp = re.sub(base_paths, "", Path().cwd().__str__())
-logging.info("Working at %s", temp)
-
-# Suppress specific warnings
-warnings.simplefilter(action="ignore", category=FutureWarning)
-warnings.simplefilter(action="ignore", category=UserWarning)
+logging.info("Working at %s", _hide_base_path(_repo_root()))
 
 # Add project name to logger
-project_path = os.popen("git rev-parse --show-toplevel 2>&1").read().rstrip()
-logger_name = Path(project_path).name if not 'fatal' in project_path else "App"
-if re.findall("_|-", logger_name):
-    logger_name = re.sub("_|-", " ", logger_name).title()
+logger_name = _project_name(_repo_root())
 logger = logging.getLogger(logger_name)
 
 ## logger and shorthands ## ----------------------------------------------------
@@ -62,3 +90,7 @@ warning = logger.warning
 debug = logger.debug
 error = logger.error
 critical = logger.critical
+
+## Suppress specific warnings ## -----------------------------------------------
+warnings.simplefilter(action="ignore", category=FutureWarning)
+warnings.simplefilter(action="ignore", category=UserWarning)
