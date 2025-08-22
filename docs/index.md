@@ -3,28 +3,32 @@
 ```
 
 ```{toctree}
-:caption: Getting started
-:name: getting_started
+:caption: Setup
+:name: setup
 :hidden:
 :maxdepth: 1
 
-references.md
+getting_started/index.md
+advanced_configuration/index.md
+```
+
+
+```{toctree}
+:caption: Modules
+:name: modules
+:hidden:
+:maxdepth: 2
+
+modules/index_data_processing
+modules/index_method_wrappers
+modules/index_auxiliary
 ```
 
 ```{toctree}
-:caption: Workflows
-:name: workflows
+:caption: Tutorials
+:name: tutorials
 :hidden:
 :maxdepth: 1
 
-workflows/load_data
-workflows/exploration
-workflows/subset
-workflows/relabel
-workflows/preprocessing
-workflows/label_harmonization
-workflows/label_transfer
-workflows/integration
-workflows/metrics
-workflows/common
+workflows/index
 ```

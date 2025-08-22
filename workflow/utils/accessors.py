@@ -185,3 +185,15 @@ def adata_to_memory(
         elif verbose:
             print(f'Layer {layer} not found, skipping...', flush=True)
     return adata
+
+
+def parse_gene_names(adata, gene_list):
+    var_names = adata.var_names.astype(str)
+    genes_not_in_var = [str(g) for g in gene_list if g not in var_names]
+    gene_list = [g for g in gene_list if g in var_names]
+
+    if genes_not_in_var:
+        mask = var_names.str.contains(pat='|'.join(genes_not_in_var))
+        gene_list += var_names[mask].tolist()
+
+    return gene_list

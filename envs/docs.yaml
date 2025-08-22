@@ -12,3 +12,9 @@ dependencies:
   - ipykernel
   - ipython
   - sphinx-copybutton
+  - sphinx-autosummary-accessors
+  - sphinxcontrib-napoleon
+  - pdf2image
+  - pip
+  - pip:
+      - sphinxemoji

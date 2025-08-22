@@ -2,44 +2,24 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import anndata as ad
+from pprint import pformat
+from tqdm import tqdm
 import traceback
 import logging
 logging.basicConfig(level=logging.INFO)
 
 from utils.io import read_anndata
-from utils.processing import sc, USE_GPU
+from utils.processing import sc as rsc
+import scanpy as sc
+from utils.processing import USE_GPU
 from utils.misc import dask_compute
 
 input_zarr = snakemake.input.zarr
 output_tsv = snakemake.output.tsv
+batches_txt = snakemake.input.batch
 layer = snakemake.params.get('layer', 'X')
 batch_key = snakemake.params.get('batch_key')
-batch = str(snakemake.wildcards.batch)
 
-logging.info(f'Read {input_zarr}...')
-adata = read_anndata(
-    input_zarr,
-    X=layer,
-    obs='obs',
-    backed=True,
-    dask=True,
-)
-
-logging.info(f'Subset to batch {batch}...')
-if batch_key in adata.obs.columns:
-    adata = adata[adata.obs[batch_key].astype(str) == batch, :].copy()
-logging.info(adata.__str__())
-
-if adata.n_obs < 100:
-    columns = ['scrublet_score', 'scrublet_prediction']
-    df = pd.DataFrame(index=adata.obs.index, columns=columns, dtype=float).fillna(0)
-    df.to_csv(output_tsv, sep='\t')
-    exit(0)
-
-# load data to memory
-adata = dask_compute(adata)
-
-# set parameters
 kwargs = dict(
     batch_key=None,
     sim_doublet_ratio=2.0,
@@ -50,7 +30,6 @@ kwargs = dict(
     normalize_variance=True,
     log_transform=False,
     mean_center=True,
-    n_prin_comps=np.min([30, adata.n_obs-1, adata.n_vars-1]),
     use_approx_neighbors=True,
     get_doublet_neighbor_parents=False,
     n_neighbors=None,
@@ -60,33 +39,70 @@ kwargs = dict(
     random_state=0,
 )
 
-logging.info('Run scrublet...')
 
-if USE_GPU:
-    sc.get.anndata_to_GPU(adata)
+def run_method(
+    adata,
+    batch_key,
+    batch,
+    min_cells=100,
+    use_gpu=USE_GPU,
+    **kwargs
+):
+    if batch_key in adata.obs.columns:
+        adata = adata[adata.obs[batch_key].astype(str) == batch, :].copy()
 
-try: 
-    sc.pp.scrublet(adata, **kwargs)
-except Exception as e:    
-    if not USE_GPU:
-        raise e
+    if adata.n_obs < min_cells:
+        columns = ['scrublet_score', 'scrublet_prediction']
+        return pd.DataFrame(index=adata.obs.index, columns=columns, dtype=float).fillna(0)
 
-    traceback.print_exc()
-    print(adata, flush=True)
+    adata = dask_compute(adata, verbose=False)
+    
+    kwargs |= dict(
+        n_prin_comps=np.min([30, adata.n_obs-1, adata.n_vars-1])
+    )
 
-    logging.info('Retry on CPU...')
-    sc.get.anndata_to_CPU(adata)
-    del sc
-    import scanpy as sc
-    sc.pp.scrublet(adata, **kwargs)
+    if use_gpu:
+        rsc.get.anndata_to_GPU(adata)
 
-# save results
-logging.info('Save results...')
-df = adata.obs[['doublet_score', 'predicted_doublet']].rename(
-    columns={
-        'doublet_score': 'scrublet_score',
-        'predicted_doublet': 'scrublet_prediction',
-    }
+    try: 
+        rsc.pp.scrublet(adata, **kwargs)
+    except Exception as e:    
+        if not use_gpu:
+            raise e
+
+        traceback.print_exc()
+        print(adata, flush=True)
+
+        logging.info('Retry on CPU...')
+        rsc.get.anndata_to_CPU(adata)
+        sc.pp.scrublet(adata, **kwargs)
+
+    df = adata.obs[['doublet_score', 'predicted_doublet']].rename(
+        columns={
+            'doublet_score': 'scrublet_score',
+            'predicted_doublet': 'scrublet_prediction',
+        }
+    )
+
+    return df
+
+
+logging.info(f'Read {input_zarr}...')
+adata = read_anndata(
+    input_zarr,
+    X=layer,
+    obs='obs',
+    backed=True,
+    dask=True,
 )
-print(df)
+
+with open(batches_txt, 'r') as f:
+    batches = [line.strip().split('\t')[0] for line in f if line.strip()]
+
+results = (
+    run_method(adata, batch_key, batch)
+    for batch in tqdm(batches, desc='Run scrublet', miniters=1)
+)
+df = pd.concat(results)
+
 df.to_csv(output_tsv, sep='\t')

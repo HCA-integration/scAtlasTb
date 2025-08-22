@@ -16,7 +16,8 @@ def parse_parameters(adata: ad.AnnData, params: dict, filter_hues: list = False)
         hues = [hues]
     hues = [hue for hue in hues if hue in adata.obs.columns]
     if filter_hues:
-        hues = [hue for hue in hues if adata.obs[hue].nunique() > 0]
+        hues = {hue for hue in hues if adata.obs[hue].nunique() > 1}
+        hues = list(hues)
     if len(hues) == 0:
         hues = [None]
 
@@ -204,6 +205,10 @@ def plot_qc_joint(
     g.fig.suptitle(title, fontsize=12)
     # workaround for patchworklib
     g._figsize = g.fig.get_size_inches()
+
+    # handles, labels = g.ax_joint.get_legend_handles_labels()
+    markerscale = (80 / kwargs.get('s', 20)) ** 0.5
+    g.ax_joint.legend(markerscale=markerscale)
 
     # x threshold
     for t, t_def in zip(x_threshold, (0, np.inf)):

@@ -1,0 +1,30 @@
+output_dir: data/out
+images: images
+
+use_gpu: false
+
+DATASETS:
+  test_metrics:
+    input:
+      metrics:
+        model1--model1_param=val1: data/pbmc68k.h5ad
+        model2--model2_param=val2: data/pbmc68k.h5ad
+        unintegrated: data/pbmc68k.h5ad
+    metrics:
+      label: bulk_labels
+      batch: louvain
+      overwrite_file_id: true
+      metrics:
+        - nmi
+        - ari
+        - asw_label
+        - asw_batch
+        - cell_cycle
+        - clisi
+        - ilisi
+        - graph_connectivity
+        - isolated_label_asw
+        - isolated_label_f1
+        - pcr_comparison
+        - pcr_comparison
+        - kbet_pg

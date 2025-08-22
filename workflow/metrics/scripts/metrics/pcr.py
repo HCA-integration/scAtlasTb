@@ -1,3 +1,4 @@
+import traceback
 import warnings
 import numpy as np
 import pandas as pd
@@ -72,9 +73,11 @@ def cell_cycle(
         adata = adata[random_subset].copy()
         adata_raw = adata_raw[random_subset].copy()
 
+    assert (adata.obs[batch_key] == adata_raw.obs[batch_key]).all(), 'Batch keys do not match'
+
     # get correct feature names
     if 'feature_name' in adata_raw.var.columns:
-        adata_raw.var_names = adata_raw.var['feature_name']
+        adata_raw.var_names = adata_raw.var['feature_name'].astype(str).values
 
     # get organism
     upper_case_genes = sum(adata_raw.var_names.str.isupper())
@@ -88,7 +91,7 @@ def cell_cycle(
     adata_raw = dask_compute(adata_raw[:, adata_raw.var[var_key]].copy())
 
     # compute cell cycle score per batch
-    for batch in adata.obs[batch_key].unique():
+    for batch in adata_raw.obs[batch_key].unique():
         batch_mask = adata_raw.obs[batch_key] == batch
         try:
             ad_sub = adata_raw[batch_mask].copy()
@@ -96,7 +99,8 @@ def cell_cycle(
             adata_raw.obs.loc[batch_mask, 'S_score'] = ad_sub.obs['S_score']
             adata_raw.obs.loc[batch_mask, 'G2M_score'] = ad_sub.obs['G2M_score']
         except Exception as e:
-            print(f'Error in score_cell_cycle for batch={batch}:\n{e}', flush=True)
+            print(f'Error in score_cell_cycle for batch={batch}, skipping\nError: {e}', flush=True)
+            print(traceback.format_exc(), flush=True)
             adata_raw.obs.loc[batch_mask, 'S_score'] = 0
             adata_raw.obs.loc[batch_mask, 'G2M_score'] = 0
     
@@ -110,7 +114,7 @@ def cell_cycle(
         recompute_cc=False,
         organism=organism,
         verbose=False,
-        linreg_method='sklearn',
+        linreg_method='numpy',
         n_threads=n_threads,
     )
     # except ValueError as e:

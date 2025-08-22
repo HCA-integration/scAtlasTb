@@ -94,19 +94,18 @@ print(adata, flush=True)
 adata_raw = None
 if comparison:
     adata_raw = read_anndata(
-        input_file,
-        X='raw/X',
+        f'{input_file}/raw',
+        X='X',
         obs='obs',
-        obsm='raw/obsm',
-        var='raw/var',
-        uns='raw/uns',
+        obsm='obsm',
+        var='var',
+        uns='uns',
         dask=True,
         backed=True,
     )
     if 'feature_name' in adata_raw.var.columns:
         adata_raw.var_names = adata_raw.var['feature_name'].astype(str)
-    print('adata_raw', flush=True)
-    print(adata_raw, flush=True)
+    adata_raw.obs[batch_key] = adata_raw.obs[batch_key].astype(str)
 
 
 # set default covariates
@@ -125,7 +124,7 @@ adata.obs = adata.obs[columns].copy()
 adata.obs.rename(columns=lambda x: replace_last(x, '_1', ''), inplace=True)
 
 logger.info(f'Run metric {metric} for {output_type}...')
-adata.obs[batch_key] = adata.obs[batch_key].astype(str).fillna('NA').astype('category')
+adata.obs[batch_key] = adata.obs[batch_key].astype(str)
 
 # TODO: deal with bootstrapping
 scores = metric_function(

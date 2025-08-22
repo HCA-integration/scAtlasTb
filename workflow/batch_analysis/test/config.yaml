@@ -54,7 +54,7 @@ DATASETS:
         - enrichment_protocol.method.ontology
         - cell_suspension.biomaterial_core.biomaterial_id
       n_permutations: 50
-      sample: sample
+      sample: sample,donor
   dummy:
     input:
       batch_analysis: test/input/blood_pca.zarr

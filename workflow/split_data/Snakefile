@@ -10,7 +10,14 @@ from utils.ModuleConfig import ModuleConfig
 mcfg = ModuleConfig(
     module_name='split_data',
     config=config,
-    config_params=['key', 'values', 'backed', 'dask', 'exclude_slots', 'write_copy'],
+    config_params=[
+        'key',
+        'values',
+        'backed',
+        'dask',
+        'slots',
+        'write_copy',
+    ],
     wildcard_names=['key', 'value'],
     rename_config_params={'values': 'value'},
     explode_by=['value'],
@@ -41,12 +48,12 @@ rule split:
         lambda wildcards: mcfg.get_input_file(wildcards.dataset, wildcards.file_id),
     output:
         splits=directory(mcfg.out_dir / 'splits' / split_pattern),
-        done=touch(mcfg.out_dir / 'splits' / f'{split_pattern}.done'),
+        done=mcfg.out_dir / 'splits' / f'{split_pattern}.done',
     params:
         values=lambda wildcards: mcfg.get_from_parameters(wildcards, 'value', single_value=False),
         backed=lambda wildcards: mcfg.get_from_parameters(wildcards, 'backed'),
         dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask'),
-        exclude_slots=lambda wildcards: mcfg.get_from_parameters(wildcards, 'exclude_slots', default=[]),
+        slots=lambda wildcards: mcfg.get_from_parameters(wildcards, 'slots', default={}),
         write_copy=lambda wildcards: mcfg.get_from_parameters(wildcards, 'write_copy', default=False),
     resources:
         mem_mb=lambda wildcards, attempt: mcfg.get_resource(profile='cpu',resource_key='mem_mb', attempt=attempt, factor=1),

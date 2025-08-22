@@ -1,20 +1,24 @@
 from pathlib import Path
 import pandas as pd
 
-from utils.io import read_anndata, link_zarr
+from utils.io import read_anndata, link_zarr, write_zarr_linked, ALL_SLOTS
 
 
 input_anndata = snakemake.input[0]
 input_scrublet = snakemake.input.scrublet
 input_doubletdetection = snakemake.input.doubletdetection
 output_zarr = snakemake.output.zarr
+layer = snakemake.params.get('layer', 'X')
 
+if input_anndata.endswith('.h5ad'):
+    kwargs = {x: x for x in ALL_SLOTS} | dict(X=layer)
+else:
+    kwargs = dict(obs='obs')
 
-# read AnnData
-adata = read_anndata(input_anndata, obs='obs')
+adata = read_anndata(input_anndata, **kwargs)
 
 if adata.n_obs == 0:
-    adata.write_zarr(output_zarr)
+    write_zarr(adata, output_zarr)
     exit(0)
 
 scrub_scores = pd.concat([pd.read_table(f, index_col=0) for f in input_scrublet])
@@ -31,14 +35,10 @@ adata.obs = adata.obs.merge(scrub_scores, left_index=True, right_index=True, how
 adata.obs = adata.obs.merge(doub_scores, left_index=True, right_index=True, how='left')
 print(adata.obs)
 
-adata.write_zarr(output_zarr)
-
-if input_anndata.endswith('.zarr'):
-    input_files = [f.name for f in Path(input_anndata).iterdir()]
-    files_to_keep = [f for f in input_files if f not in ['obs']]
-    link_zarr(
-        in_dir=input_anndata,
-        out_dir=output_zarr,
-        file_names=files_to_keep,
-        overwrite=True,
-    )
+write_zarr_linked(
+    adata,
+    input_anndata,
+    output_zarr,
+    files_to_keep=['obs'],
+    slot_map={'X': layer},
+)

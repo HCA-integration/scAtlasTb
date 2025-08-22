@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO)
 
 from utils.io import read_anndata, write_zarr_linked, check_slot_exists
 from utils.processing import sc, USE_GPU
-from utils.misc import ensure_dense
+from utils.misc import ensure_dense, trim_umap
 
 input_file = snakemake.input[0]
 input_rep = snakemake.input.rep
@@ -91,6 +91,10 @@ if USE_GPU:
 
 logging.info('Compute UMAP...')
 sc.tl.umap(adata, **params)
+
+if USE_GPU:
+    logging.info('Trim UMAP...')
+    trim_umap(adata)
 
 logging.info(f'Write to {output_file}...')
 write_zarr_linked(
