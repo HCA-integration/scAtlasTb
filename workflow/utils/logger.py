@@ -64,27 +64,55 @@ def _hide_base_path(repo_root: Path | None, ignore: list[str] | None = None) -> 
     if not cwd.strip(): cwd = str(Path(*Path.cwd().parts[-2:]))
     return cwd
 
+def _is_nested(logger: logging.Logger) -> bool:
+    handlers = []
+    for h in logger.handlers:
+        temp = isinstance(h, logging.StreamHandler)
+        handlers.append(temp and getattr(h, "_from_setup", False))
+    return any(handlers)
+
+class _ColorFormatter(logging.Formatter):
+    def __init__(self, fmt: str, datefmt: str, use_color: bool) -> None:
+        super().__init__(fmt=fmt, datefmt=datefmt)
+        self.use_color = use_color
+
+    def format(self, record: logging.LogRecord) -> str:
+        if self.use_color:
+            color = LEVEL_COLORS.get(record.levelno, "")
+            if color:
+                record.levelname = f"{color}{record.levelname}{RESET}"
+        return super().format(record)
+
+def _stream_supports_color(stream: object) -> bool:
+    """Respect NO_COLOR; require TTY"""
+    if os.environ.get("NO_COLOR"): return False
+    return hasattr(stream, "isatty") and stream.isatty()
 
 ## Configure the logger ## -----------------------------------------------------
-logging.basicConfig(
-    format=LOGGER_FORMAT,
-    datefmt=DATE_FORMAT,
-    level=logging.INFO,
-    stream=sys.stdout, # send to output (no red background)
-)
-for level, format in LEVEL_COLORS.items():
-    logging.addLevelName(level, format + logging.getLevelName(level) + RESET)
 
-# Log the current working directory, removing user-specific and irrelevant paths
-logging.info("Working at %s", _hide_base_path(_repo_root()))
-
-# Add project name to logger
-logger_name = _project_name(_repo_root())
-logger = logging.getLogger(logger_name)
+def setup_logger(level: int = logging.INFO, stream = sys.stdout) -> logging.Logger:
+    logger_name = _project_name(_repo_root())
+    # Root/logger setup without global side effects
+    logger = logging.getLogger(logger_name)
+    logger.setLevel(level)
+    # Avoid duplicate handlers if setup_logger() is called multiple times
+    if not _is_nested(logger):
+        handler = logging.StreamHandler(stream)
+        handler._from_setup = True  # sentinel
+        handler.setLevel(level)
+        handler.setFormatter(
+            _ColorFormatter(
+                LOGGER_FORMAT, DATE_FORMAT, _stream_supports_color(stream)
+            )
+        )
+        logger.addHandler(handler)
+    # Show where the script is running from
+    logger.info("Working at %s", _hide_base_path(_repo_root()))
+    return logger
 
 ## logger and shorthands ## ----------------------------------------------------
-logger.setLevel(logging.INFO)
-# Define functions for different logging levels
+
+logger = setup_logger(level=logging.INFO)
 info = logger.info
 warning = logger.warning
 debug = logger.debug
