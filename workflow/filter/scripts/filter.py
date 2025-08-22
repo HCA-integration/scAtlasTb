@@ -61,7 +61,7 @@ else:
     adata = adata[adata.obs['filtered']].copy()
     logging.info(adata.__str__())
     
-    if input_file.endswith('h5ad'):
+    if Path(input_file).suffix == '.h5ad':
         kwargs |= {
             'X': 'X',
             'layers': 'layers',
