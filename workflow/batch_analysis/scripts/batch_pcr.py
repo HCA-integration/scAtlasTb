@@ -65,25 +65,19 @@ if covariate == sample_key:
     print('Sample key is the same as covariate, skipping permutation...', flush=True)
     n_permute = 0
 
-series_dict = {}
+# aggregate and permutate covariate
+cov_per_sample = adata.obs.groupby(sample_key, observed=True).agg({covariate: 'first'})
+sample_ids = cov_per_sample.index.values
+cov_values = cov_per_sample[covariate].values
+
 for i in range(n_permute):
-    # aggregate and permutate covariate
-    cov_per_sample = adata.obs.groupby(sample_key, observed=True).agg({covariate: 'first'})
-    cov_map = dict(zip(cov_per_sample.index, cov_per_sample[covariate].sample(frac=1)))
-    
-    # apply permutation
+    permuted_values = np.random.permutation(cov_values)
+    cov_map = dict(zip(sample_ids, permuted_values))
+
     covariate_perm = f'{covariate}-{i}'
-    series_dict[covariate_perm] = adata.obs[sample_key].map(cov_map)
+    adata.obs[covariate_perm] = adata.obs[sample_key].map(cov_map)
     perm_covariates.append(covariate_perm)
 
-# concat new columns to adata to avoid fragmentation
-adata.obs = pd.concat(
-    [
-        adata.obs[[sample_key, covariate]],
-        pd.DataFrame(series_dict)
-    ],
-    axis=1
-).copy()
 
 pcr_scores = tqdm(
     Parallel(
