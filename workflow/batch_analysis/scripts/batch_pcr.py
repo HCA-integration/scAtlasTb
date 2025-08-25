@@ -61,8 +61,10 @@ with open(setup_file, 'r') as f:
 # n_permute = min(snakemake.params.get('n_permute', 0), n_permute)
 n_permute = snakemake.params.get('n_permute', 0)
 
-if adata.obs[[sample_key, covariate]].value_counts().max() == 1:
-    logging.info('Sample key is the same as covariate, skipping permutation...', flush=True)
+value_counts = adata.obs[[sample_key, covariate]].drop_duplicates().value_counts(covariate)
+logging.info(value_counts)
+if value_counts.max() == 1:
+    logging.info('Sample key is the same as covariate, skipping permutation...')
     n_permute = 0
 
 logging.info(f'Calculating PCR scores for {n_permute} permutations (using {n_threads} threads)')
