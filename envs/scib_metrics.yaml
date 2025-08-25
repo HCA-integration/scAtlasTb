@@ -2,32 +2,35 @@ name: scib_metrics
 channels:
   - nvidia/label/cuda-11.4.1
   - conda-forge
-  - bioconda
 dependencies:
-  - python=3.10
-  - anndata=0.10
-  - zarr
-  - scipy<1.15
-  - hdf5=1.14.2
+  - python=3.11
+  - anndata=0.11
+  - scanpy=1.11
+  - zarr<3
   - dask
   - sparse
-  - cuda-nvcc
-  - cuda-toolkit=11.4
-  - cudnn=8.4.1.50
+  # - cuda-nvcc
+  # - cuda-toolkit=11.4
+  # - cudnn=8.4.1.50
   # - jax=0.4.6
   # - jaxlib=0.4.6
-  - scvi-tools
+  - scvi-tools<1.3
+  - pytorch-lightning
+  - numpy<2.0
   # - faiss-gpu
-  - pip
+  - pip<24.1
   - pip:
     # requirements taken from https://github.com/google/jax/issues/13758#issuecomment-1384857047
     - clu==0.0.6
     - flax==0.6.3
-    - --find-links https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
-    - jax==0.3.25
-    - jaxlib==0.3.25+cuda11.cudnn82
-    - ml-collections==0.1.0
+    # - --find-links https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+    # - jax==0.3.25
+    # - jaxlib==0.3.25+cuda11.cudnn82
+    - jax==0.4.23
+    - jaxlib==0.4.23
+    - ml-collections==0.1.1
     - optax==0.1.4
     - orbax<0.1.6
+    - orbax-checkpoint<0.1.6
+    - numpy<2.0
     - scib-metrics==0.4.1
-    - git+https://github.com/scverse/scanpy.git

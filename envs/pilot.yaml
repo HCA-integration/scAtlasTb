@@ -9,6 +9,7 @@ dependencies:
   - scipy<1.15
   - hdf5=1.14.2
   - leidenalg
+  - faiss-cpu
   - dask
   - dask-ml
   - sparse
@@ -16,5 +17,6 @@ dependencies:
   - pip
   - rpy2  # Required by PILOT. Should be installed by it, but MacOS can lack some of system dependencies, which are installed this way
   - pip:
-    - git+https://github.com/lueckenlab/patient_representation.git@main
+    - faiss-cpu<=1.9
+    - patpy
     - git+https://github.com/CostaLab/PILOT#egg=pilotpy

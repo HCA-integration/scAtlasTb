@@ -5,16 +5,13 @@ channels:
   # - nvidia
 dependencies:
   - python=3.11
-  - anndata=0.10
-  - scanpy=1.10
-  - zarr=2
-  - scipy<1.15
-  - hdf5=1.14.2
+  - anndata=0.11
+  - scanpy=1.11
+  - zarr<3
+  - scipy=1.12
   - dask
   - sparse
   - pip
   - pip:
     - torch
-    - torchvision
-    - torchaudio
     - drvi-py
