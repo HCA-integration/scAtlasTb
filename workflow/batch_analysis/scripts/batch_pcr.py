@@ -5,13 +5,7 @@ import scib
 from anndata import AnnData
 import yaml
 from tqdm import tqdm
-# from concurrent.futures import ProcessPoolExecutor, as_completed
-# from joblib import Parallel, delayed
-# try:
-#     from sklearnex import patch_sklearn
-#     patch_sklearn()
-# except ImportError:
-#     print('no hardware acceleration for sklearn', flush=True)
+from joblib import Parallel, delayed
 
 from utils.io import read_anndata
 
@@ -84,31 +78,31 @@ adata.obs = pd.concat(
     axis=1
 ).copy()
 
-
-pcr_scores = []
-for covariate in tqdm([covariate]+perm_covariates):
-    is_permuted = covariate in perm_covariates
-    score = scib.me.pcr(
-        adata,
-        covariate=covariate,
-        recompute_pca=False,
-        verbose=False,
-        linreg_method='numpy',
-    )
-    pcr_scores.append((covariate, is_permuted, score))
-
-# pcr_scores = tqdm(
-#     Parallel(
-#         n_jobs=n_threads,
-#         require='sharedmem',
-#         return_as='generator'
-#     )(
-#         delayed(compute_pcr)(adata, covariate, perm_covariates)
-#         for covariate in [covariate]+perm_covariates
-#     ),
-#     total=1+len(perm_covariates),
-# )
-# pcr_scores = list(pcr_scores)
+pcr_scores = tqdm(
+    Parallel(
+        n_jobs=n_threads,
+        require='sharedmem',
+        return_as='generator'
+    )(
+        delayed(
+            lambda covariate, is_permuted, **kwargs: (
+                covariate, is_permuted, scib.me.pcr(covariate=covariate, **kwargs)
+            )
+        )(
+            adata=adata,
+            covariate=covariate,
+            is_permuted=covariate in perm_covariates,
+            recompute_pca=False,
+            verbose=False,
+            linreg_method='numpy',
+        )
+        for covariate in [covariate]+perm_covariates
+    ),
+    desc=f'Calculating PCR scores (using {n_threads} threads)',
+    total=1+len(perm_covariates),
+    miniters=1,
+)
+pcr_scores = list(pcr_scores)
 
 # Set permuted score when covariate is the same as the group variable
 if covariate == sample_key:
