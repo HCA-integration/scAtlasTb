@@ -24,8 +24,11 @@ adata = read_anndata(
     obs='obs',
     uns='uns',
 )
+adata.uns = {k: v for k, v in adata.uns.items() if k == 'pca'}
+assert 'pca' in adata.uns, f'.uns["pca"] is missing, please make sure PCA is computed and PC loadings are saved in adata.uns as provided by scanpy'
+
+# make sure the PCA embedding is an array
 if not isinstance(adata.X, np.ndarray):
-    # make sure the PCA embedding is an array
     adata.X = adata.X.toarray()
 adata.obsm['X_pca'] = adata.X
 del adata.X
@@ -41,7 +44,11 @@ if sample_key is None or sample_key == 'None':
 sample_keys = [x.strip() for x in sample_key.split(',')]
 if len(sample_keys) > 1:
     sample_key = '--'.join(sample_keys)
-    adata.obs[sample_key] = adata.obs[sample_keys].astype(str).agg('-'.join, axis=1)
+    adata.obs[sample_key] = adata.obs[sample_keys].astype(str).agg('-'.join, axis=1).astype('category')
+
+# minimise adata.obs
+select_columns = list({sample_key, covariate})
+adata.obs = adata.obs[select_columns].copy()
 
 # read setup file
 with open(setup_file, 'r') as f:

@@ -73,6 +73,6 @@ rule plot:
         barplot=mcfg.image_dir / paramspace.wildcard_pattern / 'batch_pcr_bar.png',
         violinplot=mcfg.image_dir / paramspace.wildcard_pattern / 'batch_pcr_violin.png',
     conda:
-        get_env(config, 'plots')
+        get_env(config, 'scanpy')
     script:
         '../scripts/plot.py'
