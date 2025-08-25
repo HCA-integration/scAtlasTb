@@ -42,17 +42,20 @@ def read_adata(
         file_id = file
     if log:
         logging.info(f'Read {file}...')
-    adata = read_anndata(
-        file,
-        backed=backed,
-        dask=dask,
-        stride=stride,
-        chunks=chunks,
-        **slots,
-        verbose=False,
-    )
-    adata.obs['file_id'] = file_id
-    adata = ensure_sparse(adata)
+    try:
+        adata = read_anndata(
+            file,
+            backed=backed,
+            dask=dask,
+            stride=stride,
+            chunks=chunks,
+            **slots,
+            verbose=False,
+        )
+        adata.obs['file_id'] = file_id
+        adata = ensure_sparse(adata)
+    except Exception as e:
+        raise Exception(f'Error reading {file}') from e
     
     return adata
 
