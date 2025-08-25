@@ -7,6 +7,7 @@ import yaml
 from tqdm import tqdm
 from joblib import Parallel, delayed
 import logging
+import gc
 logging.basicConfig(level=logging.INFO)
 
 from utils.io import read_anndata
@@ -86,21 +87,36 @@ logging.info(f'Calculating PCR scores (using {n_threads} threads)')
 def run_pcr(adata, covariate, is_permuted, **kwargs):
     return covariate, is_permuted, scib.me.pcr(adata, covariate=covariate, **kwargs)
 
-pcr_scores = Parallel(
-    n_jobs=n_threads,
-    require='sharedmem',
-    return_as='generator'
-)(
+
+def chunked_parallel_jobs(jobs, chunk_size, n_threads):
+    results = []
+    for i in tqdm(range(0, len(jobs), chunk_size), desc='PCR chunks'):
+        chunk = jobs[i:i+chunk_size]
+        chunk_results = Parallel(
+            n_jobs=n_threads,
+            require='sharedmem',
+        )(chunk)
+        results.extend(chunk_results)
+        # Explicit cleanup
+        del chunk_results
+        del chunk
+        gc.collect()
+    return results
+
+
+all_jobs = [
     delayed(run_pcr)(
         adata=adata,
-        covariate=covariate,
-        is_permuted=covariate in perm_covariates,
+        covariate=cov,
+        is_permuted=cov in perm_covariates,
         recompute_pca=False,
         verbose=False,
         linreg_method='numpy',
-    ) for covariate in [covariate]+perm_covariates
-)
-pcr_scores = list(tqdm(pcr_scores,  total=1+len(perm_covariates), miniters=1))
+    ) for cov in [covariate]+perm_covariates
+]
+
+chunk_size = max(1, n_threads)
+pcr_scores = chunked_parallel_jobs(all_jobs, chunk_size, n_threads)
 
 # Set permuted score when covariate is the same as the group variable
 if covariate == sample_key:
