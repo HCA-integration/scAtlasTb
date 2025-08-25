@@ -65,7 +65,7 @@ def get_majority_consensus(df, columns, new_key='majority_consensus'):
         if re.fullmatch(pattern, col)
     ]
     columns = list(set(columns))
-    print(columns)
+    assert len(columns) > 0, f'No columns found matching patterns: {columns}'
     
     agreement_col = f'{new_key}_agreement'
     low_agreement_col = f'{new_key}_low_agreement'
@@ -75,7 +75,7 @@ def get_majority_consensus(df, columns, new_key='majority_consensus'):
     
     categories = reduce(pd.Index.union, [df[col].cat.categories.dropna() for col in columns])
     cat_dtype = pd.CategoricalDtype(categories=categories)
-    df_cat = df[columns].astype(cat_dtype).apply(lambda x: x.cat.codes)    
+    df_cat = df[columns].astype(cat_dtype).apply(lambda x: x.cat.codes)
     
     majority_votes, mode_count = mode_counts_per_row(df_cat.to_numpy())
     
