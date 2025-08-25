@@ -6,6 +6,8 @@ from anndata import AnnData
 import yaml
 from tqdm import tqdm
 from joblib import Parallel, delayed
+import logging
+logging.basicConfig(level=logging.INFO)
 
 from utils.io import read_anndata
 
@@ -79,31 +81,26 @@ for i in range(n_permute):
     perm_covariates.append(covariate_perm)
 
 
-pcr_scores = tqdm(
-    Parallel(
-        n_jobs=n_threads,
-        require='sharedmem',
-        return_as='generator'
-    )(
-        delayed(
-            lambda covariate, is_permuted, **kwargs: (
-                covariate, is_permuted, scib.me.pcr(covariate=covariate, **kwargs)
-            )
-        )(
-            adata=adata,
-            covariate=covariate,
-            is_permuted=covariate in perm_covariates,
-            recompute_pca=False,
-            verbose=False,
-            linreg_method='numpy',
-        )
-        for covariate in [covariate]+perm_covariates
-    ),
-    desc=f'Calculating PCR scores (using {n_threads} threads)',
-    total=1+len(perm_covariates),
-    miniters=1,
+logging.info(f'Calculating PCR scores (using {n_threads} threads)')
+
+def run_pcr(adata, covariate, is_permuted, **kwargs):
+    return covariate, is_permuted, scib.me.pcr(adata, covariate=covariate, **kwargs)
+
+pcr_scores = Parallel(
+    n_jobs=n_threads,
+    require='sharedmem',
+    return_as='generator'
+)(
+    delayed(run_pcr)(
+        adata=adata,
+        covariate=covariate,
+        is_permuted=covariate in perm_covariates,
+        recompute_pca=False,
+        verbose=False,
+        linreg_method='numpy',
+    ) for covariate in [covariate]+perm_covariates
 )
-pcr_scores = list(pcr_scores)
+pcr_scores = list(tqdm(pcr_scores,  total=1+len(perm_covariates), miniters=1))
 
 # Set permuted score when covariate is the same as the group variable
 if covariate == sample_key:
