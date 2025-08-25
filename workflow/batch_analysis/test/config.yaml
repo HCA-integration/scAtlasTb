@@ -1,13 +1,5 @@
 output_dir: test/out
-dataset_meta: test/datasets.tsv
-schema_file: test/data/schema_mapping.tsv
-dcp_metadata: test/dcp_metadata.tsv
 images: test/images
-
-os: intel
-# defaults:
-#   datasets:
-#     - dummy
 
 DATASETS:
   blood_pca:
@@ -53,7 +45,7 @@ DATASETS:
         - collection_protocol.method.ontology
         - enrichment_protocol.method.ontology
         - cell_suspension.biomaterial_core.biomaterial_id
-      n_permutations: 50
+      n_permutations: 1000
       sample: sample,donor
   dummy:
     input:
