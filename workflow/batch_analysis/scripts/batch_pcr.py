@@ -28,8 +28,8 @@ adata = read_anndata(
     obs='obs',
     uns='uns',
 )
-adata.uns = {k: v for k, v in adata.uns.items() if k == 'pca'}
 assert 'pca' in adata.uns, f'.uns["pca"] is missing, please make sure PCA is computed and PC loadings are saved in adata.uns as provided by scanpy'
+adata.uns = {'pca': adata.uns['pca']}
 
 # make sure the PCA embedding is an array
 if not isinstance(adata.X, np.ndarray):
