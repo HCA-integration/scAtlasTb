@@ -57,8 +57,6 @@ SCVI_MODEL_PARAMS = [
     'use_additive_background',
     'use_batch_in_decoder',
     'regularise_dispersion',
-    'extra_encoder_kwargs',
-    'extra_decoder_kwargs',
 ]
 
 SCANVI_MODEL_PARAMS = SCVI_MODEL_PARAMS + ['linear_classifier']
