@@ -1,0 +1,20 @@
+name: scvi-vitkl
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - anndata=0.10
+  - scanpy=1.10
+  - zarr
+  - scipy<1.15
+  - hdf5=1.14.2
+  - dask
+  - sparse
+  - pip
+  - pip:
+    - torch
+    - torchvision
+    - torchaudio
+    - jax<=0.4.28
+    - jaxlib<=0.4.28
+    - git+https://github.com/vitkl/scvi-tools.git@library_stability
