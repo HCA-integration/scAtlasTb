@@ -50,6 +50,15 @@ SCVI_MODEL_PARAMS = [
     'extra_decoder_kwargs',
     'categorical_covariate_keys',
     'continuous_covariate_keys',
+    # vitkl parameters
+    'library_n_hidden',
+    'library_log_vars_weight',
+    'scale_activation',
+    'use_additive_background',
+    'use_batch_in_decoder',
+    'regularise_dispersion',
+    'extra_encoder_kwargs',
+    'extra_decoder_kwargs',
 ]
 
 SCANVI_MODEL_PARAMS = SCVI_MODEL_PARAMS + ['linear_classifier']
