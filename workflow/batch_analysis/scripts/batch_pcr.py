@@ -6,6 +6,7 @@ from anndata import AnnData
 import yaml
 from tqdm import tqdm
 from joblib import Parallel, delayed
+
 import logging
 import gc
 logging.basicConfig(level=logging.INFO)
@@ -59,33 +60,33 @@ with open(setup_file, 'r') as f:
 # n_permute = setup['n_permute']
 # n_permute = min(snakemake.params.get('n_permute', 0), n_permute)
 n_permute = snakemake.params.get('n_permute', 0)
-print(f'n_permute: {n_permute}', flush=True)
 
-# Permute covariates
-perm_covariates = []
-
-if covariate == sample_key:
-    print('Sample key is the same as covariate, skipping permutation...', flush=True)
+if adata.obs[[sample_key, covariate]].value_counts().max() == 1:
+    logging.info('Sample key is the same as covariate, skipping permutation...', flush=True)
     n_permute = 0
 
-# aggregate and permutate covariate
-cov_per_sample = adata.obs.groupby(sample_key, observed=True).agg({covariate: 'first'})
-sample_ids = cov_per_sample.index.values
-cov_values = cov_per_sample[covariate].values
-
-for i in range(n_permute):
-    permuted_values = np.random.permutation(cov_values)
-    cov_map = dict(zip(sample_ids, permuted_values))
-
-    covariate_perm = f'{covariate}-{i}'
-    adata.obs[covariate_perm] = adata.obs[sample_key].map(cov_map)
-    perm_covariates.append(covariate_perm)
+logging.info(f'Calculating PCR scores for {n_permute} permutations (using {n_threads} threads)')
 
 
-logging.info(f'Calculating PCR scores (using {n_threads} threads)')
+def run_pcr(adata, covariate, i, sample_key, sample_ids, cov_values, **kwargs):
+    is_permuted = i > 0
+    if is_permuted:
+        # Permute covariate per sample
+        permuted_values = np.random.permutation(cov_values)
+        cov_map = dict(zip(sample_ids, permuted_values))
+        covariate_array = adata.obs[sample_key].map(cov_map)
+    else:
+        # Use original covariate
+        covariate_array = adata.obs[covariate]
 
-def run_pcr(adata, covariate, is_permuted, **kwargs):
-    return covariate, is_permuted, scib.me.pcr(adata, covariate=covariate, **kwargs)
+    result = scib.me.pc_regression(
+        adata.obsm['X_pca'],
+        pca_var=adata.uns['pca']['variance'],
+        covariate=covariate_array,
+        **kwargs
+    )
+    
+    return f'{covariate}-{i}', is_permuted, result
 
 
 def chunked_parallel_jobs(jobs, chunk_size, n_threads):
@@ -104,24 +105,29 @@ def chunked_parallel_jobs(jobs, chunk_size, n_threads):
     return results
 
 
+# aggregate covariate per sample for permutation
+cov_per_sample = adata.obs.groupby(sample_key, observed=True).agg({covariate: 'first'})
+
 all_jobs = [
     delayed(run_pcr)(
         adata=adata,
-        covariate=cov,
-        is_permuted=cov in perm_covariates,
-        recompute_pca=False,
+        covariate=covariate,
+        i=i,
+        sample_key=sample_key,
+        sample_ids=cov_per_sample.index.values,
+        cov_values=cov_per_sample[covariate].values,
         verbose=False,
         linreg_method='numpy',
-    ) for cov in [covariate]+perm_covariates
+    ) for i in range(n_permute + 1)
 ]
 
 chunk_size = max(1, n_threads)
 pcr_scores = chunked_parallel_jobs(all_jobs, chunk_size, n_threads)
 
 # Set permuted score when covariate is the same as the group variable
-if covariate == sample_key:
-    # permutations wouln't change values in this case, impute same value as covariate score
-    perm_score = (f'{covariate}-0', True, pcr_scores[0][2])
+if n_permute == 0 :
+    # permutations wouldn't change values in this case, impute same value as covariate score
+    perm_score = (f'{covariate}-1', True, pcr_scores[0][2])
     pcr_scores.append(perm_score)
 
 df = pd.DataFrame.from_records(
@@ -138,5 +144,5 @@ df['z_score'] = (df['pcr'] - df['perm_mean']) / df['perm_std']
 df['signif'] = df['z_score'] > 1.5
 df['p-val'] = df.loc[df['permuted'], 'signif'].sum() / n_permute
 
-print(df.to_string(), flush=True)
+print(df, flush=True)
 df.to_csv(output_file, sep='\t', index=False)
