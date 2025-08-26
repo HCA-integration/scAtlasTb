@@ -115,6 +115,7 @@ class InputFiles:
         try:
             file = file_map[file_id]
         except KeyError as e:
-                f'File "{file_id}" not found\n{pformat(list(file_map.keys()))}'
+            raise ValueError(
+                f'File "{file_id}" not found\n {pformat(list(file_map.keys()))}'
             ) from e
         return file
