@@ -9,6 +9,7 @@ logging.basicConfig(level=logging.INFO)
 from tqdm import tqdm
 import warnings
 warnings.filterwarnings("ignore")
+from tqdm.dask import TqdmCallback
 from dask import config as da_config
 da_config.set(num_workers=snakemake.threads)
 import numpy as np
@@ -182,7 +183,9 @@ else:
         logging.info(f'Select features for all cells with arguments: {args}...')
         if use_gpu:
             sc.get.anndata_to_GPU(adata)
-        sc.pp.highly_variable_genes(adata, **args)
+        
+        with TqdmCallback(desc=f'Select features with arguments: {args}...', miniters=1):
+            sc.pp.highly_variable_genes(adata, **args)
         adata.var[hvg_column_name] = adata.var['highly_variable']
 
     # set extra_hvgs in full dataset
