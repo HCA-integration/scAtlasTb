@@ -6,7 +6,7 @@ from pprint import pformat
 import logging
 logging.basicConfig(level=logging.INFO)
 
-from utils.io import read_anndata, write_zarr_linked
+from utils.io import read_anndata, write_zarr_linked, get_store
 from utils.accessors import subset_hvg
 from utils.misc import dask_compute
 from utils.processing import assert_neighbors, sc, _filter_genes
@@ -91,6 +91,10 @@ def read_and_subset(
 
 files_to_keep = ['obs', 'var']
 slot_map = {}
+
+# check if var_mask exists in data
+store = get_store(input_file)
+assert var_mask in store['var'], f'var_mask="{var_mask}" not found in {input_file}.'
 
 adata_norm, files_to_link, slot_map = read_and_subset(
     input_file=input_file,

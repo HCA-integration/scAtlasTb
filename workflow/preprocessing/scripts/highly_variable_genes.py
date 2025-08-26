@@ -7,6 +7,7 @@ logging.basicConfig(level=logging.INFO)
 import warnings
 warnings.filterwarnings("ignore", message="The frame.append method is deprecated and will be removed from pandas in a future version.")
 import anndata as ad
+from tqdm.dask import TqdmCallback
 from dask import array as da
 from dask import config as da_config
 da_config.set(num_workers=snakemake.threads)
@@ -64,8 +65,12 @@ else:
     if USE_GPU:
         sc.get.anndata_to_GPU(adata)
     
-    logging.info(f'Select features with arguments: {args}...')
-    sc.pp.highly_variable_genes(adata, **args)
+    with TqdmCallback(
+        desc=f'Select features with arguments: {args}...',
+        miniters=1,
+        mininterval=1,
+    ):
+        sc.pp.highly_variable_genes(adata, **args)
 
     # add HVG info back to adata
     hvg_column_map = {

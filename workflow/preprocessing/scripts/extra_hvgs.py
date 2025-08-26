@@ -9,6 +9,7 @@ logging.basicConfig(level=logging.INFO)
 from tqdm import tqdm
 import warnings
 warnings.filterwarnings("ignore")
+from tqdm.dask import TqdmCallback
 from dask import config as da_config
 da_config.set(num_workers=snakemake.threads)
 import numpy as np
@@ -17,6 +18,7 @@ import scanpy
 
 from utils.io import read_anndata, write_zarr_linked
 from utils.accessors import _filter_batch
+from utils.misc import dask_compute
 from utils.processing import sc, USE_GPU
 rsc = sc
 
@@ -95,6 +97,9 @@ adata = read_anndata(
     dask=True,
 )
 logging.info(adata.__str__())
+for col in adata.var.columns:
+    if col.startswith('extra_hvgs'):
+        del adata.var[col]  # remove old HVG columns
 
 # if adata.n_obs > 2e6:
 #     use_gpu = False
@@ -158,6 +163,7 @@ else:
             # filter genes and cells that would break HVG function
             batch_mask = _filter_batch(_ad, batch_key=args.get('batch_key'))
             _ad = _ad[batch_mask, _ad.var['nonzero_genes']].copy()
+            _ad = dask_compute(_ad)
             
             # if _ad.n_obs > 1e6:
             #     use_gpu = False
@@ -182,7 +188,9 @@ else:
         logging.info(f'Select features for all cells with arguments: {args}...')
         if use_gpu:
             sc.get.anndata_to_GPU(adata)
-        sc.pp.highly_variable_genes(adata, **args)
+        
+        with TqdmCallback(desc=f'Select features with arguments: {args}...', miniters=1):
+            sc.pp.highly_variable_genes(adata, **args)
         adata.var[hvg_column_name] = adata.var['highly_variable']
 
     # set extra_hvgs in full dataset

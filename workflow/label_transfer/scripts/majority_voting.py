@@ -17,6 +17,9 @@ output_plots.mkdir(parents=True, exist_ok=True)
 majority_reference = snakemake.params.get('majority_reference')
 majority_consensus = snakemake.params.get('majority_consensus')
 
+logging.info(f'majority_reference: {majority_reference}')
+logging.info(f'majority_consensus: {majority_consensus}')
+
 logging.info('Read adata...')
 adata = read_anndata(input_file, obs='obs')
 
@@ -35,13 +38,13 @@ if majority_reference is not None:
         **majority_reference.get('crosstab_kwargs', {})
     )
 
-if majority_consensus is not None:
+if majority_consensus is not None and majority_consensus.get('columns'):
     logging.info(f'Compute majority consensus for:\n{pformat(majority_consensus)}')
     
     new_key = 'majority_consensus'
     maj_df = get_majority_consensus(
         adata.obs,
-        columns=majority_consensus['columns'],
+        column_patterns=majority_consensus['columns'],
         new_key=new_key,
     )
     adata.obs[maj_df.columns] = maj_df

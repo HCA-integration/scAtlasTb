@@ -80,7 +80,7 @@ def compute_neighbors(adata, output_type=None, force=False, check_n_neighbors=Fa
             adata.obsm['X_emb'] = adata_tmp.obsm['X_pca']
             del adata_tmp
         kwargs |= dict(use_rep='X_emb')
-        logging.info('Neighbors...')
+        logging.info(f'Neighbors with {kwargs}...')
         sc.pp.neighbors(adata, **kwargs)
     
     else:
