@@ -1,21 +1,18 @@
 name: sysvi
 channels:
+  - nvidia
+  - pytorch
   - conda-forge
-  # - pytorch
-  # - nvidia
 dependencies:
   - python=3.11
   - anndata=0.10
   - scanpy=1.10
-  # - jaxlib=*=*cuda*
-  # - cuda-version>12.1
-  # - cuda-nvcc>12.1
   - zarr<3
   - scipy<1.15
   - dask
   - sparse
+  - scvi-tools
+  - jax<=0.4.28
   - pip
   - pip:
     - git+https://github.com/Hrovatin/scvi-tools.git
-    - faiss-cpu<=1.9
-    - patpy
