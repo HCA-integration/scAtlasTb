@@ -44,7 +44,7 @@ if majority_consensus is not None and majority_consensus.get('columns'):
     new_key = 'majority_consensus'
     maj_df = get_majority_consensus(
         adata.obs,
-        columns=majority_consensus['columns'],
+        column_patterns=majority_consensus['columns'],
         new_key=new_key,
     )
     adata.obs[maj_df.columns] = maj_df

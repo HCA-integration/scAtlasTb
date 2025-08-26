@@ -55,17 +55,17 @@ def get_majority_reference(df, reference_key, query_key, **kwargs):
         categories=map_majority.dropna().unique(),
     )
 
-def get_majority_consensus(df, columns, new_key='majority_consensus'):
+def get_majority_consensus(df, column_patterns, new_key='majority_consensus'):
     import re
     from functools import reduce
 
     # parse regex columns
     columns = [
-        col for col in df.columns for pattern in columns
+        col for col in df.columns for pattern in column_patterns
         if re.fullmatch(pattern, col)
     ]
     columns = list(set(columns))
-    assert len(columns) > 0, f'No columns found matching patterns: {columns}'
+    assert len(columns) >= 2, f'No columns found matching patterns: {column_patterns}'
     
     agreement_col = f'{new_key}_agreement'
     low_agreement_col = f'{new_key}_low_agreement'
