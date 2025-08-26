@@ -18,6 +18,7 @@ import scanpy
 
 from utils.io import read_anndata, write_zarr_linked
 from utils.accessors import _filter_batch
+from utils.misc import dask_compute
 from utils.processing import sc, USE_GPU
 rsc = sc
 
@@ -96,6 +97,9 @@ adata = read_anndata(
     dask=True,
 )
 logging.info(adata.__str__())
+for col in adata.var.columns:
+    if col.startswith('extra_hvgs'):
+        del adata.var[col]  # remove old HVG columns
 
 # if adata.n_obs > 2e6:
 #     use_gpu = False
@@ -159,6 +163,7 @@ else:
             # filter genes and cells that would break HVG function
             batch_mask = _filter_batch(_ad, batch_key=args.get('batch_key'))
             _ad = _ad[batch_mask, _ad.var['nonzero_genes']].copy()
+            _ad = dask_compute(_ad)
             
             # if _ad.n_obs > 1e6:
             #     use_gpu = False
