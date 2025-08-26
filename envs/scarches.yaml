@@ -2,24 +2,18 @@ name: scarches
 channels:
   - conda-forge
 dependencies:
-  - python=3.10
-  - anndata=0.10.0
-  - scanpy=1.11
-  - pandas<2
+  - python=3.11
+  - anndata=0.10
+  - scanpy=1.10
   - scipy<=1.12
   - zarr<3
   - dask
   - sparse
-  - scvi-tools=0.20.3
-  - muon
-  - jax=0.4.23
-  - jaxlib=0.4.23
-  - chex=0.1.82
-  - optax=0.2.1
   - pip
   - pip:
-    - jax==0.4.23
-    - jaxlib==0.4.23
-    - chex==0.1.84
-    - optax==0.2.1
+    - torch
+    - torchvision
+    - torchaudio
     - git+https://github.com/theislab/scarches.git@master
+    - jax<0.4.14
+    - jaxlib<0.4.14
