@@ -11,7 +11,5 @@ dependencies:
   - dask
   - dask-ml
   - sparse
-  - pip
-  - pip:
-    - torch
-    - bbknn
+  - pytorch
+  - bbknn
