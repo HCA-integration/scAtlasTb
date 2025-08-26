@@ -18,4 +18,6 @@ dependencies:
   - jaxlib<=0.4.20
   - pip
   - pip:
+    - jax==0.4.13  # needed for compatibility with MacOS
+    - jaxlib==0.4.13  # needed for compatibility with MacOS
     - drvi-py
