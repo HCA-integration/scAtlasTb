@@ -40,7 +40,7 @@ The toolbox has 2 modes of dealing with conda evironments:
 
 2. **OR:** Pre-install conda environments locally and set `env_mode: local` (default). This requires you to manually update conda environments when the YAML specifications change, but gives you full control on whether a new environment needs to be built and does not create any duplicate environments. In order to keep environment management overhead minimal, consider creating the environments you need for your specific workflow. Each module should have a section on the environments needed by it.
 
-## Managing environments for `env_mode: from_yaml`
+## Option 1: Managing environments for `env_mode: from_yaml`
 
 Set the global parameter in your configuration file
 
@@ -70,7 +70,7 @@ snakemake <target_rule> --conda-cleanup-envs
 Read the [Snakemake documentation](https://snakemake.readthedocs.io/en/v7.31.1/snakefiles/deployment.html#integrated-package-management) on more information on package management, which includes pre-building environments or removing old environments.
 
 
-## Managing environments for `env_mode: local`
+## Option 2: Managing environments for `env_mode: local`
 
 Optional: set the global parameter in your configuration file. This is the default, so it will be used, even when `env_mode` is not configured.
 
