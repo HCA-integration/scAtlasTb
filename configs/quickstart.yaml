@@ -1,15 +1,18 @@
   output_dir: data/out
   images: images
+  use_gpu: false
+
+  env_mode: local
 
   DATASETS:
 
-    my_dataset: # custom task/workflow name
+    task_name: # custom task/workflow name
 
       # input specification: map of module name to map of input file name to input file path
       input:
         preprocessing:
           file_1: data/pbmc68k.h5ad
-        integration: preprocessing # all outputs of module will automatically be used as input
+        integration: preprocessing
         metrics: integration
       
       # module configuration
@@ -25,22 +28,47 @@
       
       # module configuration
       integration:
-        raw_counts: raw/X
-        norm_counts: X
+        raw_counts: layers/counts
+        norm_counts: layers/normcounts
         batch: batch
         methods:
           unintegrated:
+          bbknn:
+          combat:
+          harmony_pytorch:
+          harmonypy:
           scanorama:
             batch_size: 100
           scvi:
             max_epochs: 10
             early_stopping: true
+          drvi:
+            max_epochs: 10
+            early_stopping: true
+          sysvi:
+            max_epochs: 10
+            early_stopping: true
+            system_key: phase
 
       # module configuration
       metrics:
-        unintegrated: layers/norm_counts
+        unintegrated: layers/normcounts
         batch: batch
         label: bulk_labels
         methods:
-          - nmi
+          - asw_batch
           - graph_connectivity
+          - ilisi
+          - pcr_comparison
+          - ari
+          - asw_label
+          - cell_cycle
+          - clisi
+          - isolated_label_asw
+          - isolated_label_f1
+          - nmi
+          - morans_i_random
+          - kbet_pg
+          - pcr_random
+          - pcr
+          - pcr_genes

@@ -55,7 +55,7 @@ metrics_tab <- dcast(
   subset(dt, select = all_columns),
   as.formula(id_formula),
   value.var = value_var,
-  fun.aggregate = mean
+  fun.aggregate = function(x) mean(x, na.rm = TRUE)
 )
 print(head(metrics_tab))
 

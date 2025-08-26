@@ -5,6 +5,6 @@
 
 installation.md
 quickstart.md
-configure_workflow.md
-call_pipeline.md
+configure_workflow.rst
+call_pipeline.rst
 ```

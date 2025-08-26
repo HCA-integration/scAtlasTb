@@ -3,27 +3,22 @@ channels:
   - rapidsai
   - nvidia
   - conda-forge
+  - bioconda
 dependencies:
   - python=3.11
-  - anndata=0.10
-  - scanpy=1.10
+  - anndata=0.11
+  - scanpy=1.11
   - leidenalg
   - louvain
   - zarr
-  - cuda-version=12.2
-  # - cuda-cudart=12.2
-  # - cuda-nvrtc=12.2
-  # - libnvjitlink=12.2
+  - cuda-version=12
   - rapids=24.06
-  # - pyarrow
-  # - arrow-cpp
-  - hdf5=1.14.2
   - scipy<1.15
   - dask
   - dask-ml
   - sparse
+  - harmonypy
+  - pytorch
   - pip
   - pip:
-    - torch
-    - harmonypy
     - rapids-singlecell

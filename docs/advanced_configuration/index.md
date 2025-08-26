@@ -3,6 +3,6 @@
 ```{toctree}
 :maxdepth: 2
 
-advanced.md
+advanced.rst
 troubleshooting.md
 ```

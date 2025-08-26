@@ -11,12 +11,10 @@ dependencies:
   - python=3.10
   - anndata>=0.10.0
   - scanpy >=1.10.0
-  - scipy<1.15
-  - hdf5=1.14.2
   - dask
   - dask-ml
   - sparse
-  - zarr
+  - zarr<3
   - r-rtensor
   - r-ica
   - bioconductor-fgsea

@@ -10,7 +10,6 @@ For this workflow, make sure you install the following environments:
 
 * `envs/scanpy.yaml`
 * `envs/scib.yaml` for `scib` metrics https://github.com/theislab/scib
-* `envs/scib_accel.yaml` for intel-accelerated `scib` metrics (TODO: deprecate)
 * `envs/scib_metrics.yaml` for `scib_metrics` metrics https://github.com/YosefLab/scib-metrics
 * `envs/funkyheatmap.yaml` for `funkyheatmap` plots of the metrics https://github.com/funkyheatmap/funkyheatmap
 

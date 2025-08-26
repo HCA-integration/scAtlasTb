@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from snakemake.rules import Rule
 
-from utils.ModuleConfig import ModuleConfig
+from utils.ModuleConfig import ModuleConfig, get_use_gpu
 from utils.config import _get_or_default_from_config
 from utils.misc import expand_dict_and_serialize, unique_dataframe
 
@@ -22,9 +22,17 @@ class IntegrationConfig(ModuleConfig):
         if isinstance(parameters, str):
             parameters = pd.read_table(parameters)
         if isinstance(parameters, pd.DataFrame):
+            profile = 'gpu' if get_use_gpu(kwargs['config']) else 'cpu'
+            if profile == 'cpu':
+                mask = ~parameters['cpu_env'].isna()
+                parameters.loc[mask, 'env'] = parameters.loc[mask, 'cpu_env']
+                parameters['resources'] = 'cpu'
+
+            # set output types
             parameters['output_type'] = parameters['output_type'].str.split(',')
             parameters['output_types'] = parameters['output_type']
             parameters = parameters.explode('output_type')
+
             kwargs['parameters'] = parameters
         
         kwargs['dont_inherit'] = ['methods']

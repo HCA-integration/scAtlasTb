@@ -1,4 +1,4 @@
-name: celltypist
+name: harmony_cpu
 channels:
   - conda-forge
   - bioconda
@@ -6,10 +6,9 @@ dependencies:
   - python=3.11
   - anndata=0.11
   - scanpy=1.11
-  - leidenalg
-  - dask
-  - sparse
   - zarr<3
-  - pip
-  - pip:
-    - celltypist
+  - dask
+  - dask-ml
+  - sparse
+  - harmony-pytorch
+  - harmonypy

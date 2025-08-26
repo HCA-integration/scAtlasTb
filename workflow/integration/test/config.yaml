@@ -25,7 +25,7 @@ defaults:
   datasets:
     - test
     - multi_wildcards
-    - preprocessed
+    # - preprocessed
     - harmony
     - scarches
     - scvi_tools
@@ -89,6 +89,11 @@ DATASETS:
         unintegrated:
         scgen:
           n_epochs: 10
+        scvi:
+          max_epochs: 100
+        drvi:
+          max_epochs: 100
+        
 
   harmony:
     input:
@@ -151,7 +156,6 @@ DATASETS:
     input:
       integration:
         orig: test/input/pbmc68k.h5ad
-        prepr: test/input/preprocessing/dataset~all/file_id~pbmc/preprocessed.zarr
     integration:
       threads: 3
       label: bulk_labels
@@ -223,7 +227,6 @@ DATASETS:
     input:
       integration:
         orig: test/input/pbmc68k.h5ad
-        # prepr: test/input/preprocessing/dataset~all/file_id~pbmc/preprocessed.zarr
     integration:
       label: bulk_labels
       batch: batch

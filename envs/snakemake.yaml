@@ -7,5 +7,5 @@ dependencies:
   - snakemake=7.31
   - pandas<2.0.0
   - graphviz
-  - singularity
+  # - singularity
   - jsonpickle
