@@ -44,6 +44,21 @@ use_gpu: false
 
 This will force Snakemake to use the CPU versions of an environment.
 
+## Working on Apple Silicon
+
+Not all packages that are available for Intel Mac are available for Apple Silicon machines, resulting in environments failing to install.
+This is an issue for `bioconda` dependencies in R-heavy environments e.g. `envs/funkyheatmap.yaml`.
+As a workaround, you can set the [`CONDA_SUBDIR`](https://conda-forge.org/docs/user/tipsandtricks/?utm_source=chatgpt.com#installing-apple-intel-packages-on-apple-silicon) before creating the environment, to enable emulation.
+
+```
+CONDA_SUBDIR=osx-64 conda env create -f envs/funkyheatmap.yaml
+```
+
+> ⚠️ **CAUTION** Be careful when setting `CONDA_SUBDIR` globally, especially when you decide to update your base environment afterwards.
+> You could brick your Conda installation and need to reinstall conda from scratch (I've been there).
+> As long as you're using `CONDA_SUBDIR=osx-64` explicitly for the environments that need it, you should be fine.
+
+
 ## FAQs
 
 Below are some scenarios that can occur when starting with the pipeline.
