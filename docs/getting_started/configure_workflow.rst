@@ -11,6 +11,14 @@ Global configuration allows you to set output locations, computational resources
 
 You can find example configuration files under ``configs/``.
 
+.. dropdown:: TL;DR Complete configuration for quickstart (click to expand)
+   :icon: code
+
+   .. literalinclude:: ../../configs/quickstart.yaml
+      :language: yaml
+      :caption: configs/quickstart.yaml
+
+
 1. Global configuration: Output settings
 ----------------------------------------
 
@@ -53,10 +61,10 @@ In the backend, this affects which conda environment Snakemake uses, whenever ha
 
 .. code-block:: yaml
 
-   os: intel
+   env_mode: local
    use_gpu: true
 
-3. Input configuration
+1. Input configuration
 ----------------------
 
 You can select and combine modules to create a custom workflow by specifying the input and module configuration in a YAML file.
@@ -66,7 +74,7 @@ Each instance of a workflow needs a unique task name and it can take any number 
 
    DATASETS: # TODO: rename to TASKS
 
-     my_dataset: # custom task/workflow name
+     task_name: # custom task/workflow name
        # input specification: map of module name to map of input file name to input file path
        input:
          preprocessing:
@@ -89,7 +97,7 @@ You can configure the behaviour of each module by specifying their parameters un
 .. code-block:: yaml
 
    DATASETS:
-     my_dataset:
+     task_name:
        input:
          ...
 
