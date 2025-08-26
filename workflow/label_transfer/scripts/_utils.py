@@ -64,8 +64,11 @@ def get_majority_consensus(df, column_patterns, new_key='majority_consensus'):
         col for col in df.columns for pattern in column_patterns
         if re.fullmatch(pattern, col)
     ]
-    columns = list(set(columns))
-    assert len(columns) >= 2, f'No columns found matching patterns: {column_patterns}'
+    columns = list(dict.fromkeys(columns))
+    assert len(columns) >= 2, (
+        f'Insufficient columns found matching patterns: {column_patterns}. '
+        f'Found {len(columns)} column(s), need at least 2.'
+    )
     
     agreement_col = f'{new_key}_agreement'
     low_agreement_col = f'{new_key}_low_agreement'
