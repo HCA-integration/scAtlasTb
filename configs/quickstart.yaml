@@ -2,9 +2,11 @@
   images: images
   use_gpu: false
 
+  env_mode: from_yaml
+
   DATASETS:
 
-    my_dataset: # custom task/workflow name
+    task_name: # custom task/workflow name
 
       # input specification: map of module name to map of input file name to input file path
       input:
@@ -43,8 +45,6 @@
           drvi:
             max_epochs: 10
             early_stopping: true
-            devices: 1
-            accelerator: cpu
           sysvi:
             max_epochs: 10
             early_stopping: true

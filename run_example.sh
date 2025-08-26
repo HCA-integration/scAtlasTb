@@ -3,6 +3,6 @@ set -e -x
 
 snakemake \
   --profile .profiles/local \
-  --configfile configs/example_config.yaml \
+  --configfile configs/quickstart.yaml \
   --snakefile workflow/Snakefile \
     $@
