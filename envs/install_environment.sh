@@ -44,6 +44,9 @@ ALL_ENVS=$($CONDA_CMD env list)
 
 if [[ $ALL_ENVS == *"$ENV"* ]]; then
     operation="update"
+    if [[ $CONDA_CMD == "mamba" ]]; then
+      operation="$operation -y"
+    fi
 else
     operation="create -y"
 fi
