@@ -22,8 +22,7 @@ class IntegrationConfig(ModuleConfig):
         if isinstance(parameters, str):
             parameters = pd.read_table(parameters)
         if isinstance(parameters, pd.DataFrame):
-            # set environments
-            profile = profile if get_use_gpu(kwargs['config']) else 'cpu'
+            profile = 'gpu' if get_use_gpu(kwargs['config']) else 'cpu'
             if profile == 'cpu':
                 mask = ~parameters['cpu_env'].isna()
                 parameters.loc[mask, 'env'] = parameters.loc[mask, 'cpu_env']
