@@ -24,7 +24,7 @@ The modules are tested and developed using task-specific conda environments, whi
 
 > 📝  **Note** If you use conda version 22.11 or above, make sure you set the conda solver to [`libmamba`](https://www.anaconda.com/blog/a-faster-conda-for-a-growing-community) for significantly faster installation. For newer versions or if you are using mamba directly, `libmamba` should already be the default.
 
-## Install Conda environments
+## Install dependencies
 
 All the conda environments used by the toolbox are under `envs/*.yaml`.
 You will at least require the snakemake environment.
@@ -34,26 +34,33 @@ conda env create -f envs/snakemake.yaml
 ```
 
 The different parts of the workflow (modules, rules) require specific conda environments.
-The toolbox has 2 modes of dealing with conda evironments:
+The toolbox has 2 modes of managing conda evironments for Snakemake:
 
-1. **EITHER:** For maximum reproducibility, but potentially more computational overhead over time, configure `env_mode: from_yaml` and let Snakemake create only the environments for the specific jobs you want to run. In this mode, **do NOT pre-install the environments locally** (option 2), if you want to avoid redundant copies of environments. Beware that any updates to the environment yaml files will trigger a new environment to be installed and you might need to clean up old environments regularly.
+* **Option 1: `env_mode: from_yaml`** For maximum reproducibility (but potentially more computational overhead) let Snakemake manage of the environments.
+* **Option 2: `env_mode: local`** (default)  Manually pre-install conda environments locally. This requires you to manually update conda environments when the YAML specifications change, but gives you full control over your environments and does not keep outdated environment copies.
 
-2. **OR:** Pre-install conda environments locally and set `env_mode: local` (default). This requires you to manually update conda environments when the YAML specifications change, but gives you full control on whether a new environment needs to be built and does not create any duplicate environments. In order to keep environment management overhead minimal, consider creating the environments you need for your specific workflow. Each module should have a section on the environments needed by it.
+## Option 1: `env_mode: from_yaml`
 
-## Option 1: Managing environments for `env_mode: from_yaml`
+This option is convenient, because you don't need to worry about environment management, since Snakemake ensures that you are always using the most up-to-date environment.
+Beware that any updates to the environment yaml files will trigger a new environment to be installed, without removing the old environments, which needs to be done manually.
+Additionally, if you are setting up multiple projects in different working directories, each project will require its own set of environments, which increases the computational overhead.
+But if you're only using small workflows that require only very few environments, these concerns are minor compared to the convenience of Snakemake handling the environments for you.
 
-Set the global parameter in your configuration file
+Make sure you set the global parameter in your configuration file:
 
 ```yaml
 env_mode: from_yaml
 ```
 
 > 📝 **Note:**
-> Do NOT use `envs/install_all_environments.sh` in this mode!
+> In this mode, **do NOT pre-install the environments locally** (i.e. do not combine option 1 with option 2), if you want to avoid redundant copies of environments.
 
 
 ### Creating environments
-If you are using `env_mode: from_yaml`, just add a [`--conda-create-envs-only`](https://snakemake.readthedocs.io/en/v7.31.1/executing/cli.html#conda) to your snakemake command (see below for example workflow configuration and runner script).  Environments will be saved under `.snakemake/conda` from wherever you call the snakemake commands, so make sure that directory has sufficient space or create a symlink for `.snakemake/conda` to a different location (e.g. scratch) or refer to the [Snakemake documentation](https://snakemake.readthedocs.io/en/v7.31.1/snakefiles/deployment.html#integrated-package-management) on configuring the location of the resulting conda environments.
+
+If you are using `env_mode: from_yaml`, just add a [`--conda-create-envs-only`](https://snakemake.readthedocs.io/en/v7.31.1/executing/cli.html#conda) to your Snakemake command (see below for example workflow configuration and runner script).
+Environments will be saved under `.snakemake/conda` from wherever you call the snakemake commands, so make sure that directory has sufficient space or create a symlink for `.snakemake/conda` to a different location (e.g. scratch).
+Also refer to the [Snakemake documentation](https://snakemake.readthedocs.io/en/v7.31.1/snakefiles/deployment.html#integrated-package-management) on configuring the location of the resulting conda environments.
 
 ```
 snakemake <target_rule> --conda-create-envs-only
@@ -70,9 +77,12 @@ snakemake <target_rule> --conda-cleanup-envs
 Read the [Snakemake documentation](https://snakemake.readthedocs.io/en/v7.31.1/snakefiles/deployment.html#integrated-package-management) on more information on package management, which includes pre-building environments or removing old environments.
 
 
-## Option 2: Managing environments for `env_mode: local`
+## Option 2: `env_mode: local`
+This option is convenient when you have limited space or a slow file system, where installing conda environments is quite expensive.
+By setting `env_mode` to "local", you can manage the conda environments yourself, which is particularly convenient when you need to debug or try out multiple different versions of a package that fits to your system.
+This is the recommended approach if you are developing new features for the toolbox.
 
-Optional: set the global parameter in your configuration file. This is the default, so it will be used, even when `env_mode` is not configured.
+Set the global parameter in your configuration file. This is the default, so it will be used, even when `env_mode` is not configured.
 
 ```yaml
 env_mode: local
@@ -80,20 +90,22 @@ env_mode: local
 
 ### Installing environments
 
-If you want to only install specific environments (which is recommended if you're starting out with small workflows), you can install the enviroment with conda:
+In order to keep environment management overhead minimal, consider creating the environments you need for your specific workflow (which is recommended for small workflows).
+Each module should have a section on which environments it needs.
+You can install each enviroment directly with the following conda command:
 
 ```
 conda env create -f envs/<env_name>.yaml
 ```
 
-Alternatively, you can use the `install_environment.sh`, which automatically install or update the environment
+Alternatively, you can use the `install_environment.sh`, which automatically creates the environment when it doesn't exist yet, or updates it when it does.
 
 ```
 bash install_environment -h  # help message
 bash install_environment -f envs/<env_name>.yaml
 ```
 
-If, instead, you want to pre-install all environments, `envs/install_all_environments.sh` provides a convenient wrapper.
+If, instead, you want to pre-install all environments, `envs/install_all_environments.sh` provides a convenient wrapper:
 
 ```
 bash envs/install_all_environments.sh -h  # help message
