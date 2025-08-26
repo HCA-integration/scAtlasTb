@@ -83,6 +83,9 @@ The toolbox provides some example Snakemake profiles under ``.profiles``, which 
 To use a profile (e.g. the local profile), add ``--profile .profiles/<profile_name>`` to your Snakemake command.
 You can read more about profiles in `Snakemake's documentation <https://snakemake.readthedocs.io/en/v7.31.1/executing/cli.html#profiles>`_.
 
+
+.. _cluster_execution:
+
 Cluster execution
 -----------------
 

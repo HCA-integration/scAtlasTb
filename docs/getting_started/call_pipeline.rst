@@ -3,45 +3,37 @@
 ▶️ Call the pipeline
 ====================
 
-Create a wrapper script
------------------------
-
-Next, you can create a wrapper script that will call the pipeline with the correct profile and configuration file(s).
+Create a runner script
+----------------------
+Next, you can create a runner script that will call the pipeline with the correct profile and configuration file(s).
 This way, it is easier to call the pipeline and you can avoid having to remember all the flags and options.
 
-Below is an example of a wrapper script that you can use to call the pipeline.
+Below is an example of a runner script that you can use to call the pipeline.
 
-.. code-block:: bash
-
-   #!/usr/bin/env bash
-   set -e -x
-
-   # assuming that the toolbox is on the same level of the directory you're calling the script from
-   pipeline="$(realpath ../scAtlasTb)"   # adjust depending on location of wrapper script
-
-   snakemake \
-     --configfile <my_config_file>.yaml \
-     --snakefile $pipeline/workflow/Snakefile \
-     --use-conda \
-     --rerun-incomplete \
-     --keep-going \
-     --printshellcmds \
-       $@
+.. literalinclude:: ../../run_example.sh
+    :language: bash
+    :caption: run_example.sh
 
 You must set the flag ``--use-conda`` to ensure that Snakemake uses the conda environments specified in the rules.
-If your config file becomes very big, you can split the workflows into separate config files and include them to the ``configfile`` in the wrapper script.
+You can add this to the runner script or, as done in the quickstart example with ``--profile .profiles/local``, to
+a Snakemake profile (see :ref:`snakemake_profiles`).
+
+.. dropdown:: Example profile configuration for local computation
+    :icon: beaker
+
+    .. literalinclude:: ../../.profiles/local/config.yaml
+        :language: yaml
+        :caption: .profiles/local/config.yaml
+
+If your config file becomes very big, you can split the workflows into separate config files and include them to the ``configfile`` in the runner script.
 
 .. code-block:: bash
-
-   #!/usr/bin/env bash
-   set -e -x
-
-   pipeline="$(realpath ../scAtlasTb)"
 
    snakemake \
      --configfile \
-       <my_config_file>.yaml \
-       <my_config_file_2>.yaml \
+       config1.yaml \
+       config2.yaml \
+       config3.yaml \
      ...
 
 .. tip::
@@ -68,7 +60,7 @@ Before running the pipeline, you need to activate your Snakemake environment.
 
     The most relevant snakemake arguments are:
 
-    - ``-n``: dryrun
+    - ``-n``: dry run
     - ``--use-conda``: use rule-specific conda environments to ensure all dependencies are met
     - ``-c``: maximum number of cores to be used
     - ``--configfile``: specify a config file to use. The overall workflow already defaults to the config file under ``configs/config.yaml``
@@ -143,6 +135,7 @@ Which should give you something like this:
 All the rules ending with ``_all`` are callable, i.e. you can use them to specify that their workflow should be run.
 The rest are needed by the pipeline, but can't be called by the user, you can just ignore them.
 
+
 Specify which workflow/rule you want to run
 -------------------------------------------
 
@@ -184,9 +177,9 @@ This should list all the rules with details such as inputs, outputs and paramete
 
    This was a dry-run (flag -n). The order of jobs does not reflect the order of execution.
 
-Notice, that this also includes preprocessing rules that were defined in the config as input to the integration.
-Since Snakemake only computes the files that are direct dependencies of the target that you define, the workflow does not include preprocessing-specific rules are not used by the integration module.
-If you want to include all preprocessing rules, you need to include it in the command:
+Notice, that this also includes ``preprocessing`` jobs that are needed as input to the ``integration`` module.
+But since the pipeline command only specified the integration output, Snakemake only resolves the preprocessing jobs that are essential to the integration module.
+If you want to include all preprocessing jobs (e.g. UMAPs for each input), you need to include it in the command:
 
 .. code-block:: bash
 
@@ -198,17 +191,19 @@ Following the same principle, you can call the metrics by including the ``metric
 
    bash run_pipeline.sh preprocessing_all integration_all metrics_all -n
 
+
 Execute the workflow
 --------------------
 
-If you are happy with the dryrun, you can dispatch the workflow by specifying the number of cores you want to provide for the pipeline.
+If you are happy with the dry run, you can execute the workflow by specifying the number of cores you want to provide for the pipeline.
 
 .. code-block:: bash
 
    bash run_pipeline.sh preprocessing_all integration_all metrics_all -c 10
 
-You can also use `Snakemake profiles <#snakemake_profiles>`_ to dispatch your pipeline with extra configurations such as Snakemake presets or `cluster execution <#cluster_execution>`_.
+The code will be executed locally, wherever you called the command, but you can also configure :ref:`snakemake_profiles` for cluster execution.
+Check out :ref:`cluster_execution` for an example profile for SLURM executions.
 
 .. note::
    You have now successfully set up and configured your pipeline!
-   Give it a spin and feel free to edit the configs to your
+   Give it a spin and feel free to edit the configs to your custom workflow! 🎉
