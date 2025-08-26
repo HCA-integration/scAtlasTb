@@ -48,7 +48,7 @@ Set the global parameter in your configuration file
 env_mode: from_yaml
 ```
 
-> **Note**
+> 📝 **Note:**
 > Do NOT use `envs/install_all_environments.sh` in this mode!
 
 
