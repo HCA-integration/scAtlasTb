@@ -43,8 +43,8 @@ else
     ENV_NAME="$TARGET"
 fi
 
-if [[ -z "$ENV_NAME" ]]; then
-    echo "Environment $TARGET does not exist, skipping"
+if ! $CONDA_CMD env list | awk '{print $1}' | grep -Fxq "$ENV_NAME"; then
+    echo "Environment $ENV_NAME does not exist, skipping"
     exit 0
 fi
 
