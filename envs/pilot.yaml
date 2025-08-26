@@ -6,14 +6,12 @@ dependencies:
   - python=3.11.9
   - anndata=0.10
   - scanpy=1.9.6
-  - scipy<1.15
-  - hdf5=1.14.2
   - leidenalg
   - faiss-cpu
   - dask
   - dask-ml
   - sparse
-  - zarr
+  - zarr<3
   - pip
   - rpy2  # Required by PILOT. Should be installed by it, but MacOS can lack some of system dependencies, which are installed this way
   - pip:

@@ -7,8 +7,6 @@ dependencies:
   - anndata=0.11
   - scanpy=1.11
   - scanorama>=1.7.4
-  - zarr
-  - scipy<1.15
-  - hdf5=1.14.2
+  - zarr<3
   - dask
   - sparse

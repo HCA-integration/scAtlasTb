@@ -7,14 +7,13 @@ dependencies:
   - anndata=0.11
   - scanpy=1.11
   - scipy<1.14  # due to doublet_detection using .A
-  - hdf5=1.14.2
   - leidenalg
   - dask
   - sparse
-  - zarr
+  - zarr<3
   - scrublet
   - cffi
   - pip
   - pip:
     - doubletdetection
-    - git+https://github.com/mumichae/sctk.git@mumichae-patch-1
+    - sctk>=0.2.3

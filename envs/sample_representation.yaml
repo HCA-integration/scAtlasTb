@@ -5,15 +5,13 @@ channels:
 dependencies:
   - python=3.11.9
   - anndata=0.10
-  - scipy<1.15
   - scanpy=1.10
-  - hdf5=1.14.2
   - leidenalg
   - faiss-cpu
   - dask<2024.8
   - dask-ml
   - sparse
-  - zarr
+  - zarr<3
   - pip
   - pip:
     - faiss-cpu<=1.9

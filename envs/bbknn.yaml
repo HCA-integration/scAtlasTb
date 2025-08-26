@@ -8,7 +8,6 @@ dependencies:
   - scanpy=1.11
   - zarr<3
   - faiss
-  - scipy<1.15
   - dask
   - dask-ml
   - sparse
