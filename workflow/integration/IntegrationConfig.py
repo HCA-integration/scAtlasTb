@@ -102,6 +102,9 @@ class IntegrationConfig(ModuleConfig):
                 continue
             for method, hyperparams_dict in methods_config.items():
                 if isinstance(hyperparams_dict, dict):
+                    # make hyperparameters invariant to order of configuration
+                    hyperparams_dict = dict(sorted(hyperparams_dict.items()))
+                    
                     df = self.parameters.wildcards_df.query('method == @method and dataset == @dataset')
                     if df.empty:
                         continue
