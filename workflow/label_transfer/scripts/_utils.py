@@ -70,9 +70,16 @@ def get_majority_consensus(df, column_patterns, new_key='majority_consensus'):
     agreement_col = f'{new_key}_agreement'
     low_agreement_col = f'{new_key}_low_agreement'
     n_vote_columns = len(columns)
+
+    # Convert columns to categorical if not yet the case
+    for col in columns:
+        if not pd.api.types.is_categorical_dtype(df[col]):
+            df[col] = df[col].astype('category')
     
+    # Warn if categories aren't the same across columns
     check_same_categories(df, columns)
-    
+
+    # Create a unified categorical dtype
     categories = reduce(pd.Index.union, [df[col].cat.categories.dropna() for col in columns])
     cat_dtype = pd.CategoricalDtype(categories=categories)
     df_cat = df[columns].astype(cat_dtype).apply(lambda x: x.cat.codes)
