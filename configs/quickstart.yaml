@@ -2,7 +2,7 @@
   images: images
   use_gpu: false
 
-  env_mode: from_yaml
+  env_mode: local
 
   DATASETS:
 
