@@ -18,5 +18,7 @@ dependencies:
   - rpy2
   - upsetplot
   - pip
+  - python=3.10.18
   - pip:
     - git+https://github.com/scverse/scanpy.git@main
+

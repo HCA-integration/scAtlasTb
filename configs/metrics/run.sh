@@ -1,15 +1,12 @@
 #!/usr/bin/env bash
 set -e -x
 
-pipeline="$(realpath ../sc-atlasing-toolbox)"
-
 snakemake \
   --profile .profiles/local \
   --configfile \
-    configs/example_config.yaml \
+    configs/metrics/hlcav1.yaml \
   --snakefile workflow/Snakefile \
   --use-conda \
-  # --conda-prefix /ictstr01/groups/luckylab/workspace/chelsea.bright/envs \
   --rerun-incomplete \
   --keep-going \
   --printshellcmds \

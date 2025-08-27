@@ -1,0 +1,30 @@
+output_dir: data/out/scib-metrics
+images: images
+
+use_gpu: false
+
+DATASETS:
+  test_metrics:
+    input:
+      metrics:
+        model1: data/input/hlca_minified.h5ad
+        unintegrated: data/input/hlca_minified.h5ad
+    metrics:
+      label: scanvi_label
+      batch: dataset
+      overwrite_file_id: true
+      metrics:
+        - nmi
+        - ari
+        - asw_label
+        - asw_batch
+        - bras_batch
+        # - cell_cycle
+        # - clisi
+        # - ilisi
+        # - graph_connectivity
+        # - isolated_label_asw
+        # - isolated_label_f1
+        # - pcr_comparison
+        # - pcr_comparison
+        # - kbet_pg

@@ -38,9 +38,28 @@
 
       # module configuration
       metrics:
-        unintegrated: layers/norm_counts
+        unintegrated: layers/normcounts
         batch: batch
         label: bulk_labels
         methods:
-          - nmi
-          - graph_connectivity
+          # - nmi_leiden_y
+          # - ari_leiden_y
+          # - bras_batch
+          # - cell_cycle
+          # - clisi_y
+          # - ilisi_y
+          # - graph_connectivity
+          # - isolated_label_asw_y
+          # - pcr
+          # - kbet_y
+           - nmi
+           - ari
+          # - morans_i
+          # - asw_label
+          # - asw_batch
+          # - clisi
+          # - ilisi
+          # - graph_connectivity
+          # - isolated_label_asw
+          # - isolated_label_f1
+            
