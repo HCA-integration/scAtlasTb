@@ -26,6 +26,7 @@ mcfg = PreprocessingConfig(
         'umap',
         'dask',
         'resources',
+        'n_threads',
     ],
 )
 paramspace = mcfg.get_paramspace()
