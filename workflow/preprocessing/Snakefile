@@ -24,6 +24,8 @@ mcfg = PreprocessingConfig(
         'raw_counts',
         'scale',
         'umap',
+        'dask',
+        'resources',
     ],
 )
 paramspace = mcfg.get_paramspace()
