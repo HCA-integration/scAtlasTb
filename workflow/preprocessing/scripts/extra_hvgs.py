@@ -72,7 +72,7 @@ extra_genes = extra_hvg_args.get('extra_genes', [])
 remove_genes = extra_hvg_args.get('remove_genes', [])
 min_cells = extra_hvg_args.pop('min_cells', 10)
 dask = snakemake.params.get('dask', True) # get global dask flag
-dask = args.pop('dask', dask) # overwrite with pca-specific dask flag
+dask = args.pop('dask', dask) # overwrite with extra_hvgs-specific dask flag
 
 hvg_column_name = 'extra_hvgs'
 use_gpu = USE_GPU

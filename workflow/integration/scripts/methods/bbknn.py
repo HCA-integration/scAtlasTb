@@ -55,7 +55,7 @@ min_batches = cells_per_batch[cells_per_batch < neighbors_within_batch].index.to
 if len(min_batches) > 0:
     files_to_keep.extend(['obs'])
     adata = adata[~adata.obs[batch_key].isin(min_batches)].copy()
-    # adata = adata[adata.obs[]min_batches]
+    # Example alternative: adata = adata[adata.obs[batch_key].isin(min_batches)]
 
 # recompute PCA according to user-defined hyperparameters
 logging.info(f'Compute PCA with parameters {pformat(pca_kwargs)}...')
