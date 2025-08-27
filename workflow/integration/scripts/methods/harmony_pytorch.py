@@ -1,4 +1,5 @@
 from pprint import pformat
+from pathlib import Path
 import logging
 logging.basicConfig(level=logging.INFO)
 import torch
@@ -7,6 +8,7 @@ from harmony import harmonize
 
 from integration_utils import clean_categorical_column, add_metadata, \
     remove_slots, get_hyperparams, PCA_PARAMS
+from mcv import mcv_optimal_pcs_scanpy, plot_mcv_pca
 from utils.io import read_anndata, write_zarr_linked
 from utils.accessors import subset_hvg
 from utils.misc import dask_compute
@@ -14,6 +16,9 @@ from utils.misc import dask_compute
 
 input_file = snakemake.input[0]
 output_file = snakemake.output[0]
+output_plot_dir = snakemake.output.plots
+Path(output_plot_dir).mkdir(parents=True, exist_ok=True)
+
 wildcards = snakemake.wildcards
 params = dict(snakemake.params)
 batch_key = wildcards.batch
@@ -55,6 +60,14 @@ adata = read_anndata(
     backed=True,
 )
 
+if pca_kwargs.get('n_comps') == 'mcv':
+    adata.layers['raw'] = read_anndata(
+        input_file,
+        X='layers/counts',
+        dask=True,
+        backed=True,
+    ).X
+
 for column in keys:
     clean_categorical_column(adata, column)
 
@@ -65,6 +78,21 @@ adata, _ = subset_hvg(
     compute_dask=False
 )
 logging.info(f'Subset features: {adata.shape}')
+
+# Param optimisation
+if pca_kwargs.get('n_comps') == 'mcv':
+    logging.info('Find optimal n PCs via molecular cross validation (MCV)...')
+    optimal_k, mcv_summary = mcv_optimal_pcs_scanpy(
+        adata,
+        raw_name='raw',
+        max_pcs=100,
+        scale_for_pca=scale,
+    )
+    logging.info(f'Optimal n_comps for PCA: {optimal_k}')
+    pca_kwargs['n_comps'] = optimal_k
+    params['hyperparams']['n_comps'] = optimal_k
+
+    plot_mcv_pca(mcv_summary, figdir=output_plot_dir)
 
 if scale:
     logging.info('Scale counts...')
