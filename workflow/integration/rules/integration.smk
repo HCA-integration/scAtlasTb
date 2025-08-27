@@ -18,8 +18,7 @@ rule prepare:
         labels=lambda wildcards: mcfg.get_from_parameters(wildcards, 'label', exclude=['output_type'], single_value=False),
     conda:
         get_env(config, 'scanpy', gpu_env='rapids_singlecell', no_gpu=True)
-    threads:
-        lambda wildcards: max(1, mcfg.get_from_parameters(wildcards, 'threads', exclude=['output_type'], default=1)),
+    threads: 10
     resources:
         partition=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='partition',attempt=attempt),
         qos=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='qos',attempt=attempt),
