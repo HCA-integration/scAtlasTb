@@ -13,7 +13,7 @@ use rule normalize from preprocessing as preprocessing_normalize with:
         args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'normalize', default={}),
         dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=True)
     threads:
-        lambda wildcards: 10
+        lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_threads', default=10)
     resources:
         partition=mcfg.get_resource(profile='cpu',resource_key='partition'),
         qos=mcfg.get_resource(profile='cpu',resource_key='qos'),
@@ -29,7 +29,7 @@ rule filter_genes:
     params:
         dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=True),
     threads:
-        lambda wildcards: 10
+        lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_threads', default=10)
     resources:
         partition=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='partition',attempt=attempt),
         qos=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='qos',attempt=attempt),
@@ -50,7 +50,7 @@ use rule highly_variable_genes from preprocessing as preprocessing_highly_variab
         args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'highly_variable_genes', default={}),
         dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=True),
     threads:
-        lambda wildcards: 10
+        lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_threads', default=10)
     resources:
         partition=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w),resource_key='partition',attempt=attempt),
         qos=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w),resource_key='qos',attempt=attempt),
@@ -69,7 +69,7 @@ use rule extra_hvgs from preprocessing as preprocessing_extra_hvgs with:
         overwrite_args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'overwrite_args_dict', default={}),
         dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=True),
     threads:
-        lambda wildcards: 10
+        lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_threads', default=10)
     resources:
         partition=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w),resource_key='partition',attempt=attempt),
         qos=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w),resource_key='qos',attempt=attempt),
@@ -87,7 +87,7 @@ use rule pca from preprocessing as preprocessing_pca with:
         scale=lambda wildcards: mcfg.get_from_parameters(wildcards, 'scale', default=False),
         dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=True),
     threads:
-        lambda wildcards: 10
+        lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_threads', default=10)
     resources:
         partition=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w),resource_key='partition',attempt=attempt),
         qos=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w),resource_key='qos',attempt=attempt),
@@ -103,7 +103,7 @@ use rule neighbors from preprocessing as preprocessing_neighbors with:
     params:
         args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'neighbors', default={}),
     threads:
-        lambda wildcards: 10
+        lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_threads', default=10)
     resources:
         partition=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='partition',attempt=attempt),
         qos=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='qos',attempt=attempt),
@@ -122,7 +122,7 @@ use rule umap from preprocessing as preprocessing_umap with:
         # args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'umap', default={}),  # TODO use args instead of direct params
         neighbors_key='neighbors',
     threads:
-        lambda wildcards: 10
+        lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_threads', default=10)
     resources:
         partition=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='partition',attempt=attempt),
         qos=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='qos',attempt=attempt),
