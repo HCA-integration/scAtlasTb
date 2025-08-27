@@ -94,6 +94,7 @@ if pca_kwargs.get('n_comps') == 'mcv':
 
     plot_mcv_pca(mcv_summary, figdir=output_plot_dir)
 
+
 if scale:
     logging.info('Scale counts...')
     sc.pp.scale(adata, zero_center=True, max_value=None)

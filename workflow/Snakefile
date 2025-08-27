@@ -79,7 +79,7 @@ config_classes = {
 config['DATASETS'] = config.get('DATASETS', {})
 default_datasets = config.get('defaults', {}).get('datasets', config['DATASETS'].keys())
 for dataset, dataset_config in config['DATASETS'].items():
-    for module_name in dataset_config.get('input', {}).keys():
+    for module_name in list(dataset_config.get('input', {}).keys()):
         config = update_input_files_per_dataset(
             dataset=dataset,
             module_name=module_name,
