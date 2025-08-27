@@ -11,14 +11,16 @@ use rule normalize from preprocessing as preprocessing_normalize with:
         raw_counts=lambda wildcards: mcfg.get_from_parameters(wildcards, 'raw_counts'),
         gene_id_column=lambda wildcards: mcfg.get_from_parameters(wildcards, 'gene_id_column'),
         args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'normalize', default={}),
-        dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=True)
+        dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=True),
+    conda:
+        lambda w: get_env(config, 'scanpy', gpu_env='rapids_singlecell', no_gpu=mcfg.get_profile(w) == 'cpu')
     threads:
         lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_threads', default=10)
     resources:
-        partition=mcfg.get_resource(profile='cpu',resource_key='partition'),
-        qos=mcfg.get_resource(profile='cpu',resource_key='qos'),
-        gpu=mcfg.get_resource(profile='cpu',resource_key='gpu'),
-        mem_mb=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='mem_mb',attempt=attempt, factor=1),
+        partition=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w),resource_key='partition',attempt=attempt),
+        qos=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w),resource_key='qos',attempt=attempt),
+        gpu=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w),resource_key='gpu',attempt=attempt),
+        mem_mb=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w),resource_key='mem_mb',attempt=attempt, factor=1),
 
 
 rule filter_genes:
@@ -49,6 +51,8 @@ use rule highly_variable_genes from preprocessing as preprocessing_highly_variab
     params:
         args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'highly_variable_genes', default={}),
         dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=True),
+    conda:
+        lambda w: get_env(config, 'scanpy', gpu_env='rapids_singlecell', no_gpu=mcfg.get_profile(w) == 'cpu')
     threads:
         lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_threads', default=10)
     resources:
@@ -68,6 +72,8 @@ use rule extra_hvgs from preprocessing as preprocessing_extra_hvgs with:
         extra_hvgs=lambda wildcards: mcfg.get_from_parameters(wildcards, 'extra_hvgs', default={}),
         overwrite_args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'overwrite_args_dict', default={}),
         dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=True),
+    conda:
+        lambda w: get_env(config, 'scanpy', gpu_env='rapids_singlecell', no_gpu=mcfg.get_profile(w) == 'cpu')
     threads:
         lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_threads', default=10)
     resources:
@@ -86,6 +92,8 @@ use rule pca from preprocessing as preprocessing_pca with:
         args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'pca', default={}),
         scale=lambda wildcards: mcfg.get_from_parameters(wildcards, 'scale', default=False),
         dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=True),
+    conda:
+        lambda w: get_env(config, 'scanpy', gpu_env='rapids_singlecell', no_gpu=mcfg.get_profile(w) == 'cpu')
     threads:
         lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_threads', default=10)
     resources:
