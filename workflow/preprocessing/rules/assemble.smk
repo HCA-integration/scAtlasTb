@@ -127,8 +127,7 @@ use rule umap from preprocessing as preprocessing_umap with:
         zarr=directory(mcfg.out_dir / paramspace.wildcard_pattern / 'umap.zarr'),
         done=touch(mcfg.out_dir / paramspace.wildcard_pattern / 'umap.done'),
     params:
-        # args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'umap', default={}),  # TODO use args instead of direct params
-        neighbors_key='neighbors',
+        args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'umap', default={}),
     threads:
         lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_threads', default=10)
     resources:
