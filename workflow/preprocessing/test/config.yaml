@@ -30,7 +30,7 @@ DATASETS:
       resources: gpu
       n_threads: 15
       raw_counts: X
-      scale: false
+      scale: true
       extra_hvgs:
         overwrite_args:
           n_top_genes:
