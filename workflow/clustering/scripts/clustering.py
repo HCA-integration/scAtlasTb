@@ -80,7 +80,7 @@ def apply_clustering(
     if use_gpu and n_clusters > max_clusters and not size_ok:
         # fallback when too many clusters are computed (assuming this is a bug in the rapids implementation)
         logging.info(
-            f'Cluster {key_added} has {n_clusters} custers, which is more than {max_clusters}. '
+            f'Cluster {key_added} has {n_clusters} clusters, which is more than {max_clusters}. '
             'Falling back to scanpy implementation...'
         )
         cluster_func = alt_algorithm_map[algorithm]
