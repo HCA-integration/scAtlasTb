@@ -19,14 +19,17 @@ from utils.processing import sc, USE_GPU
 input_file = snakemake.input[0]
 output_file = snakemake.output[0]
 args = snakemake.params.get('args', {})
-dask = snakemake.params.get('dask', True) # get global dask flag
-dask = args.pop('dask', dask) # overwrite with pca-specific dask flag
 
 if args is None:
     args = {}
 elif isinstance(args, dict):
     args.pop('subset', None) # don't support subsetting
 logging.info(str(args))
+
+dask = snakemake.params.get('dask', True) # get global dask flag
+if isinstance(args, dict):
+    dask = args.pop('dask', dask) # overwrite with pca-specific dask flag
+
 
 logging.info(f'Read {input_file}...')
 kwargs = dict(
