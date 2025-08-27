@@ -170,3 +170,9 @@ use rule assemble from preprocessing as preprocessing_assemble with:
     retries: 0
     conda:
         get_env(config, 'scanpy')
+
+
+rule assemble_all:
+    input:
+        mcfg.get_output_files(rules.preprocessing_assemble.output.zarr),
+    localrule: True
