@@ -23,8 +23,8 @@ def apply_clustering(
     adata,
     resolution: float,
     cpu_kwargs: dict = None,
-    n_cell_cpu: int = 300_000,
-    max_cluster_factor: int = 50,
+    n_cell_cpu: int = 100_000,
+    max_cluster_factor: int = 100,
     recompute_neighbors: bool = False,
     neighbors_args: dict = {},
     use_gpu: bool = USE_GPU,
@@ -69,11 +69,15 @@ def apply_clustering(
     cluster_func = algorithm_map.get(algorithm, KeyError(f'Unknown clustering algorithm: {algorithm}'))
     cluster_func(adata, **kwargs)
     
-    # heuristic to check if number of clusters is reasonable
+    # heuristic to check if number of clusters and sizes are reasonable
     max_clusters = max(1, int(max_cluster_factor * resolution))
     n_clusters = adata.obs[key_added].nunique()
+    # check if smallest cluster size is reasonable
+    min_cluster_size = adata.obs[key_added].value_counts().min()
+    quantile_cluster_size = adata.obs[key_added].value_counts().quantile(0.1)
+    size_ok = (quantile_cluster_size > adata.n_obs / max_clusters) or (min_cluster_size > 10)
     
-    if use_gpu and n_clusters > max_clusters:
+    if use_gpu and n_clusters > max_clusters and not size_ok:
         # fallback when too many clusters are computed (assuming this is a bug in the rapids implementation)
         logging.info(
             f'Cluster {key_added} has {n_clusters} custers, which is more than {max_clusters}. '
