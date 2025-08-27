@@ -370,7 +370,9 @@ class ModuleConfig:
 
 
     def get_profile(self, wildcards: [dict, Wildcards]):
-        return self.get_from_parameters(wildcards, 'resources')
+        if 'resources' in self.parameters.wildcards_df.columns:
+            return self.get_from_parameters(wildcards, 'resources', default='cpu')
+        return 'cpu'
 
 
     def get_resource(
