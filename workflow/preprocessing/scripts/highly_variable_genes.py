@@ -28,7 +28,7 @@ logging.info(str(args))
 
 dask = snakemake.params.get('dask', True) # get global dask flag
 if isinstance(args, dict):
-    dask = args.pop('dask', dask) # overwrite with pca-specific dask flag
+    dask = args.pop('dask', dask) # overwrite with hvg-specific dask flag
 
 
 logging.info(f'Read {input_file}...')

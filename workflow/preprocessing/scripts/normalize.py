@@ -21,7 +21,7 @@ layer = snakemake.params.get('raw_counts', 'X')
 gene_id_column = snakemake.params.get('gene_id_column')
 args = snakemake.params.get('args', {})
 dask = snakemake.params.get('dask', True) # get global dask flag
-dask = args.pop('dask', dask) # overwrite with pca-specific dask flag
+dask = args.pop('dask', dask) # overwrite with normalize-specific dask flag
 
 logging.info(f'Read {input_file}...')
 adata = read_anndata(
