@@ -10,6 +10,7 @@ checkpoint determine_covariates:
         n_permute=lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_permutations', default=10),
     conda:
         get_env(config, 'scanpy')
+    localrule: True
     script:
         '../scripts/determine_covariates.py'
 
