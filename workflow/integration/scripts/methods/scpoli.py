@@ -4,7 +4,7 @@ from pprint import pformat
 from pathlib import Path
 
 from integration_utils import add_metadata, get_hyperparams, remove_slots, \
-    set_model_history_dtypes, plot_model_history, clean_categorical_column
+    set_model_history_dtypes, plot_model_history, clean_categorical_column, SCPOLI_EARLY_STOPPING
 from utils.io import read_anndata, write_zarr_linked
 from utils.accessors import subset_hvg
 
@@ -61,10 +61,16 @@ model_params = dict(
     unknown_ct_names=['NA'],
 ) | model_params
 
-# set default pretrain epochs if not configured
-if 'n_epoch' in train_params and 'pretrain_epochs' not in train_params:
-    train_params |= {'pretrain_epochs': int(0.8 * model_params.get('n_epochs'))}
-    
+# set default training parameters
+n_epochs = train_params.get('n_epochs', 100)
+if n_epochs is None:
+    n_epochs = 100
+train_params = train_params | {
+    'early_stopping_kwargs': SCPOLI_EARLY_STOPPING,
+    # set default pretrain epochs if not configured
+    'pretrain_epochs': int(0.8 * n_epochs)
+}
+
 print(
     f'model parameters:\n{pformat(model_params)}\n'
     f'training parameters:\n{pformat(train_params)}',
