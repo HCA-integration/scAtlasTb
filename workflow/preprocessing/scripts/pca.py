@@ -19,7 +19,8 @@ input_file = snakemake.input[0]
 output_file = snakemake.output[0]
 scale = snakemake.params.get('scale', False)
 args = snakemake.params.get('args', {})
-dask = args.pop('dask', False) and not USE_GPU and not scale
+dask = snakemake.params.get('dask', True) # get global dask flag
+dask = args.pop('dask', dask) # overwrite with pca-specific dask flag
 
 logging.info(f'Read "{input_file}"...')
 adata = read_anndata(

@@ -19,12 +19,13 @@ from utils.processing import sc, USE_GPU
 input_file = snakemake.input[0]
 output_file = snakemake.output[0]
 args = snakemake.params.get('args', {})
+dask = snakemake.params.get('dask', True) # get global dask flag
+dask = args.pop('dask', dask) # overwrite with pca-specific dask flag
 
 if args is None:
     args = {}
 elif isinstance(args, dict):
     args.pop('subset', None) # don't support subsetting
-# subset_to_hvg = isinstance(args, dict) and args.get('subset', False)
 logging.info(str(args))
 
 logging.info(f'Read {input_file}...')
@@ -33,11 +34,9 @@ kwargs = dict(
     obs='obs',
     var='var',
     uns='uns',
-    backed=True,
-    dask=True,
+    backed=dask,
+    dask=dask,
 )
-# if subset_to_hvg:
-#     kwargs |= dict(layers='layers')
 adata = read_anndata(input_file, **kwargs)
 logging.info(adata.__str__())
 var = adata.var.copy()
@@ -91,12 +90,6 @@ else:
 
 logging.info(f'Write to {output_file}...')
 files_to_keep = ['uns', 'var']
-# if subset_to_hvg:
-#     logging.info('Subset to highly variable genes...')
-#     adata = adata[:, adata.var['highly_variable']].copy()
-#     files_to_keep.extend(['X', 'layers', 'varm', 'varp'])
-#     logging.info(adata.__str__())
-# else:
 adata = ad.AnnData(var=var, uns=adata.uns)
 write_zarr_linked(
     adata,

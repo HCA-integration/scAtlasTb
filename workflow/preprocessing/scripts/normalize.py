@@ -9,16 +9,8 @@ from dask import array as da
 from dask import config as da_config
 da_config.set(num_workers=snakemake.threads)
 import sparse
-try:
-    import rapids_singlecell as sc
-    import cupy as cp
-    logging.info('Using rapids_singlecell...')
-    rapids = True
-except ImportError as e:
-    import scanpy as sc
-    logging.info('Importing rapids failed, using scanpy...')
-    rapids = False
 
+from utils.processing import sc, USE_GPU
 from utils.io import read_anndata, write_zarr_linked
 from utils.misc import dask_compute, ensure_sparse
 
@@ -28,8 +20,8 @@ output_file = snakemake.output[0]
 layer = snakemake.params.get('raw_counts', 'X')
 gene_id_column = snakemake.params.get('gene_id_column')
 args = snakemake.params.get('args', {})
-dask = snakemake.params.get('dask', True) and not rapids
-backed = snakemake.params.get('backed', True) and dask and not rapids
+dask = snakemake.params.get('dask', True) # get global dask flag
+dask = args.pop('dask', dask) # overwrite with pca-specific dask flag
 
 logging.info(f'Read {input_file}...')
 adata = read_anndata(
@@ -65,7 +57,7 @@ if input_file.endswith('.h5ad'):
     adata.raw = adata
 
 # make sure data is on GPU for rapids_singlecell
-if rapids:
+if USE_GPU:
     logging.info('Transfer to GPU...')
     # adata.X = adata.X.astype('float32')
     sc.get.anndata_to_GPU(adata)
@@ -75,7 +67,7 @@ sc.pp.normalize_total(adata, **args)
 logging.info('log-transform...')
 sc.pp.log1p(adata)
 
-if rapids:
+if USE_GPU:
     logging.info('Transfer to CPU...')
     sc.get.anndata_to_CPU(adata)
 
@@ -95,7 +87,7 @@ logging.info(adata.__str__())
 
 if not input_file.endswith('.h5ad'):
     del adata.X
-adata = dask_compute(adata)
+adata = dask_compute(adata, layers='normcounts')
 
 write_zarr_linked(
     adata,
