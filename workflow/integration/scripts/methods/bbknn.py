@@ -44,30 +44,25 @@ clean_categorical_column(adata, batch_key)
 adata, _ = subset_hvg(
     adata,
     var_column='integration_features',
-    compute_dask=True
+    compute_dask=False,
 )
+
+# quickfix: remove batches with fewer than 3 cells
+neighbors_within_batch = hyperparams.get('neighbors_within_batch', 3)
+cells_per_batch = adata.obs.value_counts(batch_key)
+min_batches = cells_per_batch[cells_per_batch < neighbors_within_batch].index.tolist()
+
+if len(min_batches) > 0:
+    files_to_keep.extend(['obs'])
+    adata = adata[~adata.obs[batch_key].isin(min_batches)].copy()
+    # adata = adata[adata.obs[]min_batches]
 
 # recompute PCA according to user-defined hyperparameters
 logging.info(f'Compute PCA with parameters {pformat(pca_kwargs)}...')
 use_rep = 'X_pca'
-# adata.X = adata.X.map_blocks(lambda x: x.toarray(), dtype=adata.X.dtype)
 sc.pp.pca(adata, **pca_kwargs)
+dask_compute(adata, layers=use_rep)
 del adata.X
-# dask_compute(adata, layers=use_rep)
-
-# quickfix: remove batches with fewer than 3 cells
-neighbors_within_batch = hyperparams.get('neighbors_within_batch', 3)
-min_batches = adata.obs.groupby(
-    batch_key,
-    observed=False
-).filter(
-    lambda x: len(x) > neighbors_within_batch
-).index
-
-if min_batches.nunique() < adata.n_obs:
-    files_to_keep.extend(['obs'])
-    # adata.layers = read_anndata(input_file, layers='layers').layers
-    adata = adata[min_batches]
 
 # run method
 logging.info(f'Run BBKNN with parameters {pformat(hyperparams)}...')
