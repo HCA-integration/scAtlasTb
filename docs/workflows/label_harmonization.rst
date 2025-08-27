@@ -1,5 +1,2 @@
-.. image:: ../_static/workflow_graphs/label_harmonization.png
-    :align: center
-
-.. include:: ../../workflow/label_harmonization/README.md
-    :parser: myst_parser.sphinx_
+Harmonizing cell type labels with CellHint
+==========================================

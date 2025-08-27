@@ -1,4 +1,4 @@
-# from utils.misc import ensure_sparse
+from utils.misc import ensure_sparse
 from utils.annotate import add_wildcards
 import numpy as np
 from scipy import sparse
@@ -50,6 +50,13 @@ SCVI_MODEL_PARAMS = [
     'extra_decoder_kwargs',
     'categorical_covariate_keys',
     'continuous_covariate_keys',
+    # vitkl parameters
+    'library_n_hidden',
+    'library_log_vars_weight',
+    'scale_activation',
+    'use_additive_background',
+    'use_batch_in_decoder',
+    'regularise_dispersion',
 ]
 
 SCANVI_MODEL_PARAMS = SCVI_MODEL_PARAMS + ['linear_classifier']
@@ -99,13 +106,6 @@ DRVI_MODEL_PARAMS = [
 ]
 
 
-def ensure_sparse(adata):
-    from scipy.sparse import csr_matrix, issparse
-
-    if not issparse(adata.X):
-        adata.X = csr_matrix(adata.X)
-
-
 def add_metadata(adata, wildcards, params, **kwargs):
     """
     Add integration metatdata to integratd output
@@ -123,6 +123,10 @@ def add_metadata(adata, wildcards, params, **kwargs):
         **kwargs
     }
     add_wildcards(adata, wildcards, 'integration')
+    # hyperparams = params['hyperparams']
+    # if hyperparams is None:
+    #     hyperparams = {}
+    # add_wildcards(adata, dict(wildcards) | hyperparams, 'int')
 
 
 def remove_slots(adata, output_type, keep_X=False):

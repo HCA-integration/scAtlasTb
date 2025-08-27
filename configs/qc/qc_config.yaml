@@ -1,11 +1,18 @@
+output_dir: data/out
+images: images
+user_gpu: false
+
 DATASETS:
-  test:
+
+  example_qc_analysis:
     input:
       qc:
-        test: data/pbmc68k.h5ad
+        test1: data/pbmc68k.h5ad # adjust to custom file path
         test2: data/pbmc68k.h5ad
+      merge: qc
     qc:
-      sample: batch
-      donor: phase
-      hue:
+      counts: X  # raw counts slot
+      hue: # obs columns you want in your plot
+        - bulk_labels
+        - batch
         - phase

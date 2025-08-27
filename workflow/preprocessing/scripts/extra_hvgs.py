@@ -9,14 +9,18 @@ logging.basicConfig(level=logging.INFO)
 from tqdm import tqdm
 import warnings
 warnings.filterwarnings("ignore")
+from tqdm.dask import TqdmCallback
 from dask import config as da_config
 da_config.set(num_workers=snakemake.threads)
+import numpy as np
 import anndata as ad
+import scanpy
 
-from utils.io import read_anndata, write_zarr_linked, csr_matrix_int64_indptr
+from utils.io import read_anndata, write_zarr_linked
+from utils.accessors import _filter_batch
 from utils.misc import dask_compute
-from utils.processing import _filter_batch, sc, USE_GPU
-
+from utils.processing import sc, USE_GPU
+rsc = sc
 
 def match_genes(var_df, gene_list, column=None):
     import urllib
@@ -66,8 +70,10 @@ overwrite_args = snakemake.params.get('overwrite_args')
 union_over = extra_hvg_args.get('union_over')
 extra_genes = extra_hvg_args.get('extra_genes', [])
 remove_genes = extra_hvg_args.get('remove_genes', [])
+min_cells = extra_hvg_args.pop('min_cells', 10)
 
 hvg_column_name = 'extra_hvgs'
+use_gpu = USE_GPU
 
 if args is None:
     args = {}
@@ -91,11 +97,18 @@ adata = read_anndata(
     dask=True,
 )
 logging.info(adata.__str__())
+for col in adata.var.columns:
+    if col.startswith('extra_hvgs'):
+        del adata.var[col]  # remove old HVG columns
+
+# if adata.n_obs > 2e6:
+#     use_gpu = False
+#     sc = scanpy
 
 # add metadata
 if 'preprocessing' not in adata.uns:
     adata.uns['preprocessing'] = {}
-adata.uns['preprocessing'][hvg_column_name] = args
+adata.uns['preprocessing'][hvg_column_name] = args | extra_hvg_args
 
 if adata.n_obs == 0:
     logging.info('No data, write empty file...')
@@ -124,40 +137,60 @@ else:
         logging.info(f'Compute highly variable genes per {union_over} with args={args}...')
         if isinstance(union_over, str):
             union_over = [union_over]
-        adata.obs['union_over'] = adata.obs[union_over] \
-            .astype(str) \
-            .apply(lambda x: '--'.join(x), axis=1) \
-            .astype('category')
+        union_values = adata.obs[union_over].astype(str) \
+            .replace(['nan', 'unknown'], np.nan).dropna() \
+            .apply(lambda x: '--'.join(x), axis=1)
         
-        for group in tqdm(adata.obs['union_over'].unique()):
+        # remove groups with fewer than min_cells
+        value_counts = union_values.value_counts()
+        remove_groups = value_counts[value_counts < min_cells]
+        union_values = union_values[~union_values.isin(remove_groups.index)]
+        
+        # set union_over values in adata.obs
+        adata.obs['union_over'] = union_values
+        adata.obs['union_over'] = adata.obs['union_over'].astype('category')
+        
+        logging.info(adata.obs['union_over'].value_counts(dropna=False))
+        logging.info(f'Removed groups with fewer than {min_cells} cells:\n{remove_groups}')
+        
+        for group in tqdm(
+            adata.obs['union_over'].dropna().unique(),
+            miniters=1,
+            desc='Computing HVGs per group',
+        ):
             _ad = adata[adata.obs['union_over'] == group].copy()
             
             # filter genes and cells that would break HVG function
             batch_mask = _filter_batch(_ad, batch_key=args.get('batch_key'))
             _ad = _ad[batch_mask, _ad.var['nonzero_genes']].copy()
-            _ad = dask_compute(_ad, layers='X')
+            _ad = dask_compute(_ad)
             
-            min_cells = 10
-            if _ad.n_obs < min_cells:
-                logging.info(f'Group={group} has fewer than {min_cells} cells, skipping...')
-                continue
+            # if _ad.n_obs > 1e6:
+            #     use_gpu = False
+            #     sc = scanpy
+            # elif USE_GPU:
+            #     use_gpu = True
+            #     sc = rsc
             
-            if USE_GPU:
-                sc.get.anndata_to_GPU(_ad)
+            if use_gpu:
+                rsc.get.anndata_to_GPU(_ad)
 
             sc.pp.highly_variable_genes(_ad, **args)
             
             # get union of gene sets
             adata.var[hvg_column_name] = adata.var[hvg_column_name] | _ad.var['highly_variable']
             del _ad
-        del adata.obs['union_over']
+        
+        logging.info(f'Computed {adata.var[hvg_column_name].sum()} highly variable genes.')
+    
     else:
         # default gene selection
         logging.info(f'Select features for all cells with arguments: {args}...')
-        adata = dask_compute(adata)
-        if USE_GPU:
+        if use_gpu:
             sc.get.anndata_to_GPU(adata)
-        sc.pp.highly_variable_genes(adata, **args)
+        
+        with TqdmCallback(desc=f'Select features with arguments: {args}...', miniters=1):
+            sc.pp.highly_variable_genes(adata, **args)
         adata.var[hvg_column_name] = adata.var['highly_variable']
 
     # set extra_hvgs in full dataset

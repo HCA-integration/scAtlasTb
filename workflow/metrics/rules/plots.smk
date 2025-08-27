@@ -46,7 +46,7 @@ use rule barplot from plots as metrics_barplot_per_file with:
     input:
         tsv=rules.merge_per_file.output.tsv
     output:
-        png=mcfg.image_dir / 'per_file' / '{file_id}' / '{metric}-barplot.png'
+        png=mcfg.image_dir / paramspace.wildcard_pattern / '{metric}-barplot.png'
     params:
         metric=lambda wildcards: wildcards.metric,
         category='metric',
@@ -129,6 +129,7 @@ rule funkyheatmap:
     input:
         tsv=rules.merge.output.tsv,
         extra_columns=rules.merge.output.extra_columns,
+        r_utils=workflow.source_path('../scripts/plots/r_utils.R'),
     output:
         pdf=mcfg.image_dir / 'all' / 'funky_heatmap.pdf',
         tsv=mcfg.image_dir / 'all' / 'funky_heatmap.tsv'
@@ -153,6 +154,7 @@ use rule funkyheatmap as funkyheatmap_per_dataset with:
     input:
         tsv=rules.merge_per_dataset.output.tsv,
         extra_columns=rules.merge_per_dataset.output.extra_columns,
+        r_utils=workflow.source_path('../scripts/plots/r_utils.R'),
     output:
         pdf=mcfg.image_dir / 'per_dataset' / '{dataset}' / 'funky_heatmap.pdf',
         tsv=mcfg.image_dir / 'per_dataset' / '{dataset}' / 'funky_heatmap.tsv',
@@ -171,6 +173,7 @@ use rule funkyheatmap as funkyheatmap_per_batch with:
     input:
         tsv=rules.merge_per_batch.output.tsv,
         extra_columns=rules.merge_per_batch.output.extra_columns,
+        r_utils=workflow.source_path('../scripts/plots/r_utils.R'),
     output:
         pdf=mcfg.image_dir / 'per_batch' / '{batch}' / 'funky_heatmap.pdf',
         tsv=mcfg.image_dir / 'per_batch' / '{batch}' / 'funky_heatmap.tsv',
@@ -189,6 +192,7 @@ use rule funkyheatmap as funkyheatmap_per_label with:
     input:
         tsv=rules.merge_per_label.output.tsv,
         extra_columns=rules.merge_per_label.output.extra_columns,
+        r_utils=workflow.source_path('../scripts/plots/r_utils.R'),
     output:
         pdf=mcfg.image_dir / 'per_label' / '{label}' / 'funky_heatmap.pdf',
         tsv=mcfg.image_dir / 'per_label' / '{label}' / 'funky_heatmap.tsv',
@@ -207,6 +211,7 @@ use rule funkyheatmap as funkyheatmap_per_file with:
     input:
         tsv=rules.merge_per_file.output.tsv,
         extra_columns=rules.merge_per_file.output.extra_columns,
+        r_utils=workflow.source_path('../scripts/plots/r_utils.R'),
     output:
         pdf=mcfg.image_dir / 'per_file' / '{file_id}' / 'funky_heatmap.pdf',
         tsv=mcfg.image_dir / 'per_file' / '{file_id}' / 'funky_heatmap.tsv',
@@ -244,9 +249,20 @@ rule plots_all:
         mcfg.get_output_files(rules.funkyheatmap_per_label.output),
         # mcfg.get_output_files(rules.funkyheatmap_per_file.output),
         # # barplot
-        expand(rules.metrics_barplot.output,metric=['s', 'max_uss', 'score']),
-        expand(rules.metrics_barplot_per_dataset.output,metric=['s', 'max_uss', 'score'],**mcfg.get_wildcards(wildcard_names=['dataset'])),
-        expand(rules.metrics_barplot_per_file.output,metric=['s', 'max_uss', 'score'],**mcfg.get_wildcards(wildcard_names=['file_id'])),
+        expand(
+            rules.metrics_barplot.output,
+            metric=['s', 'max_uss', 'score']
+        ),
+        expand(
+            rules.metrics_barplot_per_dataset.output,
+            metric=['s', 'max_uss', 'score'],
+            **mcfg.get_wildcards(wildcard_names=['dataset'])
+        ),
+        # expand(
+        #     rules.metrics_barplot_per_file.output,
+        #     metric=['s', 'max_uss', 'score'],
+        #     **mcfg.get_wildcards(wildcard_names=['dataset', 'file_id'])
+        # ),
         # # swarmplot
         # expand(rules.metrics_swarmplot.output,metric='score'),
         # expand(rules.metrics_swarmplot_per_dataset.output,metric='score',**mcfg.get_wildcards(wildcard_names=['dataset'])),

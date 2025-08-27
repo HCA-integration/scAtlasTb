@@ -10,7 +10,7 @@ from dask import array as da
 import logging
 logging.basicConfig(level=logging.INFO)
 
-from utils.io import read_anndata, write_zarr_linked
+from utils.io import read_anndata, write_zarr, write_zarr_linked, get_file_reader
 from utils.misc import dask_compute
 
 
@@ -22,7 +22,7 @@ backed = params.get('backed', True)
 dask = params.get('dask', True)
 subset = params.get('subset', False)
 
-kwargs = {'obs': 'obs'}
+kwargs = {'obs': 'obs', 'var': 'var'}
 adata = read_anndata(input_file, **kwargs)
 logging.info(adata.__str__())
 
@@ -44,35 +44,55 @@ adata.obs['filtered'] = mask
 value_counts = adata.obs['filtered'].value_counts()
 logging.info(value_counts)
 
-if subset and False in value_counts.index:
-    kwargs |= {
-        'X': 'X',
-        'layers': 'layers',
-        'raw': 'raw',
-        'obsm': 'obsm',
-        'obsp': 'obsp',
-    }
-    # filter out slots that aren't present in the input
-    kwargs = {k: v for k, v in kwargs.items() if k in [f.name for f in Path(input_file).iterdir()]}
-    
-    logging.info('Read all slots for subsetting...')
-    obs = adata.obs # save updated obs
-    adata = read_anndata(
-        input_file,
-        backed=backed,
-        dask=dask,
-        **{k: v for k, v in kwargs.items() if k != 'obs'},
-    )
-    adata.obs = obs # updated obs
-    
-    logging.info('Subset data by filters...')
-    adata = dask_compute(adata[adata.obs['filtered']].copy())
-    logging.info(adata.__str__())
+# update subset flag
+subset = subset and False in value_counts.index
 
-logging.info(f'Write to {output_file}...')
-write_zarr_linked(
-    adata,
-    input_file,
-    output_file,
-    files_to_keep=kwargs.keys(),
-)
+if not subset:
+    # don't subset, just keep filtering annotation
+    logging.info(f'Write to {output_file}...')
+    write_zarr_linked(
+        adata,
+        input_file,
+        output_file,
+        files_to_keep=['obs'],
+    )
+else:
+    logging.info('Subset data by filters...')
+    adata = adata[adata.obs['filtered']].copy()
+    logging.info(adata.__str__())
+    
+    if Path(input_file).suffix == '.h5ad':
+        kwargs |= {
+            'X': 'X',
+            'layers': 'layers',
+            'raw': 'raw',
+            'obsm': 'obsm',
+            'obsp': 'obsp',
+        }
+        # filter out slots that aren't present in the input
+        func, _ = get_file_reader(input_file)
+        store = func(input_file, 'r')
+        kwargs = {k: v for k, v in kwargs.items() if k in store.keys()}
+        
+        logging.info('Read all slots for subsetting...')
+        obs = adata.obs # save updated obs
+        adata = read_anndata(
+            input_file,
+            backed=backed,
+            dask=dask,
+            **{k: v for k, v in kwargs.items() if k != 'obs'},
+        )
+        adata.obs = obs # updated obs
+        
+        write_zarr(adata, output_file, compute=True)
+    else:
+        var_mask = np.full(adata.n_vars, True, dtype=bool)
+
+        logging.info(f'Write to {output_file}...')
+        write_zarr_linked(
+            adata,
+            input_file,
+            output_file,
+            files_to_keep=['obs'],
+            subset_mask=(mask.values, var_mask),
+        )

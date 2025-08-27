@@ -1,5 +1,3 @@
-download_columns = ['url', 'dataset', 'collection_id', 'dataset_id', 'project_uuid']
-
 rule download:
     message:
         """
@@ -8,7 +6,7 @@ rule download:
     output:
         h5ad=out_dir / 'download' / '{dataset}.h5ad'
     params:
-        dataset_df=lambda w: dataset_df.query(f'dataset == "{w.dataset}"')[download_columns].reset_index(drop=True)
+        dataset_df=lambda w: dataset_df.query(f'dataset == "{w.dataset}"')[DOWNLOAD_COLUMNS].reset_index(drop=True)
     conda:
         get_env(config, 'scanpy', env_dir='../../../envs')
     script:
@@ -58,8 +56,8 @@ rule harmonize_metadata:
         meta=lambda wildcards: unlist_dict(
             get_wildcards(dataset_df, columns=all_but(dataset_df.columns,'subset'), wildcards=wildcards)
         ),
-        backed=False,
-        dask=False,
+        backed=True,
+        dask=True,
     output:
         zarr=directory(out_dir / 'harmonize_metadata' / '{dataset}.zarr'),
         # plot=image_dir / 'harmonize_metadata' / 'counts_sanity--{dataset}.png',

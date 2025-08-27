@@ -1,9 +1,34 @@
 metric_wildcards = mcfg.get_wildcard_names() + ['metric', 'overwrite_file_id']
 
-rule merge:
+rule merge_per_file:
     message:
         """
         Merge all metrics for all datasets and methods
+        {params.wildcards_string}
+        """
+    input:
+        metrics=lambda wildcards: mcfg.get_output_files(rules.run.output, subset_dict=wildcards, all_params=True),
+        benchmark=lambda wildcards: mcfg.get_output_files(rules.run.benchmark, subset_dict=wildcards, all_params=True),
+    output:
+        tsv=mcfg.out_dir / 'results' / paramspace.wildcard_pattern / 'metrics.tsv',
+        extra_columns=mcfg.out_dir / 'results' / paramspace.wildcard_pattern / 'extra_columns.txt',
+    params:
+        wildcards=lambda wildcards: mcfg.get_wildcards(subset_dict=wildcards, exclude=['dataset', 'file_id'], as_df=True, wildcard_names=metric_wildcards),
+        wildcards_string=lambda wildcards: mcfg.get_wildcards(subset_dict=wildcards, exclude=['dataset', 'file_id'], as_df=True, wildcard_names=metric_wildcards).to_string(index=False),
+    conda:
+        get_env(config, 'scanpy')
+    resources:
+        mem_mb=1000,
+    retries: 0
+    group:
+        'metrics_merge'
+    script: '../scripts/merge.py'
+
+
+use rule merge_per_file as merge with:
+    message:
+        """
+        Merge all metrics for {wildcards}
         {params.wildcards_string}
         """
     input:
@@ -15,16 +40,11 @@ rule merge:
     params:
         wildcards=mcfg.get_wildcards(as_df=True, wildcard_names=metric_wildcards),
         wildcards_string=mcfg.get_wildcards(as_df=True, wildcard_names=metric_wildcards).to_string(index=False),
-    conda:
-        get_env(config, 'scanpy')
-    resources:
-        mem_mb=1000,
     group:
         'metrics_merge'
-    script: '../scripts/merge.py'
 
 
-use rule merge as merge_per_dataset with:
+use rule merge_per_file as merge_per_dataset with:
     message:
         """
         Merge all metrics for {wildcards}
@@ -43,7 +63,7 @@ use rule merge as merge_per_dataset with:
         'metrics_merge'
 
 
-use rule merge as merge_per_batch with:
+use rule merge_per_file as merge_per_batch with:
     message:
         """
         Merge all metrics for {wildcards}
@@ -62,7 +82,7 @@ use rule merge as merge_per_batch with:
         'metrics_merge'
 
 
-use rule merge as merge_per_label with:
+use rule merge_per_file as merge_per_label with:
     message:
         """
         Merge all metrics for {wildcards}
@@ -77,25 +97,6 @@ use rule merge as merge_per_label with:
     params:
         wildcards=lambda wildcards: mcfg.get_wildcards(subset_dict=wildcards, exclude='label', as_df=True, wildcard_names=metric_wildcards),
         wildcards_string=lambda wildcards: mcfg.get_wildcards(subset_dict=wildcards, exclude='label', as_df=True, wildcard_names=metric_wildcards).to_string(index=False),
-    group:
-        'metrics_merge'
-
-
-use rule merge as merge_per_file with:
-    message:
-        """
-        Merge all metrics for {wildcards}
-        {params.wildcards_string}
-        """
-    input:
-        metrics=lambda wildcards: mcfg.get_output_files(rules.run.output, subset_dict=dict(wildcards), all_params=True),
-        benchmark=lambda wildcards: mcfg.get_output_files(rules.run.benchmark, subset_dict=dict(wildcards), all_params=True),
-    output:
-        tsv=mcfg.out_dir / 'results' / 'per_file' / '{file_id}.tsv',
-        extra_columns=mcfg.out_dir / 'results' / 'per_file' / '{file_id}_extra_columns.txt',
-    params:
-        wildcards=lambda wildcards: mcfg.get_wildcards(subset_dict=wildcards, exclude='file_id', as_df=True, wildcard_names=metric_wildcards),
-        wildcards_string=lambda wildcards: mcfg.get_wildcards(subset_dict=wildcards, exclude='file_id', as_df=True, wildcard_names=metric_wildcards).to_string(index=False),
     group:
         'metrics_merge'
 

@@ -1,6 +1,7 @@
 from pathlib import Path
 import hashlib
 import pandas as pd
+from pprint import pformat
 
 from .config import get_from_config
 from .misc import create_hash
@@ -110,4 +111,11 @@ class InputFiles:
         """
         Get file path for a given dataset and file ID
         """
-        return self.get_files_per_dataset(dataset)[file_id]
+        file_map = self.get_files_per_dataset(dataset)
+        try:
+            file = file_map[file_id]
+        except KeyError as e:
+            raise ValueError(
+                f'File "{file_id}" not found\n {pformat(list(file_map.keys()))}'
+            ) from e
+        return file

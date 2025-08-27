@@ -5,12 +5,8 @@ dependencies:
   - python=3.11
   - anndata=0.10
   - scanpy=1.10
-  # - scvi-tools
-  # - cudatoolkit
   - scipy<=1.12
-#  - jax<0.4.14
-  - zarr
-  - hdf5=1.14.2
+  - zarr<3
   - dask
   - sparse
   - pip
@@ -21,7 +17,3 @@ dependencies:
     - git+https://github.com/theislab/scarches.git@master
     - jax<0.4.14
     - jaxlib<0.4.14
-    #- scvi-tools==0.12.1
-    #- pytorch-lightning==1.3.8
-    #- torchmetrics<0.5
-    #- scipy<1.9

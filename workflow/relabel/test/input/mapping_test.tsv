@@ -1,6 +1,6 @@
 bulk_labels	lineage
 CD14+ Monocyte	myeloid
-Dendritic	lymphoid
+Dendritic	myeloid
 CD56+ NK	lymphoid
 CD4+/CD25 T Reg	lymphoid
 CD19+ B	lymphoid

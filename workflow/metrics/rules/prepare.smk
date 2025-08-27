@@ -8,6 +8,7 @@ rule prepare:
         neighbor_args=lambda wildcards: mcfg.get_for_dataset(wildcards.dataset, ['preprocessing', 'neighbors'], default={}),
         unintegrated_layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'unintegrated', default='X'),
         corrected_layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'corrected', default='X'),
+        var_mask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'var_mask', default='highly_variable'),
     conda:
         get_env(config, 'scanpy', gpu_env='rapids_singlecell')
     resources:
@@ -28,18 +29,36 @@ rule prepare_all:
 
 # Clustering for cluster-based metrics
 
+def scale_mem_mb(wildcards, attempt, factor=3, min_mb=1_000, profile=None):
+    # TODO: add to utils
+    if profile is None:
+        profile = mcfg.get_profile(wildcards)
+    mem_mb = mcfg.get_resource(profile=profile, resource_key='mem_mb', attempt=attempt)
+
+    try:
+        mem_mb = int(mem_mb)
+    except ValueError:
+        return mem_mb
+    
+    mem_mb = int(mem_mb // factor)
+    return max(min_mb, mem_mb)
+
+
 use rule cluster from clustering as metrics_cluster with:
     input:
         zarr=rules.prepare.output.zarr,
     output:
         zarr=directory(mcfg.out_dir / 'prepare' / paramspace.wildcard_pattern / 'cluster_resolutions' / '{algorithm}--{resolution}--{level}.zarr'),
+    params:
+        clustering_args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'clustering', default={}).get('kwargs', {}),
+        overwrite=lambda wildcards: mcfg.get_from_parameters(wildcards, 'clustering', default={}).get('overwrite', True),
     conda:
-        get_env(config, 'scanpy') # force clustering on CPU
+        get_env(config, 'scanpy', gpu_env='rapids_singlecell')
     resources:
-        partition=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='partition',attempt=attempt),
-        qos=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='qos',attempt=attempt),
-        mem_mb=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='mem_mb',attempt=attempt, factor=1),
-        gpu=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='gpu',attempt=attempt),
+        partition=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='partition',attempt=attempt),
+        qos=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='qos',attempt=attempt),
+        mem_mb=lambda w, attempt: mcfg.get_resource(profile='gpu', resource_key='mem_mb', attempt=attempt, factor=0.8),
+        gpu=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='gpu',attempt=attempt),
 
 
 use rule merge from clustering as metrics_cluster_collect with:
@@ -80,7 +99,7 @@ rule score_genes:
     resources:
         partition=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='partition',attempt=attempt),
         qos=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='qos',attempt=attempt),
-        mem_mb=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='mem_mb',attempt=attempt),
+        mem_mb=lambda w, attempt: scale_mem_mb(w, attempt, factor=2, profile='gpu'),
         gpu=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='gpu',attempt=attempt),
     script:
         '../scripts/score_genes.py'

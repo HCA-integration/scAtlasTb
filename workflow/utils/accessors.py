@@ -5,7 +5,6 @@ from dask import array as da
 
 from .io import to_memory
 from .misc import dask_compute
-from .processing import _filter_genes
 
 
 # deprecated
@@ -51,6 +50,54 @@ def select_neighbors(adata, output_type):
     return adata
 
 
+def _filter_batch(adata, batch_key=None):
+    """
+    Filter cells from batches with too few cells
+    """
+    mask = np.ones(adata.n_obs, dtype=bool)
+    if batch_key is not None:
+        cells_per_batch = adata.obs[batch_key].value_counts()
+        if cells_per_batch.min() < 2:
+            mask = adata.obs[batch_key].isin(cells_per_batch[cells_per_batch > 1].index)
+    return mask
+
+
+def _filter_genes(adata, verbose=True, return_varnames=False, **kwargs):
+    """
+    :return: boolean mask of genes that pass the filter
+    """
+    import scanpy as sc
+    from dask import array as da
+    from tqdm.dask import TqdmCallback
+    from contextlib import nullcontext
+        
+    # if isinstance(adata.X, da.Array):
+    #     import sparse
+        
+    #     min_cells = kwargs.get('min_cells', 0)
+        
+    #     with TqdmCallback(
+    #         desc=f"Determine genes with >= {min_cells} cells",
+    #         miniters=10,
+    #         mininterval=5,
+    #     ):
+    #         X = X.map_blocks(sparse.COO)
+    #         mask = (X != 0).sum(axis=0) >= min_cells
+    #         mask = mask.compute().todense()
+    #     return mask
+
+    X = adata.X
+    context = TqdmCallback(desc='Filter genes', miniters=1) if verbose and isinstance(X, da.Array) else nullcontext()
+    
+    with context:
+        gene_subset, _ = sc.pp.filter_genes(X, **kwargs)
+    
+    if return_varnames:
+        gene_subset = adata.var_names[gene_subset]
+    
+    return gene_subset
+
+
 def subset_hvg(
     adata: ad.AnnData,
     to_memory: [str, list, bool] = 'X',
@@ -84,9 +131,8 @@ def subset_hvg(
             with TqdmCallback(desc=f"Determine genes with < {min_cells} cells"):
                 low_count_mask = low_count_mask.compute().todense()
         else:
-            low_count_genes = _filter_genes(adata, min_cells=min_cells)
-            low_count_mask = np.isin(adata.var_names, low_count_genes)
-        adata.var[var_column] = adata.var[var_column] & ~low_count_mask
+            filtered_mask = _filter_genes(adata, min_cells=min_cells)
+        adata.var[var_column] &= filtered_mask
     
     if adata.var[var_column].sum() == adata.var.shape[0]:
         warnings.warn('All genes are highly variable, not subsetting')
@@ -139,3 +185,15 @@ def adata_to_memory(
         elif verbose:
             print(f'Layer {layer} not found, skipping...', flush=True)
     return adata
+
+
+def parse_gene_names(adata, gene_list):
+    var_names = adata.var_names.astype(str)
+    genes_not_in_var = [str(g) for g in gene_list if g not in var_names]
+    gene_list = [g for g in gene_list if g in var_names]
+
+    if genes_not_in_var:
+        mask = var_names.str.contains(pat='|'.join(genes_not_in_var))
+        gene_list += var_names[mask].tolist()
+
+    return gene_list

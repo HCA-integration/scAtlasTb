@@ -6,7 +6,7 @@ from matplotlib import image as mpimg
 import seaborn as sns
 from tqdm import tqdm
 import traceback
-import concurrent.futures
+from joblib import Parallel, delayed
 import scanpy as sc
 from pprint import pformat
 import logging
@@ -27,6 +27,7 @@ output_joint.mkdir(parents=True, exist_ok=True)
 
 logging.info(f'Read {input_zarr}...')
 adata = read_anndata(input_zarr, obs='obs', uns='uns')
+print(adata, flush=True)
 
 # get parameters
 file_id = snakemake.wildcards.file_id
@@ -44,9 +45,9 @@ if adata.obs.shape[0] == 0:
 def create_figure(df, png_file, density_png, joint_title, **kwargs):
     g = plot_qc_joint(df, **kwargs)
     
-    # adjust legend position
+    # remove legend from joint plot image
     if g.ax_joint.legend_ is not None:
-        sns.move_legend(g.ax_joint, 'right')
+        g.ax_joint.get_legend().remove()
     
     # save plot temporarily
     plt.tight_layout()
@@ -57,12 +58,27 @@ def create_figure(df, png_file, density_png, joint_title, **kwargs):
     f, axes = plt.subplots(1, 2, figsize=(20, 10))
     axes[0].imshow(mpimg.imread(png_file))
     axes[1].imshow(mpimg.imread(density_png))
+
+    # move legend from joint plot to right of figure
+    handles, labels = g.ax_joint.get_legend_handles_labels()
+    markerscale = (80 / kwargs.get('s', 20)) ** 0.5
+    g.ax_joint.legend(markerscale=markerscale)
+    if handles and labels:
+        axes[0].legend(
+            handles=handles,
+            labels=labels,
+            markerscale=markerscale,
+            loc='center right',
+            bbox_to_anchor=(0, 0.5),
+            borderaxespad=0.5,
+        )
+    
     for ax in axes.ravel():
         ax.set_axis_off()
     plt.suptitle(joint_title, fontsize=16)
     
     # save final plot
-    plt.tight_layout()
+    plt.tight_layout(w_pad=0.05)
     plt.savefig(png_file, bbox_inches='tight')
     plt.close('all')
 
@@ -85,7 +101,11 @@ def call_plot(df, x, y, log_x, log_y, hue, scatter_plot_kwargs, density_png, den
     scatter_plot_kwargs |= dict(
         palette=palette,
         legend=legend,
-        marginal_kwargs=dict(palette=palette, legend=False),
+        marginal_kwargs=dict(
+            palette=palette,
+            legend=False,
+            stat='density',
+        ),
     )
     
     # plot joint QC on regular scale
@@ -134,8 +154,8 @@ thresholds = get_thresholds(
 logging.info(f'\n{pformat(thresholds)}')
 
 scatter_plot_kwargs = dict(
-    s=4,
-    alpha=.5,
+    s=8,
+    alpha=.8,
     linewidth=0,
 )
 
@@ -145,7 +165,7 @@ kde_plot_kwargs = dict(
     alpha=.8,
 )
 # adjust parameters for large datasets
-if adata.n_obs > 1e5:
+if adata.n_obs > 5e4:
     kde_plot_kwargs |= dict(
         bw_adjust=2,
         gridsize=50,
@@ -158,7 +178,7 @@ coordinates = [
 
 # # subset to max of 300k cells due to high computational cost
 density_data = adata.obs.sample(n=int(min(300_000, adata.n_obs)), random_state=42)
-density_data = adata.obs
+# density_data = adata.obs
 
 for x, y, log_x, log_y in coordinates:
     logging.info(f'Joint QC plots per {x} vs {y}...')
@@ -239,31 +259,28 @@ for x, y, log_x, log_y in coordinates:
     plt.tight_layout()
     plt.savefig(density_log_png, bbox_inches='tight')
 
-    # for hue in tqdm(hues):
-    #     call_plot(adata.obs, x, y, log_x, log_y, hue, scatter_plot_kwargs, density_png)
     
-    with concurrent.futures.ProcessPoolExecutor(max_workers=threads) as executor:
-        futures = [
-            executor.submit(
-                call_plot,
-                df=adata.obs,
-                x=x,
-                y=y,
-                log_x=log_x,
-                log_y=log_y,
-                hue=hue,
-                scatter_plot_kwargs=scatter_plot_kwargs,
-                density_png=density_png,
-                density_log_png=density_log_png,
-            ) for hue in hues
-        ]
-        
-        for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures)):
-            try:
-                future.result()
-            except Exception as e:
-                logging.error(f"Exception occurred: {e}")
-                traceback.print_exc()
+    def safe_call_plot(*args, **kwargs):
+        try:
+            return call_plot(*args, **kwargs)
+        except Exception as e:
+            logging.error(f"Error in plot job: {e}")
+            traceback.print_exc()
+            return None
+    
+    Parallel(n_jobs=threads)(
+        delayed(safe_call_plot)(
+            df=adata.obs,
+            x=x,
+            y=y, 
+            log_x=log_x,
+            log_y=log_y,
+            hue=hue,
+            scatter_plot_kwargs=scatter_plot_kwargs,
+            density_png=density_png,
+            density_log_png=density_log_png
+        ) for hue in tqdm(hues)
+    )
     
     # remove redundant plots
     density_png.unlink()

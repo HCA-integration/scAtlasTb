@@ -6,7 +6,7 @@ from pprint import pformat
 import logging
 logging.basicConfig(level=logging.INFO)
 
-from utils.io import read_anndata, write_zarr_linked
+from utils.io import read_anndata, write_zarr_linked, get_store
 from utils.accessors import subset_hvg
 from utils.misc import dask_compute
 from utils.processing import assert_neighbors, sc, _filter_genes
@@ -55,7 +55,7 @@ def read_and_subset(
     
     logging.info('Determine var_mask...')
     subsetted = False
-    if var_column not in adata.var:
+    if var_column is None or var_column == 'None':
         adata.var[new_var_column] = True
     else:
         adata.var[new_var_column] = adata.var[var_column]
@@ -63,8 +63,12 @@ def read_and_subset(
     if filter_zero_genes:
         logging.info('Filter all zero genes...')
         # filter out which genes are all 0
-        all_zero_genes = _filter_genes(adata, min_cells=50)
-        adata.var[new_var_column] = adata.var[new_var_column] & ~adata.var_names.isin(all_zero_genes)
+        filtered_genes = _filter_genes(
+            adata[:, adata.var[new_var_column]].copy(),
+            min_cells=1,
+            return_varnames=True,
+        )
+        adata.var[new_var_column] &= adata.var_names.isin(filtered_genes)
     
     if save_subset:
         logging.info('Subset HVG...')
@@ -87,6 +91,10 @@ def read_and_subset(
 
 files_to_keep = ['obs', 'var']
 slot_map = {}
+
+# check if var_mask exists in data
+store = get_store(input_file)
+assert var_mask in store['var'], f'var_mask="{var_mask}" not found in {input_file}.'
 
 adata_norm, files_to_link, slot_map = read_and_subset(
     input_file=input_file,
@@ -135,7 +143,7 @@ if input_file.endswith('.h5ad'):
         },
     )
     files_to_keep.append('X')
-elif input_file.endswith('.zarr'):
+elif input_file.endswith(('.zarr', '.zarr/')):
     if save_subset:
         files_to_keep.extend(['varm', 'varp'])
     adata = AnnData(

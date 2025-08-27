@@ -20,6 +20,7 @@ suppressPackageStartupMessages({
   library(tidyverse)
   library(dynutils)
 })
+source(snakemake@input$r_utils)
 
 # read files
 dt <- fread(input_file)
@@ -54,7 +55,7 @@ metrics_tab <- dcast(
   subset(dt, select = all_columns),
   as.formula(id_formula),
   value.var = value_var,
-  fun.aggregate = mean
+  fun.aggregate = function(x) mean(x, na.rm = TRUE)
 )
 print(head(metrics_tab))
 
@@ -114,17 +115,44 @@ row_groups <- NULL
 #   metrics_tab[, split_data_value := NULL]
 # }
 
+# # shorten redundant information in long names
+# cols <- colnames(metrics_tab)
+# for (col in c('file_name', 'file_id')) {
+#   col_values <- metrics_tab[[col]]
+#   max_len <- max(nchar(na.omit(col_values)), na.rm = TRUE)
+#   if (!is.na(max_len) && (max_len > 20) && !is.numeric(col_values)) {
+#     lcs <- longest_common_substring(col_values)
+#     metrics_tab[[col]] <- gsub(lcs, '', metrics_tab[[col]])
+#   }
+# }
 # remove uninformative columns TODO: include this information in figure header
-columns <- names(metrics_tab)[sapply(metrics_tab, uniqueN) != 1 | names(metrics_tab) %in% metrics]
+columns <- names(metrics_tab)[
+  sapply(metrics_tab, uniqueN) != 1 |
+  names(metrics_tab) %in% c(metrics, 'file_name', 'label', 'batch')
+]
 metrics_tab <- metrics_tab[, ..columns]
 
+get_col_width <- function(col, dt, factor=0.3) {
+  width <- max(nchar(as.character(dt[[col]])), na.rm = TRUE)
+  if (is.infinite(width) | width < 1) {
+    width <- nchar(col)
+  }
+  return(factor * width + 1) # +1 for padding
+}
+
 #add column info metadata for plotting using funkyheatmap
-dt1 <- data.table(id=integration_setup, group="Integration Setup", geom='text', palette='setup')
-dt2 <- data.table(id="Overall Score", group="Overall", geom="bar", palette="overall")
-dt3 <- data.table(id="Bio Conservation", group="Bio Conservation", geom='bar', palette='bio')
-dt4 <- data.table(id=bio_metrics, group="Bio Conservation", geom='funkyrect', palette='bio')
-dt5 <- data.table(id="Batch Correction", group="Batch Correction", geom='bar', palette='batch')
-dt6 <- data.table(id=batch_metrics, group="Batch Correction", geom='circle', palette='batch')
+dt1 <- data.table(
+  id=integration_setup,
+  group="Integration Setup",
+  geom='text',
+  palette='setup',
+  width=sapply(integration_setup, get_col_width, dt=metrics_tab)
+)
+dt2 <- data.table(id="Overall Score", group="Overall", geom="bar", palette="overall", width=4)
+dt3 <- data.table(id="Bio Conservation", group="Bio Conservation", geom='bar', palette='bio', width=4)
+dt4 <- data.table(id=bio_metrics, group="Bio Conservation", geom='funkyrect', palette='bio', width=1)
+dt5 <- data.table(id="Batch Correction", group="Batch Correction", geom='bar', palette='batch', width=4)
+dt6 <- data.table(id=batch_metrics, group="Batch Correction", geom='circle', palette='batch', width=1)
 column_info <- rbind(dt1, dt2, dt3, dt4, dt5, dt6, fill=TRUE)
 column_info <- column_info[column_info$id %in% colnames(metrics_tab)]
 print("column_info")

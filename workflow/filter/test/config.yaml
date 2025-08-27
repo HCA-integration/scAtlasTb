@@ -7,7 +7,7 @@ DATASETS:
     input:
       filter: test/input/load_data/harmonize_metadata/Lee2020.zarr
     filter:
-      subset: true
+      subset: false
       dask: true
       backed: true
       remove_by_column:
@@ -30,7 +30,7 @@ DATASETS:
     input:
       filter: test/input/pbmc68k.h5ad
     filter:
-      subset: false
+      subset: true
       remove_by_column:
         phase:
           - G1

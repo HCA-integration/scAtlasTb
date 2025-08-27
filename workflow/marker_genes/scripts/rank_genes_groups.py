@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
+from pprint import pprint
 import warnings
-warnings.filterwarnings("ignore")
+warnings.filterwarnings('ignore')
 import logging
 logging.basicConfig(level=logging.INFO)
 import scanpy as sc
@@ -46,6 +47,9 @@ adata = read_anndata(
 )
 logging.info(adata.__str__())
 
+if 'feature_name' in adata.var.columns:
+    adata.var_names = adata.var['feature_name'].astype(str)
+
 # logging.info('Subset highly variable genes...')
 # adata, _ = subset_hvg(adata, var_column='highly_variable')
 # adata = filter_genes(adata, batch_key=sample_key, min_cells=1, min_counts=1)
@@ -55,17 +59,14 @@ if pseudobulk:
     adata.obs['pseudo_group'] = adata.obs[group_key].astype(str) + '_' + adata.obs[sample_key].astype(str)
     logging.info(f'Creating pseudobulks for sample={sample_key} and group={group_key}...')
     adata = get_pseudobulks(adata, group_key='pseudo_group', agg='sum')
+    logging.info(f'Pseudobulk shape: {adata.shape}')
 
-    # compute for all genes, because sample size is way more manageable
+    # compute marker genes for all genes, because sample size is way more manageable
     args['n_genes'] = adata.n_vars
-    logging.info(adata.__str__())
 
-# filter groups
+# filter groups with more than 1 observation
 groups_counts = adata.obs[group_key].value_counts()
 groups = groups_counts[groups_counts > 1].index.tolist()
-
-if 'feature_name' in adata.var.columns:
-    adata.var_names = adata.var['feature_name']
 
 logging.info(f'Running marker genes analysis for {group_key} and args={args}...')
 key = f'marker_genes_group={group_key}'
@@ -105,19 +106,25 @@ logging.info('Create DEG dataframe...')
 result = adata.uns[key]
 markers_df = []
 for cluster in result['names'].dtype.names:
-    current = pd.DataFrame(
-        {
-            "gene": result["names"][cluster],
-            "z-score": result["scores"][cluster],
-            "logfoldchange": result["logfoldchanges"][cluster],
-            "pval": result["pvals"][cluster],
-            "pval_adj": result["pvals_adj"][cluster], 
-            "pct_within": result["pts"].loc[result["names"][cluster]][cluster],
-            "pct_outside": result["pts_rest"].loc[result["names"][cluster]][cluster],
-            "cluster": cluster
-        }
-    )
-    markers_df.append(current)
+    # parse percent results
+    pct_dict = {}
+    for orig, new in dict(pts='pct_within', pts_rest='pct_outside').items():
+        s = result[orig][cluster]
+        # keep unique duplicates where values is max
+        s = s.loc[s.groupby(level=0).idxmax()]
+        pct_dict[new] = s
+    pct_dict_df = pd.DataFrame(pct_dict).reset_index(names='gene')
+    
+    df = pd.DataFrame({
+        'gene': result['names'][cluster],
+        'z-score': result['scores'][cluster],
+        'logfoldchange': result['logfoldchanges'][cluster],
+        'pval': result['pvals'][cluster],
+        'pval_adj': result['pvals_adj'][cluster], 
+        'cluster': cluster
+    })
+    df = df.merge(pct_dict_df, on='gene', how='left')
+    markers_df.append(df)
 markers_df = pd.concat(markers_df).set_index('cluster')
 markers_df['-log10 pvalue'] = -np.log10(markers_df['pval'])
 

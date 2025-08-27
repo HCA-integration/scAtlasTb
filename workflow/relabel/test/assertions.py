@@ -27,7 +27,8 @@ for file in files:
     # new column mapping
     new_label_cfg = config['DATASETS'][dataset]['relabel'].get('new_columns')
     if new_label_cfg is not None:
-        mapping_df = pd.read_table(new_label_cfg['file'])
+        read_func = pd.read_parquet if new_label_cfg['file'].endswith('.parquet') else pd.read_table
+        mapping_df = read_func(new_label_cfg['file'])
 
         for label in new_label_cfg['order']:
             assert label in obs.columns, f'"{label}" not found in obs for {file}'

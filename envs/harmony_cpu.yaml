@@ -1,0 +1,14 @@
+name: harmony_cpu
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.11
+  - anndata=0.11
+  - scanpy=1.11
+  - zarr<3
+  - dask
+  - dask-ml
+  - sparse
+  - harmony-pytorch
+  - harmonypy

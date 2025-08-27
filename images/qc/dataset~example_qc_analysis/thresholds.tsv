@@ -1,0 +1,9 @@
+dataset	file_id	threshold_type	passed_frac	removed_frac	n_passed	n_removed	n_total	percent_mito_min	percent_mito_max	n_genes_min	n_genes_max	n_counts_min	n_counts_max
+example_qc_analysis	test1	sctk_autoqc	0.0	1.0	0	700	700	0.0	0.08410688	201.73354	764.9998	1948.412	2086.3728
+example_qc_analysis	test1	user	0.0	1.0	0	700	700						
+example_qc_analysis	test1	alternative	0.0	1.0	0	700	700						
+example_qc_analysis	test1	updated	0.0	1.0	0	700	700	0.0	0.08410688	201.73354	764.9998	1948.412	2086.3728
+example_qc_analysis	test2	sctk_autoqc	0.0	1.0	0	700	700	0.0	0.08410688	201.73354	764.9998	1948.412	2086.3728
+example_qc_analysis	test2	user	0.0	1.0	0	700	700						
+example_qc_analysis	test2	alternative	0.0	1.0	0	700	700						
+example_qc_analysis	test2	updated	0.0	1.0	0	700	700	0.0	0.08410688	201.73354	764.9998	1948.412	2086.3728

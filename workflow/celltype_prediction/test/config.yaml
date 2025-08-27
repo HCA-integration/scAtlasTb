@@ -25,6 +25,7 @@ DATASETS:
       celltypist:
         params:
           majority_voting: true
+          over_clustering: n_genes
         models:
           - Healthy_COVID19_PBMC
           - Immune_All_Low

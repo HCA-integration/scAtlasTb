@@ -55,27 +55,37 @@ def get_majority_reference(df, reference_key, query_key, **kwargs):
         categories=map_majority.dropna().unique(),
     )
 
-def get_majority_consensus(df, columns, new_key='majority_consensus'):
+def get_majority_consensus(df, column_patterns, new_key='majority_consensus'):
     import re
     from functools import reduce
 
     # parse regex columns
     columns = [
-        col for col in df.columns for pattern in columns
+        col for col in df.columns for pattern in column_patterns
         if re.fullmatch(pattern, col)
     ]
-    columns = list(set(columns))
-    print(columns)
+    columns = list(dict.fromkeys(columns))
+    assert len(columns) >= 2, (
+        f'Insufficient columns found matching patterns: {column_patterns}. '
+        f'Found {len(columns)} column(s), need at least 2.'
+    )
     
     agreement_col = f'{new_key}_agreement'
     low_agreement_col = f'{new_key}_low_agreement'
     n_vote_columns = len(columns)
+
+    # Convert columns to categorical if not yet the case
+    for col in columns:
+        if not pd.api.types.is_categorical_dtype(df[col]):
+            df[col] = df[col].astype('category')
     
+    # Warn if categories aren't the same across columns
     check_same_categories(df, columns)
-    
+
+    # Create a unified categorical dtype
     categories = reduce(pd.Index.union, [df[col].cat.categories.dropna() for col in columns])
     cat_dtype = pd.CategoricalDtype(categories=categories)
-    df_cat = df[columns].astype(cat_dtype).apply(lambda x: x.cat.codes)    
+    df_cat = df[columns].astype(cat_dtype).apply(lambda x: x.cat.codes)
     
     majority_votes, mode_count = mode_counts_per_row(df_cat.to_numpy())
     

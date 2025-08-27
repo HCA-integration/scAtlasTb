@@ -72,6 +72,7 @@ DATASETS:
     clustering:
       neighbors_key: neighbors
       algorithm: leiden
+      use_gpu: true
       resolutions:
         - 0.5
       hierarchy: 3

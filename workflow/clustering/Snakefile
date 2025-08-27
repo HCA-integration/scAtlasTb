@@ -20,11 +20,19 @@ mcfg = ClusteringConfig(
         'resolutions',
         'hierarchy',
         'algorithm',
+        'overwrite',
+        'use_gpu',
     ],
     # wildcard_names=['algorithm', 'resolution'],
     rename_config_params={'resolutions': 'resolution'},
     explode_by=['algorithm', 'resolution'],
-    dtypes={'recompute_neighbors': bool, 'recompute_umap': bool, 'resolution': str},
+    dtypes={
+        'recompute_neighbors': bool,
+        'recompute_umap': bool,
+        'resolution': str,
+        # 'overwrite': bool,
+        # 'use_gpu': bool,
+    },
 )
 paramspace = mcfg.get_paramspace()
 
@@ -51,9 +59,14 @@ include: 'rules/postprocessing.smk'
 include: 'rules/plots.smk'
 
 
+rule cluster_all:
+    input:
+        mcfg.get_output_files(rules.clustering_merge.output)
+    localrule: True
+
 rule all:
     input:
-        mcfg.get_output_files(rules.clustering_merge.output),
+        rules.cluster_all.input,
         rules.plots_all.input
     default_target: True
     localrule: True

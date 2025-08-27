@@ -102,6 +102,7 @@ rule plots:
         plots=directory('{dataset}_plot'),
     params:
         basis='X_pca'
+    threads: 10
     conda:
         get_env(config, 'scanpy')
     script:

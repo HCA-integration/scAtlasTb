@@ -24,6 +24,15 @@ def remove_outliers(adata, extrema='max', factor=10, rep='X_umap'):
     return adata[outlier_mask]
 
 
+def trim_umap(embed, old_key='X_umap', new_key='X_umap', threshold=1e-5):
+    """Code provided by @moinfar, modified by @mumichae"""
+    x_min, x_max = np.quantile(embed.obsm[old_key][:, 0], (threshold, 1-threshold))
+    x_min, x_max = float(x_min), float(x_max)
+    y_min, y_max = np.quantile(embed.obsm[old_key][:, 1], (threshold, 1-threshold))
+    y_min, y_max = float(y_min), float(y_max)
+    embed.obsm[new_key] = np.vstack([embed.obsm[new_key][:, 0].clip(x_min, x_max), embed.obsm[old_key][:, 1].clip(y_min, y_max)]).T
+
+
 def all_but(_list, is_not):
     return [x for x in _list if x != is_not]
 
@@ -157,6 +166,9 @@ def ensure_sparse(adata, layers: [str, list] = None, sparse_type=None, **kwargs)
         from scipy.sparse import csr_matrix
         from dask import array as da
         
+        if matrix is None:
+            return matrix
+        
         if sparse_type is None:
             sparse_type = csr_matrix
 
@@ -188,11 +200,13 @@ def dask_compute(adata, layers: [str, list] = None, verbose: bool = True, **kwar
     
     def compute_layer(x, persist=False):
         from tqdm.dask import TqdmCallback
+        from contextlib import nullcontext
         
         if not isinstance(x, da.Array):
             return x
         
-        with TqdmCallback(miniters=10, mininterval=5):
+        context = TqdmCallback(desc='Dask compute', miniters=10, mininterval=5) if verbose else nullcontext()
+        with context:
             if persist:
                 x = x.persist()
             x = x.compute()

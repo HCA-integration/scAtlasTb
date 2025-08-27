@@ -33,7 +33,7 @@ defaults:
       - kbet_pg
   datasets:
     - test_metrics
-    - test_no_name
+    - test_clustering_metrics
     - test_integration
     - scib_metrics
     - morans_i
@@ -51,14 +51,21 @@ DATASETS:
       batch: louvain
       overwrite_file_id: true
 
-    test_no_name:
-      input:
-        metrics: test/input/pbmc68k.h5ad
+  test_clustering_metrics:
+    input:
+      metrics: test/input/pbmc68k.h5ad
+    metrics:
+      label: bulk_labels
+      batch: batch
+      clustering:
+        kwargs:
+          random_state: 42
+        overwrite: true
       metrics:
-        label: bulk_labels
-        batch: louvain
-        metrics:
-          - nmi
+        - nmi
+        - ari
+        - isolated_label_f1
+        - graph_connectivity
   
   test_integration:
     input:
@@ -69,8 +76,8 @@ DATASETS:
         bbknn: test/input/integration/dataset~test/file_id~pbmc68k/batch~batch/var_mask~highly_variable/method~bbknn--hyperparams~25cb428a38--label~None--output_type~knn.zarr
         harmony: test/input/integration/dataset~harmony/file_id~3bd5f9cfa3/batch~batch/var_mask~highly_variable/method~harmonypy--hyperparams~a494363475--label~None--output_type~embed.zarr
         # scanorama_full: test/input/integration/dataset~test/file_id~pbmc68k/batch~batch/var_mask~highly_variable/method~scanorama--hyperparams~a90b47ca49--label~None--output_type~full.zarr
-        scanorama_embed: test/input/integration/dataset~test/file_id~pbmc68k/batch~batch/var_mask~highly_variable/method~scanorama--hyperparams~a90b47ca49--label~None--output_type~embed.zarr
-        scvi: test/input/integration/dataset~scvi_tools/file_id~orig/batch~batch/var_mask~highly_variable/method~scvi--hyperparams~dbed8671e3--label~None--output_type~embed.zarr
+        # scanorama_embed: test/input/integration/dataset~test/file_id~pbmc68k/batch~batch/var_mask~highly_variable/method~scanorama--hyperparams~a90b47ca49--label~None--output_type~embed.zarr
+        scvi: test/input/integration/dataset~scvi_tools/file_id~orig/batch~batch/var_mask~highly_variable/method~scvi--hyperparams~9f3f32149c--label~None--output_type~embed.zarr
     metrics:
       unintegrated: layers/normcounts
       raw_counts: layers/counts

@@ -1,20 +1,23 @@
 name: drvi
 channels:
+  #- pytorch
+  #- nvidia
   - conda-forge
-  # - pytorch
-  # - nvidia
 dependencies:
   - python=3.11
-  - anndata=0.10
-  - scanpy=1.10
-  - zarr=2
-  - scipy<1.15
-  - hdf5=1.14.2
+  - anndata<0.11
+  - scanpy=1.9.5
+  - zarr<3
+  - scipy<1.13
   - dask
   - sparse
+  - pytorch<2.4
+  - pytorch-lightning<2.1
+  - scvi-tools=1.0.4
+  - jax<=0.4.20
+  - jaxlib<=0.4.20
   - pip
   - pip:
-    - torch
-    - torchvision
-    - torchaudio
+    - jax==0.4.13  # needed for compatibility with MacOS
+    - jaxlib==0.4.13  # needed for compatibility with MacOS
     - drvi-py

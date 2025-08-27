@@ -94,9 +94,11 @@ if 'dataset_meta' in config:
     config['dataset_meta'] = Path(config['dataset_meta']).resolve()
 
 os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 
 envvars:
-    'HDF5_USE_FILE_LOCKING'
+    'HDF5_USE_FILE_LOCKING',
+    'KMP_DUPLICATE_LIB_OK',
 
 # Import modules
 module common:

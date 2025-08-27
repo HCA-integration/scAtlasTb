@@ -1,13 +1,14 @@
-method	output_type	use_cell_type	no_scale	env	resources	do_not_expand
-unintegrated	full,embed,knn	false	false	scanpy	cpu	
-bbknn	knn	false	false	bbknn	gpu	
-combat	full	false	false	scanpy	cpu	
-harmony_pytorch	embed	false	false	harmony_pytorch	gpu	
-harmonypy	embed	false	false	rapids_singlecell	gpu	
-scanorama	embed,full	false	false	scanorama	cpu	
-scanvi	embed	true	true	scvi-tools	gpu	
-scvi	embed	false	true	scvi-tools	gpu	
-drvi	embed	false	true	drvi	gpu	
-scpoli	embed	true	false	scarches	gpu	conditions,unknown_ct_names,labeled_indices,hidden_layer_sizes
-scgen	embed,full	true	false	scarches	gpu	hidden_layer_sizes
-sysvi	embed	false	true	sysvi	gpu
+method	output_type	use_cell_type	no_scale	env	resources	cpu_env	do_not_expand
+unintegrated	full,embed,knn	false	false	scanpy	cpu		
+bbknn	knn	false	false	bbknn	gpu		
+combat	full	false	false	scanpy	cpu		
+harmony_pytorch	embed	false	false	harmony_pytorch	gpu	harmony_cpu	
+harmonypy	embed	false	false	rapids_singlecell	gpu	harmony_cpu	
+scanorama	embed,full	false	false	scanorama	cpu		
+scanvi	embed	true	true	scvi-tools	gpu		
+scvi	embed	false	true	scvi-tools	gpu		
+scvi_vitkl	embed	false	true	scvi-vitkl	gpu		
+drvi	embed	false	true	drvi	gpu		
+scpoli	embed	true	false	scarches	gpu	scarches	conditions,unknown_ct_names,labeled_indices,hidden_layer_sizes
+scgen	embed,full	true	false	scarches	gpu	scarches	hidden_layer_sizes
+sysvi	embed	false	true	sysvi	gpu		

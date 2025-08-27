@@ -7,19 +7,18 @@ logging.basicConfig(level=logging.INFO)
 import warnings
 warnings.filterwarnings("ignore", message="The frame.append method is deprecated and will be removed from pandas in a future version.")
 import anndata as ad
+from tqdm.dask import TqdmCallback
 from dask import array as da
 from dask import config as da_config
 da_config.set(num_workers=snakemake.threads)
 
 from utils.io import read_anndata, write_zarr_linked
-from utils.processing import _filter_batch, sc, USE_GPU
-from utils.misc import dask_compute
+from utils.accessors import _filter_batch
+from utils.processing import sc, USE_GPU
 
 input_file = snakemake.input[0]
 output_file = snakemake.output[0]
 args = snakemake.params.get('args', {})
-# dask = snakemake.params.get('dask', False) and not USE_GPU
-# backed = snakemake.params.get('backed', False) and dask and not USE_GPU
 
 if args is None:
     args = {}
@@ -61,17 +60,17 @@ else:
     # filter genes and cells that would break HVG function
     batch_mask = _filter_batch(adata, batch_key=args.get('batch_key'))
     adata = adata[batch_mask, adata.var['nonzero_genes']].copy()
-    adata = dask_compute(adata, layers='X')
     
     # make sure data is on GPU for rapids_singlecell
     if USE_GPU:
         sc.get.anndata_to_GPU(adata)
     
-    logging.info(f'Select features with arguments: {args}...')
-    sc.pp.highly_variable_genes(
-        adata,
-        **args
-    )
+    with TqdmCallback(
+        desc=f'Select features with arguments: {args}...',
+        miniters=1,
+        mininterval=1,
+    ):
+        sc.pp.highly_variable_genes(adata, **args)
 
     # add HVG info back to adata
     hvg_column_map = {

@@ -12,7 +12,7 @@ import numpy as np
 from dask import config as da_config
 
 from load_data_utils import SCHEMAS, get_union
-from utils.io import read_anndata, to_memory
+from utils.io import read_anndata, write_zarr
 from utils.misc import ensure_sparse, dask_compute
 
 in_file = snakemake.input.h5ad
@@ -21,8 +21,8 @@ annotation_file = snakemake.input.get('annotation_file')
 out_file = snakemake.output.zarr
 # out_plot = snakemake.output.plot
 
-backed = snakemake.params.get('backed', False)
-dask = snakemake.params.get('dask', False)
+backed = snakemake.params.get('backed', True)
+dask = snakemake.params.get('dask', True)
 meta = snakemake.params.get('meta', {})
 logging.info(f'meta:\n{pformat(meta)}')
 
@@ -44,8 +44,6 @@ for key in list(adata.uns.keys()):
     del adata.uns[key]
 
 # ensure raw counts are kept in .X
-if 'final' not in adata.layers:
-    adata.layers['final'] = adata.X
 adata.X = adata.raw.X if isinstance(adata.raw, ad._core.raw.Raw) else adata.X
 del adata.raw
 
@@ -69,6 +67,7 @@ if annotation_file is not None:
 
     # remove duplicates
     annotation = annotation.drop_duplicates(subset=barcode_column)
+    print(annotation.head(), flush=True)
 
     # set index
     annotation.index = annotation[barcode_column].astype(str)
@@ -127,8 +126,9 @@ for key, value in meta.items():
     adata.obs[key] = value
 
 # save barcodes in separate column
-adata.obs['barcode'] = adata.obs_names
-adata.obs_names = adata.uns['dataset'] + '-' + adata.obs.reset_index(drop=True).index.astype(str)
+if 'barcode' not in adata.obs.columns:
+    adata.obs['barcode'] = adata.obs_names
+adata.obs_names = adata.obs[['barcode', 'tech_id']].astype(str).agg('-'.join, axis=1)
 
 # schemas translation
 schemas_df = pd.read_table(schema_file).dropna()
@@ -169,4 +169,4 @@ adata.var.index.set_names('feature_id', inplace=True)
 logging.info(f'\033[0;36mwrite\033[0m {out_file}...')
 with da_config.set(num_workers=snakemake.threads):
     adata = dask_compute(adata)
-    adata.write_zarr(out_file)
+    write_zarr(adata, out_file)
