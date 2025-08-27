@@ -1,32 +1,29 @@
 # Preprocessing
 
-This module provides rules to processes datasets according to the following steps:
 
-1. normalize counts
-2. calculate highly variable genes (and optionally subset to those genes)
-3. PCA
-4. calculate k-nearest neighbors
-5. UMAP dimensionality reduction
+This module provides a flexible preprocessing pipeline for single-cell datasets, with rules for:
 
-Additionally, this module contains rules for plotting a custom embedding (e.g. PCA) or the UMAP.
+1. Normalization
+2. Gene filtering
+3. Highly variable gene selection
+4. PCA
+5. Nearest neighbor graph construction
+6. UMAP dimensionality reduction
+7. Optional extra HVG selection and custom assembly
 
-The rules are defined under `rules/rules.smk` and imported into an end-to-end pipeline in `rules/assemble.smk`
+Rules are defined in `rules/rules.smk` and orchestrated in `rules/assemble.smk`, which assembles outputs from each step into a single AnnData object. The pipeline supports parameterization via config and dynamic resource allocation (threads, memory, partition, GPU) for each rule.
 
-## General input
 
-Each rule can take either a h5ad file or a zarr file as input and will always write the output as a zarr file for more efficient storage.
+## General input and configuration
 
-The input AnnData object must include:
+Each rule accepts either a `.h5ad` or `.zarr` file as input and always writes output as a `.zarr` file for efficient storage. Input AnnData must include:
 
-* raw counts (untransformed) in `.X` (by default) or in `.layers` under the key specified with `raw_counts` in the config file (see below for an example).
-* `.obs` batch and lineage columns if user wishes to run `highly_variable_genes` with them.
+- Raw counts in `.X` (default) or `.layers` (as specified by `raw_counts` in config)
+- Optional batch/lineage columns in `.obs` for HVG selection
 
-The AnnData files produced by the `load_data` workflow  should work out of the box.
+AnnData files from the `load_data` workflow are compatible by default. Each step saves only the changed slots, and the final `assemble` rule collects specified outputs into a single AnnData object. The output is saved as `config["output_dir"] + "/dataset_name/preprocessed.zarr"`.
 
-While each step saves only the parts of the AnnData that have changed, the final `assemble` rule will collect the slots that are defined in the config into a single AnnData zarr file.
-The assembled file is saved under `config["output_dir"] + "/dataset_name/preprocessed.zarr"`, where `dataset_name` will be replaced by the name that you give your dataset.
-
-In the following example you see all the possible preprocessing slots that the assembled object should contain.
+The pipeline is highly configurable: parameters for each step, resource allocation (threads, memory, partition, GPU), and conda environments can be set via config and rule directives. See `workflow/preprocessing/rules/assemble.smk` for details.
 
 ```yaml
 DATASETS:
@@ -44,26 +41,60 @@ DATASETS:
         - umap
 ```
 
-## Preprocessing steps
+## Resource configuration
 
-Each preprocessing step can be configured with additional parameters in the config, however, if these parameters are not defined, the pipeline will run with default parameters.
+Resource settings such as Dask usage, number of threads, and memory/partition/GPU allocation can be set globally in your config file for more scalable implementations. These defaults are applied to all preprocessing steps unless overridden for a specific rule.
+
+- `dask`: Whether to use Dask for parallelization (default: True)
+- `n_threads`: Number of threads for parallel operations (default: 10)
+- `resources`: A string indicating 
+
+For medium to larger datasets (500k+ cells), using the settings below is recommended.
+For smaller datasets, you can disable dask and GPU support to avoid computational overhead.
+
+**Global config example:**
+```yaml
+preprocessing:
+  dask: true
+  n_threads: 10
+  resources: gpu
+```
+
+You can override these whether `dask` for each step of the pipeline individually. If not specified, the pipeline uses the global defaults.
+
+**Step-specific override example (only for `dask`)**
+```yaml
+preprocessing:
+  dask: true
+  n_threads: 10
+  resources: gpu
+  highly_variable_genes:
+    dask: false # overrides global default for highly_variable_genes step
+```
+
+
+## Preprocessing steps and rule structure
+
+Each step is implemented as a Snakemake rule, with parameters, resources, and conda environments set via config and rule lambdas. If parameters are not defined, sensible defaults are used.
+
 
 ### Normalize
 
-Transforms the data using normalize_total and then log-transforms them with `scanpy.pp.log1p`.
+Transforms the data using `scanpy.pp.normalize_total` and log-transforms with `scanpy.pp.log1p`.
 
 **Output**
 
-- `.X` normalised and log1 transformed counts, stored as sparse matrix.
-- `.uns["preprocessing"]` containing metadata on the normalisation approach with the following keys:
-  - `'normalization'`: normalisation strategy (`'default'` only for now)
-  - `'log-transformed'`: whether the counts are log-normalised (always `True` for now)
-
-Note, that any counts stored in `.layers` will be removed and counts in .X will be overwritten.
+- `.X`: normalized and log1p-transformed counts (sparse)
+- `.uns["preprocessing"]`: metadata on normalization
 
 **Parameters**
 
-- `raw_counts`: Key in .layers or .X itself to specify which matrix gets transformed
+- `raw_counts`: Key for input matrix
+- `n_threads`: Number of threads (default: 10)
+- `dask`: Use Dask for parallelization (default: True)
+
+**Resources/Conda**
+- Partition, GPU, memory, and conda environment are set dynamically via config and rule lambdas.
 
 **Config example**
 
@@ -78,7 +109,22 @@ DATASETS:
         - normalize
 ```
 
-### Highly variable genes selection
+
+### Filter Genes
+
+Filters genes using `scanpy.pp.filter_genes` before HVG selection.
+
+**Output**
+- `.zarr` file with filtered genes
+
+**Parameters**
+- `dask`: Use Dask (default: True)
+- `n_threads`: Number of threads (default: 10)
+
+**Resources/Conda**
+- Partition, GPU, memory, and conda environment set via config/rule lambdas.
+
+### Highly Variable Genes Selection
 
 Highly variable genes are calculated after using `scanpy.pp.filter_genes(min_cells=1)` and the `.var` in the unfiltered object is updated.
 Note, that the highly variable gene selection will be run on the normalisation output.
@@ -110,6 +156,7 @@ DATASETS:
       assemble:  # only include highly_variable_genes output here, normalized count matrix won't be saved
         - highly_variable_genes
 ```
+
 
 ### PCA
 
@@ -146,6 +193,7 @@ DATASETS:
 ```
 
 
+
 ### K-nearest neighbor graph
 
 It will attempt to use the RAPIDS[^1] implementation but will default, if it fails, to the UMAP implementation
@@ -179,6 +227,7 @@ DATASETS:
         - neighbors
 ```
 
+
 ### UMAP
 
 UMAP dimensionality reduction is calculated from the PCA output. It can also use the RAPIDS[^1] implementation.
@@ -206,9 +255,11 @@ DATASETS:
         - umap
 ```
 
-## Assembled output
 
-The `assemble` rule collects the user specified preprocessing steps and saves them in a single anndata.AnnData object (zarr file) with the following slots:
+## Assembled output and custom assembly
+
+
+The `assemble` rule collects user-specified preprocessing outputs and saves them in a single AnnData object (zarr file). You can customize which slots to include via the `assemble` parameter in your config. The rule supports dynamic resource allocation and conda environments.
 
 **Output**
 
@@ -220,9 +271,10 @@ The `assemble` rule collects the user specified preprocessing steps and saves th
 - `.obsm["X_umap"]`: UMAP representation if `umap` is present under `assemble`
 - `.uns["preprocessing"]` containing the metadata on how the different preprocessing steps were run. See each preprocessing step for more detailed descriptions of the preprocessing metadata.
 
-**Parameters**
 
+**Parameters**
 - `assemble`: list of preprocessing outputs (including raw counts) to assemble in the final output
+
 
 **Config example**
 
@@ -243,5 +295,6 @@ DATASETS:
 
 ---
 
-[^1] On RAPIDS implementation: whether it is used or not depends on 'os'
-in the config file.
+**Notes:**
+- RAPIDS implementation for neighbors/UMAP is used if available and configured.
+- All resource and environment settings are controlled via config and rule lambdas in `assemble.smk`.
