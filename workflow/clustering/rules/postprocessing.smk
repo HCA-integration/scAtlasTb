@@ -11,7 +11,10 @@ use rule umap from preprocessing as clustering_compute_umap with:
     output:
         zarr=directory(mcfg.out_dir / 'umap' / f'{paramspace.wildcard_pattern}.zarr'),
     params:
-        neighbors_key=lambda wildcards: mcfg.get_from_parameters(wildcards, 'neighbors_key', default='neighbors'),
+        args=lambda wildcards: dict(
+            neighbors_key=mcfg.get_from_parameters(wildcards, 'neighbors_key', default='neighbors'),
+        ),
+    threads: 10
     resources:
         partition=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='partition',attempt=attempt, attempt_to_cpu=2),
         qos=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='qos',attempt=attempt, attempt_to_cpu=2),

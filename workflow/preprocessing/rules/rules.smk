@@ -10,7 +10,7 @@ rule normalize:
     output:
         zarr=directory('{dataset}_normalized.zarr'),
     conda:
-        get_env(config, 'scanpy', gpu_env='rapids_singlecell', no_gpu=True)
+        get_env(config, 'scanpy', gpu_env='rapids_singlecell')
     script:
         '../scripts/normalize.py'
 
@@ -21,7 +21,7 @@ rule highly_variable_genes:
     output:
         zarr=directory('{dataset}_highly_variable_genes.zarr')
     conda:
-        get_env(config, 'scanpy', gpu_env='rapids_singlecell', no_gpu=True)
+        get_env(config, 'scanpy', gpu_env='rapids_singlecell')
     script:
         '../scripts/highly_variable_genes.py'
 
@@ -43,7 +43,7 @@ rule pca:
     output:
         zarr=directory('{dataset}_pca.zarr')
     conda:
-        get_env(config, 'scanpy') #, gpu_env='rapids_singlecell')
+        get_env(config, 'scanpy', gpu_env='rapids_singlecell')
     script:
         '../scripts/pca.py'
 

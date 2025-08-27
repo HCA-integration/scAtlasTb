@@ -14,7 +14,7 @@ from utils.misc import ensure_dense, trim_umap
 input_file = snakemake.input[0]
 input_rep = snakemake.input.rep
 output_file = snakemake.output[0]
-params = dict(init_pos='random') | dict(snakemake.params.items())
+params = dict(init_pos='random') | snakemake.params.get('args', {})
 
 logging.info(f'Read {input_file}...')
 adata = read_anndata(
