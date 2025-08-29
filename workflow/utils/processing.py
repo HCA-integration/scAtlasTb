@@ -209,7 +209,7 @@ def get_pseudobulks(adata, group_key, agg='sum', dtype='float32', sep='--', grou
                 func=[agg]
             )
             pbulk_adata = pbulk_adata[pbulk_adata.obs[group_key].isin(groups)].copy()
-            pseudobulks = scipy.sparse.csr_matrix(pbulk_adata.layers[agg])
+            pseudobulks = pbulk_adata.layers[agg]
             groups = pbulk_adata.obs_names
             # miniters = max(10, len(value_counts) // 100)
             # pseudobulks = []
@@ -221,6 +221,7 @@ def get_pseudobulks(adata, group_key, agg='sum', dtype='float32', sep='--', grou
         else:
             raise ValueError(f'invalid type "{type(X)}"')
         
+        pseudobulks = scipy.sparse.csr_matrix(pseudobulks, dtype='float32')
         return pseudobulks, groups
 
     if isinstance(group_key, list):
