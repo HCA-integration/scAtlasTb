@@ -13,7 +13,10 @@ rule prepare:
     conda:
         get_env(config, 'sample_representation')
     resources:
-        mem_mb=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='mem_mb', attempt=attempt)
+        partition=mcfg.get_resource(resource_key='partition'),
+        qos=mcfg.get_resource(profile='cpu',resource_key='qos'),
+        mem_mb=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='mem_mb', attempt=attempt),
+        gpu=mcfg.get_resource(profile='cpu',resource_key='gpu'),
     script:
         '../scripts/prepare.py'
 
