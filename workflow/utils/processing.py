@@ -147,17 +147,6 @@ def get_pseudobulks(adata, group_key, agg='sum', dtype='float32', sep='--', grou
             df = adata.obs[[group_key]].reset_index(drop=True).query(f'{group_key} in @groups')
             df[group_key] = pd.Categorical(df[group_key], categories=groups, ordered=True)
             
-            # # determine shuffling index
-            # obs_chunks = X.chunks[0]
-            # df['dask_chunk'] = np.repeat(np.arange(len(obs_chunks)), obs_chunks)
-            # df['chunk_reorder'] = np.empty(df.shape[0], dtype=int)
-            # df.loc[df[group_key].sort_values().index, 'chunk_reorder'] = np.arange(df.shape[0], dtype=int)
-            # per_chunk_order = df.groupby('dask_chunk')['chunk_reorder'].apply(list).tolist()
-            
-            # # shuffle data by group_key
-            # X = shuffle(X, indexer=per_chunk_order, axis=0)
-            # X = X.rechunk((tuple(value_counts.values), -1))
-            
             print(f'Sort and rechunk dask array by "{group_key}"...', flush=True)
             with dask_config.set(**{'array.slicing.split_large_chunks': False}):
                 # sort dask array by group_key and rechunk by size of groups
@@ -165,32 +154,6 @@ def get_pseudobulks(adata, group_key, agg='sum', dtype='float32', sep='--', grou
                 X = X[df.sort_values(by=group_key).index.values] # also subsets for exclued groups
                 X = X.rechunk((tuple(value_counts.values), -1))
                 pseudobulks = X.map_blocks(lambda x: aggregate(x, agg), dtype=dtype)
-            # else:
-            #     import sparse
-            #
-            #     def sparse_indicator(groubpy):                
-            #         n = len(groubpy)
-            #         A = sparse.COO(
-            #             coords=[groubpy.cat.codes, np.arange(n)],
-            #             data=np.broadcast_to(1, n), # weight
-            #             shape=(len(groubpy.cat.categories), n)
-            #         )
-            #         return da.from_array(A)
-
-            #     print(f'Subset and convert dask array to Pydata sparse matrix...', flush=True)
-            #     with dask_config.set(**{'array.slicing.split_large_chunks': False}):
-            #         X = X.map_blocks(sparse.COO, dtype=dtype)
-            #     indicator_matrix = sparse_indicator(groubpy=adata.obs[group_key])
-
-            #     if agg == 'sum':
-            #         pseudobulks = indicator_matrix @ X
-            #     elif agg == 'mean':
-            #         _sum = indicator_matrix @ X
-            #         pseudobulks = _sum / _sum.sum(axis=1)
-            #     else:
-            #         raise ValueError(f'invalid aggregation method "{agg}"')
-                
-            #     pseudobulks = pseudobulks.map_blocks(lambda x: x.tocsr(), dtype=dtype)
             
             print(f'Compute aggregation...', flush=True)
             with TqdmCallback(
@@ -233,25 +196,67 @@ def get_pseudobulks(adata, group_key, agg='sum', dtype='float32', sep='--', grou
         )
     pbulks, groups = _get_pseudobulk_matrix(adata, group_key=group_key, agg=agg)
 
-    return ad.AnnData(
-        pbulks,
-        obs=aggregate_obs(adata, group_key, groups),
-        var=adata.var,
-        dtype='float32'
-    )
+    obs = aggregate_obs(adata, group_key, groups, include_cols=group_cols)
+    print(obs, flush=True)
+    return ad.AnnData(pbulks, obs=obs, var=adata.var)
 
 
-def aggregate_obs(adata: ad.AnnData, group_key: str, groups: list):
+def aggregate_obs(
+    adata: ad.AnnData,
+    group_key: str,
+    groups: list,
+    include_cols: list = None,
+):
 
     print(f'Aggregate metadata by {group_key}...', flush=True)
 
-    obs = pd.DataFrame(groups, columns=[group_key]).merge(
-        adata.obs.drop_duplicates(subset=[group_key]),
-        on=group_key,
-        how='left'
-    )
+    def smart_categorical_mode(x):
+        n_vals = len(x)
+        n_unique = x.nunique()
+        
+        # If all values are unique, just return the first one
+        if n_unique == n_vals:
+            return x.iloc[0]
+        
+        if n_unique / n_vals < 0.8:  # threshold can be tuned
+            codes = x.cat.codes.values
+            # Handle missing values (-1 codes)
+            codes = codes[codes >= 0]
+            if len(codes) == 0:
+                return None
+            counts = np.bincount(codes)
+            mode_code = np.argmax(counts)
+            return x.cat.categories[mode_code]
+        
+        # If very high uniqueness ratio, use value_counts (avoid bincount)
+        return x.value_counts().index[0]
+    
+
+    df = adata.obs
+    if include_cols is not None:
+        include_cols = list(set(include_cols+[group_key]))
+        df = df[include_cols].copy()
+    bool_columns = df.select_dtypes('bool').columns.tolist()
+    num_columns = df.select_dtypes('number').columns.tolist()
+    cat_columns = df.select_dtypes(exclude=['number', 'bool']).columns
+    cat_columns = [col for col in cat_columns if col != group_key]
+    
+    if bool_columns or num_columns or cat_columns:
+        g = df.groupby(group_key)
+        df = pd.concat([
+            g[bool_columns+num_columns].mean(),
+            g[cat_columns].agg(smart_categorical_mode),
+        ], axis=1)
+    else:
+        df = df.groupby(group_key).first()
+    df[bool_columns] = df[bool_columns] > 0.5 # mode for bool
+    df['n_agg'] = adata.obs.groupby(group_key).size()
+
+    print(f'Set aggregated metadata...', flush=True)
+    obs = pd.DataFrame(groups, columns=[group_key]).merge(df, on=group_key, how='left')
     obs.index = obs[group_key].values
 
+    print(f'Convert metadata to categorical...', flush=True)
     # convert category columns to string
     for col in obs.columns:
         if obs[col].dtype.name == 'category':
