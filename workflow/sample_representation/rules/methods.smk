@@ -12,7 +12,7 @@ rule run_method:
         prepare=rules.prepare.output.zarr,
         script=lambda wildcards: workflow.source_path(mcfg.get_from_parameters(wildcards, 'script'))
     output:
-        zarr=directory(mcfg.out_dir / f'{paramspace.wildcard_pattern}.zarr'),
+        zarr=directory(mcfg.out_dir / 'run_method' / f'{paramspace.wildcard_pattern}.zarr'),
     params:
         sample_key=lambda wildcards: mcfg.get_from_parameters(wildcards, 'sample_key'),
         cell_type_key=lambda wildcards: mcfg.get_from_parameters(wildcards, 'cell_type_key'),

@@ -37,12 +37,13 @@ use rule plots from preprocessing as sample_representation_plot_mds with:
         qos=mcfg.get_resource(profile='cpu',resource_key='qos'),
 
 
+# UMAP
 use rule umap from preprocessing as sample_representation_compute_umap with:
     input:
         zarr=rules.run_method.output.zarr,
         rep=rules.run_method.output.zarr,
     output:
-        zarr=directory(mcfg.out_dir / 'umap' / f'{paramspace.wildcard_pattern}.zarr'),
+        zarr=directory(mcfg.out_dir / f'{paramspace.wildcard_pattern}.zarr'),
     resources:
         partition=mcfg.get_resource(profile='cpu',resource_key='partition'),
         qos=mcfg.get_resource(profile='cpu',resource_key='qos'),
