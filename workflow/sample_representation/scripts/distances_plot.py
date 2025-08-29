@@ -1,7 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 import scanpy as sc
-import scipy
+from scipy.sparse import issparse, csr_matrix
 import seaborn as sns
 import warnings
 warnings.simplefilter("ignore", UserWarning)
