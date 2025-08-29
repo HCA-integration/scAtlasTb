@@ -62,3 +62,18 @@ use rule plots from preprocessing as sample_representation_plot_umap with:
     resources:
         partition=mcfg.get_resource(profile='cpu',resource_key='partition'),
         qos=mcfg.get_resource(profile='cpu',resource_key='qos'),
+
+
+# PCA
+
+use rule plots from preprocessing as sample_representation_plot_emb with:
+    input:
+        zarr=rules.run_method.output.zarr,
+    output:
+        plots=directory(mcfg.image_dir / paramspace.wildcard_pattern / 'embeddings')
+    params:
+        basis='X_pca',
+        color=lambda wildcards: mcfg.get_from_parameters(wildcards, 'colors', default=[])
+    resources:
+        partition=mcfg.get_resource(profile='cpu',resource_key='partition'),
+        qos=mcfg.get_resource(profile='cpu',resource_key='qos'),

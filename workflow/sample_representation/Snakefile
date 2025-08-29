@@ -39,13 +39,18 @@ include: "rules/methods.smk"
 include: "rules/plots.smk"
 
 
+rule plots_all:
+    input:
+        mcfg.get_output_files(rules.plot_distances.output),
+        # mcfg.get_output_files(rules.sample_representation_plot_mds.output),
+        mcfg.get_output_files(rules.sample_representation_plot_umap.output),
+        mcfg.get_output_files(rules.sample_representation_plot_emb.output),
+
 rule all:
     input:
         mcfg.get_output_files(rules.prepare.output),
         mcfg.get_output_files(rules.run_method.output),
-        mcfg.get_output_files(rules.plot_distances.output),
-        mcfg.get_output_files(rules.sample_representation_plot_umap.output),
-        mcfg.get_output_files(rules.sample_representation_plot_mds.output),
+        rules.plots_all.input,
     default_target: True
     localrule: True
 
