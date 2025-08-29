@@ -77,39 +77,66 @@ except Exception as e:
     plt.savefig(output_rankplot)
 
 for i, partition_groups in enumerate(splits):
-    try:
-        logging.info(f'Dotplot for partition {i}...')
-        sc.pl.rank_genes_groups_dotplot(
-            adata,
-            **args,
-            groups=partition_groups,
-            standard_scale='var',
-            swap_axes=False,
-            title=title,
-        )
-        plt.savefig(
-            f'{output_dotplot}/split={i}.png',
-            dpi=100,
-            bbox_inches='tight',
-        )
+    logging.info(f'Dotplot for partition {i}...')
+    dp = sc.pl.rank_genes_groups_dotplot(
+        adata,
+        **args,
+        groups=partition_groups,
+        return_fig=True,
+    )
+    dp.add_totals().style(dot_edge_color='black', dot_edge_lw=0.5).show()
+    dp.savefig(
+        f'{output_dotplot}/split={i}_expression.png',
+        dpi=100,
+        bbox_inches='tight',
+    )
 
-        logging.info(f'Matrixplot for partition {i}...')
-        sc.pl.rank_genes_groups_matrixplot(
-            adata,
-            **args,
-            groups=partition_groups,
-            values_to_plot='logfoldchanges',
-            cmap='bwr',
-            vmin=-4,
-            vmax=4,
-            colorbar_title='log fold change',
-        )
-        plt.suptitle(title)
-        plt.savefig(
-            f'{output_matrixplot}/split={i}.png',
-            dpi=100,
-            bbox_inches='tight'
-        )
-    except Exception as e:
-        logging.error(e)
-        logging.info(f'Error in partition {i}, skipping...')
+    dp = sc.pl.rank_genes_groups_dotplot(
+        adata,
+        **args,
+        groups=partition_groups,
+        values_to_plot='logfoldchanges',
+        cmap='bwr',
+        vmin=-4,
+        vmax=4,
+        colorbar_title='log fold change',
+        return_fig=True,
+    )
+    dp.add_totals().style(dot_edge_color='black', dot_edge_lw=0.5).show()
+    dp.savefig(
+        f'{output_dotplot}/split={i}_logfoldchanges.png',
+        dpi=100,
+        bbox_inches='tight',
+    )
+
+    logging.info(f'Matrixplot for partition {i}...')
+    mp = sc.pl.rank_genes_groups_matrixplot(
+        adata,
+        **args,
+        groups=partition_groups,
+        return_fig=True,
+    )
+    mp.add_totals().style(edge_color='black').show()
+    mp.savefig(
+        f'{output_matrixplot}/split={i}_expression.png',
+        dpi=100,
+        bbox_inches='tight'
+    )
+
+    mp = sc.pl.rank_genes_groups_matrixplot(
+        adata,
+        **args,
+        groups=partition_groups,
+        values_to_plot='logfoldchanges',
+        cmap='bwr',
+        vmin=-4,
+        vmax=4,
+        colorbar_title='log fold change',
+        return_fig=True,
+    )
+    mp.add_totals().style(edge_color='black').show()
+    mp.savefig(
+        f'{output_matrixplot}/split={i}_logfoldchanges.png',
+        dpi=100,
+        bbox_inches='tight'
+    )
