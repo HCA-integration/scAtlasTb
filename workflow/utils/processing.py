@@ -119,7 +119,7 @@ def filter_genes(adata, batch_key=None, compute=True, **kwargs):
     return adata
 
 
-def get_pseudobulks(adata, group_key, agg='sum', dtype='float32'):
+def get_pseudobulks(adata, group_key, agg='sum', dtype='float32', sep='--', group_cols=None):
     from dask import array as da
     
     def aggregate(x, agg):
@@ -223,6 +223,13 @@ def get_pseudobulks(adata, group_key, agg='sum', dtype='float32'):
         
         return pseudobulks, groups
 
+    if isinstance(group_key, list):
+        group_keys = group_key
+        group_key = sep.join(group_keys)
+        adata.obs[group_key] = adata.obs[group_keys].astpe(str).apply(
+            lambda x: sep.join(x),
+            axis=1
+        )
     pbulks, groups = _get_pseudobulk_matrix(adata, group_key=group_key, agg=agg)
 
     return ad.AnnData(
