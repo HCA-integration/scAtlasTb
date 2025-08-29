@@ -2,7 +2,7 @@ rule prepare:
     input:
         zarr=lambda wildcards: mcfg.get_input_file(**wildcards)
     output:
-        zarr=directory(mcfg.out_dir / 'prepare' / 'dataset~{dataset}' / 'file_id~{file_id}' / 'var_mask~{var_mask}.zarr'),
+        zarr=directory(mcfg.out_dir / 'prepare' / 'dataset~{dataset}' / 'file_id~{file_id}.zarr'),
     params:
         sample_key=lambda wildcards: mcfg.get_from_parameters(wildcards, 'sample_key'),
         cell_type_key=lambda wildcards: mcfg.get_from_parameters(wildcards, 'cell_type_key'),
