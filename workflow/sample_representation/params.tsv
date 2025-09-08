@@ -3,7 +3,7 @@ pseudobulk	embed,feature	sample_representation	py	true	cpu	1
 composition	None	sample_representation	py	true	cpu	1
 cell_type_pseudobulk	embed,feature	sample_representation	py	true	cpu	1
 pilot	embed,feature	pilot	py	true	cpu	1
-scpoli	feature	sample_representation	py	true	gpu	1
+scpoli	feature	scarches	py	true	gpu	1
 mrvi	feature	scvi-tools	py	true	gpu	1
 gloscope	embed	gloscope	R	true	cpu	10
 scitd	feature	scitd	R	true	cpu	10
