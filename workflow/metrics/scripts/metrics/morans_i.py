@@ -5,7 +5,7 @@ from scipy import sparse
 import pandas as pd
 import itertools
 from tqdm import tqdm
-
+import math
 from utils.misc import dask_compute
 from .bootstrap import bootstrap_metric
 # from utils.processing import sc as rsc
@@ -45,7 +45,7 @@ def morans_i_categorical(adata, covariate, num_mappings=10) -> float:
     unique_categories = adata.obs[covariate].unique()
     num_categories = len(unique_categories)
 
-    total_permutations = np.math.factorial(num_categories) # Determine if the number of mappings requested is feasible
+    total_permutations = math.factorial(num_categories) # Determine if the number of mappings requested is feasible
     
     if num_mappings >= total_permutations:
         # If the requested number of mappings exceeds or equals the total possible permutations, generate all permutations
