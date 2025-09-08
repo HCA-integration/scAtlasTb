@@ -66,7 +66,10 @@ message(paste(c("Distance matrix dimensions:", paste(dim(dist_matrix), collapse=
 message("Creating new anndata object...")
 adata <- sc$AnnData(
     obs = data.frame(row.names = unique(sample_ids)),
-    obsm = list(distances = dist_matrix)
+    obsm = list(
+        distances = dist_matrix,
+        X_pca = sc$tl$pca(dist_matrix)
+    )
 )
 samples <- io$read_anndata(prepare_file, obs='obs')$obs_names
 adata <- adata[samples]

@@ -1,7 +1,7 @@
 import logging
 import warnings
 
-import patient_representation as pr
+import patpy as pr
 import numpy as np
 import pandas as pd
 import scanpy as sc
@@ -33,6 +33,11 @@ adata = read_anndata(
     stride=int(n_obs / 5),
 )
 
+# parse sample key
+sample_columns = [x.strip() for x in sample_key.split(',')]
+adata.obs['group'] = adata.obs[sample_columns].agg('-'.join, axis=1)
+sample_key = 'group'
+
 # subset HVGs
 if var_mask is not None:
     adata.var = read_anndata(input_file, var='var').var
@@ -40,9 +45,9 @@ if var_mask is not None:
 dask_compute(adata)
 
 logging.info(f'Calculating Cell Type Pseudobulk representation for "{cell_type_key}", using cell features from "{use_rep}"')
-representation_method = pr.tl.CellTypePseudobulk(
+representation_method = pr.tl.GroupedPseudobulk(
     sample_key=sample_key,
-    cells_type_key=cell_type_key,
+    cell_group_key=cell_type_key,
     layer='X',
 )
 representation_method.prepare_anndata(adata)  # Assuming that small cell types and samples are already filtered out
@@ -55,11 +60,16 @@ distances = representation_method.calculate_distance_matrix(
 )
 
 # create new AnnData object for patient representations
-adata = sc.AnnData(obs=pd.DataFrame(index=representation_method.samples))
-adata.obsm['distances'] = distances
-for i, cell_type in enumerate(representation_method.cell_types):
-    adata.obsm[cell_type]: representation_method.patient_representations[i]
-adata.obsm['X_emb'] = np.hstack(representation_method.patient_representations)
+adata = sc.AnnData(
+    obs=pd.DataFrame(index=representation_method.samples),
+    obsm={'distances': distances} | {
+        cell_type: representation_method.sample_representation[i]
+        for i, cell_type in enumerate(representation_method.cell_groups)
+    }
+)
+adata.obsm['X_emb'] = np.hstack(representation_method.sample_representation)
+adata.obsm['X_pca'] = sc.pp.pca(adata.obsm['X_emb'])
+
 samples = read_anndata(prepare_file, obs='obs').obs_names
 adata = adata[samples].copy()
 

@@ -1,7 +1,7 @@
 import logging
 import warnings
 
-import patient_representation as pr
+import patpy as pr
 import pandas as pd
 import scanpy as sc
 
@@ -44,22 +44,26 @@ adata.obsm['use_rep'] = adata.X.todense() if hasattr(adata.X, 'todense') else ad
 logging.info(f'Calculating PILOT representation for "{cell_type_key}", using cell features from "{use_rep}"')
 representation_method = pr.tl.PILOT(
     sample_key=sample_key,
-    cells_type_key=cell_type_key,
+    cell_group_key=cell_type_key,
     layer='use_rep',
-    patient_state_col=sample_key
+    sample_state_col=sample_key,
 )
 representation_method.prepare_anndata(adata)
+distances = representation_method.calculate_distance_matrix(force=True)
 
 # create new AnnData object for patient representations
-adata = sc.AnnData(obs=pd.DataFrame(index=representation_method.samples))
-adata.obsm['distances'] = representation_method.calculate_distance_matrix(force=True)
-adata.obsm['X_emb'] = representation_method.patient_representations
+adata = sc.AnnData(
+    obs=pd.DataFrame(index=representation_method.samples),
+    obsm={
+        'X_pca': sc.pp.pca(distances),
+        'distances': distances,
+    },
+)
 samples = read_anndata(prepare_file, obs='obs').obs_names
 adata = adata[samples].copy()
 
 # compute kNN graph
 sc.pp.neighbors(adata, use_rep='distances', metric='precomputed')
-sc.pp.neighbors(adata, use_rep='X_emb', key_added='X_emb')
 
 logging.info(f'Write "{output_file}"...')
 logging.info(adata.__str__())
