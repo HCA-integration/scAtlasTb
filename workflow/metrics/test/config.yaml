@@ -49,6 +49,7 @@ DATASETS:
     metrics:
       label: bulk_labels
       batch: louvain
+      output_type: full
       overwrite_file_id: true
 
   test_clustering_metrics:
@@ -57,6 +58,7 @@ DATASETS:
     metrics:
       label: bulk_labels
       batch: batch
+      output_type: full
       clustering:
         kwargs:
           random_state: 42
@@ -74,10 +76,10 @@ DATASETS:
         unintegrated_embed: test/input/integration/dataset~test/file_id~pbmc68k/batch~batch/var_mask~highly_variable/method~unintegrated--hyperparams~None--label~None--output_type~embed.zarr
         unintegrated_knn: test/input/integration/dataset~test/file_id~pbmc68k/batch~batch/var_mask~highly_variable/method~unintegrated--hyperparams~None--label~None--output_type~knn.zarr
         bbknn: test/input/integration/dataset~test/file_id~pbmc68k/batch~batch/var_mask~highly_variable/method~bbknn--hyperparams~25cb428a38--label~None--output_type~knn.zarr
-        harmony: test/input/integration/dataset~harmony/file_id~3bd5f9cfa3/batch~batch/var_mask~highly_variable/method~harmonypy--hyperparams~a494363475--label~None--output_type~embed.zarr
+        harmony: test/input/integration/dataset~harmony/file_id~3bd5f9cfa3/batch~batch/var_mask~highly_variable/method~harmonypy--hyperparams~6e507e5a19--label~None--output_type~embed.zarr
         # scanorama_full: test/input/integration/dataset~test/file_id~pbmc68k/batch~batch/var_mask~highly_variable/method~scanorama--hyperparams~a90b47ca49--label~None--output_type~full.zarr
         # scanorama_embed: test/input/integration/dataset~test/file_id~pbmc68k/batch~batch/var_mask~highly_variable/method~scanorama--hyperparams~a90b47ca49--label~None--output_type~embed.zarr
-        scvi: test/input/integration/dataset~scvi_tools/file_id~orig/batch~batch/var_mask~highly_variable/method~scvi--hyperparams~9f3f32149c--label~None--output_type~embed.zarr
+        scvi: test/input/integration/dataset~scvi_tools/file_id~orig/batch~batch/var_mask~highly_variable/method~scvi--hyperparams~5604fd8c38--label~None--output_type~embed.zarr
     metrics:
       unintegrated: layers/normcounts
       raw_counts: layers/counts
@@ -93,7 +95,7 @@ DATASETS:
         - louvain
         - n_genes
       gene_sets: 
-        ifn_signature, platlets, rbc, plasma_cells, t_cd4_ctl, nk_cells, ilc, monocytes_cd14
+        ifn_signature, platelets, rbc, plasma_cells, t_cd4_ctl, nk_cells, ilc, monocytes_cd14
       metrics:
         - nmi
         - pcr_comparison
@@ -144,6 +146,7 @@ DATASETS:
     metrics:
       label: bulk_labels
       batch: batch
+      output_type: full
       raw_counts: layers/counts
       covariates:
         - phase
@@ -172,7 +175,7 @@ MARKER_GENES:
     "ISG15", "IFIT3", "IFI6", "IFI44L", "IFI35",
     "HERC5", "EPSTI1", "EIF2AK2", "CMPK2", "BST2"
   ]
-  platlets: ["GP1BB", "ITGA2B", "PF4", "PPBP", "TUBB1"]
+  platelets: ["GP1BB", "ITGA2B", "PF4", "PPBP", "TUBB1"]
   rbc: ["HBA1", "HBA2", "HBB"]
   plasma_cells: [
     "CD79A", "DERL3", "IGHA1", "ITM2C", "JCHAIN",

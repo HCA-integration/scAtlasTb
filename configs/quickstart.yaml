@@ -55,7 +55,7 @@
         unintegrated: layers/normcounts
         batch: batch
         label: bulk_labels
-        methods:
+        metrics:
           - asw_batch
           - graph_connectivity
           - ilisi
