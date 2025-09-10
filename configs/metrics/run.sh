@@ -4,7 +4,7 @@ set -e -x
 snakemake \
   --profile .profiles/local \
   --configfile \
-    configs/metrics/quickstart.yaml \
+    configs/metrics/example_workflow.yaml \
   --snakefile workflow/Snakefile \
   --use-conda \
   --rerun-incomplete \
