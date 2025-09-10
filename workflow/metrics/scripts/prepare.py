@@ -29,6 +29,7 @@ neighbor_args = params.get('neighbor_args', {})
 unintegrated_layer = params.get('unintegrated_layer', 'X')
 corrected_layer = params.get('corrected_layer', 'X')
 var_key = params.get('var_mask', 'highly_variable')
+output_type = params.get('output_type', 'full')
 
 PERSIST_MATRIX_THRESHOLD = params.get('PERSIST_MATRIX_THRESHOLD', 5e5)
 
@@ -36,7 +37,7 @@ files_to_keep = ['raw', 'uns', 'var']
 
 # determine output types
 # default output type is 'full'
-output_type = read_anndata(input_file, uns='uns').uns.get('output_type', 'full')
+output_type = read_anndata(input_file, uns='uns').uns.get('output_type', output_type)
 slot_map = {'layers/unintegrated': unintegrated_layer}
 
 logging.info(f'Output type: {output_type}')
