@@ -14,6 +14,7 @@ from utils.processing import _filter_genes
 
 input_file = snakemake.input[0]
 output_file = snakemake.output[0]
+dask = snakemake.params.get('dask', True)
 
 logging.info(f'Read {input_file}...')
 kwargs = dict(
@@ -21,8 +22,8 @@ kwargs = dict(
     obs='obs',
     var='var',
     uns='uns',
-    backed=True,
-    dask=True,
+    backed=dask,
+    dask=dask,
     stride=10_000,
 )
 # TODO: read with chunks (None, 'auto') for optimal gene-wise operations

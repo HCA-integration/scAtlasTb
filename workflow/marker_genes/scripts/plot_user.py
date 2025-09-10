@@ -106,7 +106,7 @@ for set_name, gene_set in gene_sets.items():
         continue
 
     logging.info('Dotplot...')
-    sc.pl.dotplot(
+    dp = sc.pl.dotplot(
         adata,
         gene_set,
         groupby=group_key,
@@ -115,5 +115,7 @@ for set_name, gene_set in gene_sets.items():
         # title=title,
         show=False,
         swap_axes=False,
+        return_fig=True,
     )
-    plt.savefig(f'{output_png}/{set_name}.png', dpi=100, bbox_inches='tight')
+    dp.add_totals().style(dot_edge_color='black', dot_edge_lw=0.5)
+    dp.savefig(f'{output_png}/{set_name}.png', dpi=100, bbox_inches='tight')

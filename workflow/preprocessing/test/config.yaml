@@ -26,8 +26,11 @@ DATASETS:
         blood: test/input/load_data/merged/organ/blood.zarr
         schulte: test/input/load_data/filtered/SchulteSchrepping2020.zarr
     preprocessing:
+      dask: true
+      resources: gpu
+      n_threads: 15
       raw_counts: X
-      scale: false
+      scale: true
       extra_hvgs:
         overwrite_args:
           n_top_genes:
@@ -51,8 +54,7 @@ DATASETS:
       highly_variable_genes:
         batch_key: dataset
         n_top_genes: 2000
-      pca:
-        dask: true
+        dask: false
       assemble:
         - counts
         - normalize

@@ -25,6 +25,7 @@ mcfg = MetricsConfig(
     config_params=[
         'label',
         'batch',
+        'output_type',
         'metrics',
         'methods', # deprecated
         'unintegrated',

@@ -19,7 +19,8 @@ input_file = snakemake.input[0]
 output_file = snakemake.output[0]
 scale = snakemake.params.get('scale', False)
 args = snakemake.params.get('args', {})
-dask = args.pop('dask', False) and not USE_GPU and not scale
+dask = snakemake.params.get('dask', True) # get global dask flag
+dask = args.pop('dask', dask) # overwrite with pca-specific dask flag
 
 logging.info(f'Read "{input_file}"...')
 adata = read_anndata(
@@ -55,13 +56,13 @@ logging.info('Subset to highly variable genes...')
 hvg_key = args.pop('mask_var', 'highly_variable')
 adata, _ = subset_hvg(adata, var_column=hvg_key, compute_dask=not dask)
 
+if USE_GPU:
+    sc.get.anndata_to_GPU(adata)
+
 # scaling TODO: move to separate rule
 if scale:
     logging.info('Scale data...')
-    sc.pp.scale(adata, max_value=10)
-
-if USE_GPU:
-    sc.get.anndata_to_GPU(adata)
+    sc.pp.scale(adata)
 
 logging.info(f'PCA with parameters: {args}')
 sc.pp.pca(adata, **args)

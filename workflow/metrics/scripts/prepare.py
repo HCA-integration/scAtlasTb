@@ -29,6 +29,7 @@ neighbor_args = params.get('neighbor_args', {})
 unintegrated_layer = params.get('unintegrated_layer', 'X')
 corrected_layer = params.get('corrected_layer', 'X')
 var_key = params.get('var_mask', 'highly_variable')
+output_type = params.get('output_type', 'embed')
 
 PERSIST_MATRIX_THRESHOLD = params.get('PERSIST_MATRIX_THRESHOLD', 5e5)
 
@@ -36,7 +37,7 @@ files_to_keep = ['raw', 'uns', 'var']
 
 # determine output types
 # default output type is 'full'
-output_type = read_anndata(input_file, uns='uns').uns.get('output_type', 'full')
+output_type = read_anndata(input_file, uns='uns').uns.get('output_type', output_type)
 slot_map = {'layers/unintegrated': unintegrated_layer}
 
 logging.info(f'Output type: {output_type}')
@@ -166,6 +167,7 @@ raw_file = Path(output_file) / 'raw'
 logging.info(f'Write to {raw_file}...')
 slot_map = None if is_h5ad else dict(X=unintegrated_layer)
 in_dir_map = None if is_h5ad else dict(X=input_file)
+adata.uns['output_type'] = output_type # ensure that output type is set for run.py
 write_zarr_linked(
     adata_raw,
     in_dir=output_file,

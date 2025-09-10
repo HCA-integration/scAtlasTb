@@ -6,6 +6,7 @@ use rule umap from preprocessing as integration_compute_umap with:
         rep=rules.integration_postprocess.output.zarr,
     output:
         zarr=directory(out_dir / f'{paramspace.wildcard_pattern}.zarr'),
+    threads: 10
     resources:
         partition=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='partition',attempt=attempt, attempt_to_cpu=2),
         qos=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='qos',attempt=attempt, attempt_to_cpu=2),

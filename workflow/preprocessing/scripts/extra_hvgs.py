@@ -71,6 +71,8 @@ union_over = extra_hvg_args.get('union_over')
 extra_genes = extra_hvg_args.get('extra_genes', [])
 remove_genes = extra_hvg_args.get('remove_genes', [])
 min_cells = extra_hvg_args.pop('min_cells', 10)
+dask = snakemake.params.get('dask', True) # get global dask flag
+dask = args.pop('dask', dask) # overwrite with extra_hvgs-specific dask flag
 
 hvg_column_name = 'extra_hvgs'
 use_gpu = USE_GPU
@@ -93,8 +95,8 @@ adata = read_anndata(
     obs='obs',
     var='var',
     uns='uns',
-    backed=True,
-    dask=True,
+    backed=dask,
+    dask=dask,
 )
 logging.info(adata.__str__())
 for col in adata.var.columns:
@@ -163,7 +165,6 @@ else:
             # filter genes and cells that would break HVG function
             batch_mask = _filter_batch(_ad, batch_key=args.get('batch_key'))
             _ad = _ad[batch_mask, _ad.var['nonzero_genes']].copy()
-            _ad = dask_compute(_ad)
             
             # if _ad.n_obs > 1e6:
             #     use_gpu = False

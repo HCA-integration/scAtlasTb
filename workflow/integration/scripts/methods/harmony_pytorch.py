@@ -15,11 +15,12 @@ from utils.misc import dask_compute
 input_file = snakemake.input[0]
 output_file = snakemake.output[0]
 wildcards = snakemake.wildcards
-params = snakemake.params
+params = dict(snakemake.params)
 batch_key = wildcards.batch
 
 hyperparams = params.get('hyperparams', {})
 hyperparams = {} if hyperparams is None else hyperparams
+params['hyperparams'] = hyperparams.copy()
 
 scale = hyperparams.pop('scale', False)
 pca_kwargs, hyperparams = get_hyperparams(
@@ -61,25 +62,24 @@ for column in keys:
 adata, _ = subset_hvg(
     adata,
     var_column='integration_features',
-    compute_dask=True
+    compute_dask=False
 )
+logging.info(f'Subset features: {adata.shape}')
 
 if scale:
     logging.info('Scale counts...')
-    sc.pp.scale(adata)
+    sc.pp.scale(adata, zero_center=True, max_value=None)
 
 # recompute PCA according to user-defined hyperparameters
 logging.info(f'Compute PCA with parameters {pformat(pca_kwargs)}...')
-use_rep = 'X_pca'
-# adata.X = adata.X.map_blocks(lambda x: x.toarray(), dtype=adata.X.dtype)
 sc.pp.pca(adata, **pca_kwargs)
+adata = dask_compute(adata, layers='X_pca')
 del adata.X
-# dask_compute(adata, layers=use_rep)
 
 # run method
 logging.info(f'Run Harmony pytorch with parameters {pformat(hyperparams)}...')
 adata.obsm['X_emb'] = harmonize(
-    X=adata.obsm[use_rep],
+    X=adata.obsm['X_pca'],
     batch_mat=adata.obs,
     use_gpu=use_gpu,
     n_jobs=snakemake.threads,
