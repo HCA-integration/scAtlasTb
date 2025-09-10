@@ -190,7 +190,7 @@ def get_pseudobulks(adata, group_key, agg='sum', dtype='float32', sep='--', grou
     if isinstance(group_key, list):
         group_keys = group_key
         group_key = sep.join(group_keys)
-        adata.obs[group_key] = adata.obs[group_keys].astpe(str).apply(
+        adata.obs[group_key] = adata.obs[group_keys].astype(str).apply(
             lambda x: sep.join(x),
             axis=1
         )
