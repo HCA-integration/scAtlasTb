@@ -1,7 +1,7 @@
 name: rapids_singlecell
 channels:
-  # - rapidsai
-  # - nvidia
+  - rapidsai
+  - nvidia
   - conda-forge
   - bioconda
 dependencies:
@@ -15,7 +15,7 @@ dependencies:
   - rapids=24.06
   - scipy<1.15
   - dask
-  # - dask-ml
+  - dask-ml
   - sparse
   - harmonypy
   - pytorch
