@@ -29,7 +29,7 @@ neighbor_args = params.get('neighbor_args', {})
 unintegrated_layer = params.get('unintegrated_layer', 'X')
 corrected_layer = params.get('corrected_layer', 'X')
 var_key = params.get('var_mask', 'highly_variable')
-output_type = params.get('output_type', 'full')
+output_type = params.get('output_type', 'embed')
 
 PERSIST_MATRIX_THRESHOLD = params.get('PERSIST_MATRIX_THRESHOLD', 5e5)
 
