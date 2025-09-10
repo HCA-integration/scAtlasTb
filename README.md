@@ -94,7 +94,7 @@ DATASETS:
       unintegrated: layers/norm_counts
       batch: batch
       label: bulk_labels
-      methods:
+      metrics:
         - nmi
         - graph_connectivity
 ```
