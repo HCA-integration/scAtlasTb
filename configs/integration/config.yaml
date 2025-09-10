@@ -10,6 +10,7 @@ defaults:
       bbknn:
       combat:
       harmonypy:
+      scanorama:
       scgen:
         max_epochs: 10
       scvi:
@@ -59,6 +60,8 @@ defaults:
     methods:
       - nmi_leiden_y
       - ari_leiden_y
+      - asw_label
+      - asw_batch
       - cell_cycle
       - clisi_y
       - ilisi_y
