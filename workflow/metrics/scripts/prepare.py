@@ -167,6 +167,7 @@ raw_file = Path(output_file) / 'raw'
 logging.info(f'Write to {raw_file}...')
 slot_map = None if is_h5ad else dict(X=unintegrated_layer)
 in_dir_map = None if is_h5ad else dict(X=input_file)
+adata.uns['output_type'] = output_type # ensure that output type is set for run.py
 write_zarr_linked(
     adata_raw,
     in_dir=output_file,
