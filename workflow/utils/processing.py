@@ -194,10 +194,14 @@ def get_pseudobulks(adata, group_key, agg='sum', dtype='float32', sep='--', grou
             lambda x: sep.join(x),
             axis=1
         )
+
+    # call pseudobulk function
     pbulks, groups = _get_pseudobulk_matrix(adata, group_key=group_key, agg=agg)
 
+    # aggregate metadata
     obs = aggregate_obs(adata, group_key, groups, include_cols=group_cols)
     print(obs, flush=True)
+
     return ad.AnnData(pbulks, obs=obs, var=adata.var)
 
 
@@ -240,7 +244,8 @@ def aggregate_obs(
     num_columns = df.select_dtypes('number').columns.tolist()
     cat_columns = df.select_dtypes(exclude=['number', 'bool']).columns
     cat_columns = [col for col in cat_columns if col != group_key]
-    
+    df[cat_columns] = df[cat_columns].astype('category')
+
     if bool_columns or num_columns or cat_columns:
         g = df.groupby(group_key)
         df = pd.concat([
