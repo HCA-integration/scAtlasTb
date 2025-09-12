@@ -70,11 +70,12 @@ if value_counts.max() == 1:
 logging.info(f'Calculating PCR scores for {n_permute} permutations (using {n_threads} threads)')
 
 
-def run_pcr(adata, covariate, i, sample_key, sample_ids, cov_values, **kwargs):
+def run_pcr(adata, covariate, i, sample_key, sample_ids, cov_values, seed, **kwargs):
     is_permuted = i > 0
     if is_permuted:
         # Permute covariate per sample
-        permuted_values = np.random.permutation(cov_values)
+        rng = np.random.default_rng([i, seed]) # use random seed unique to permutation
+        permuted_values = rng.permutation(cov_values)
         cov_map = dict(zip(sample_ids, permuted_values))
         covariate_array = adata.obs[sample_key].map(cov_map)
     else:
@@ -115,6 +116,7 @@ all_jobs = [
         adata=adata,
         covariate=covariate,
         i=i,
+        seed=42,
         sample_key=sample_key,
         sample_ids=cov_per_sample.index.values,
         cov_values=cov_per_sample[covariate].values,
