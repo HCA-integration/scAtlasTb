@@ -1,6 +1,6 @@
 import numpy as np
 import scanpy as sc
-from .utils import select_neighbors, rename_categories
+from .utils import select_neighbors, rename_categories, scanpy_to_neighborsresults
 
 
 def nmi(adata, output_type, batch_key, label_key, cluster_key, **kwargs):
@@ -28,7 +28,7 @@ def nmi_leiden_y(adata, output_type, batch_key, label_key, **kwargs):
     labels = rename_categories(adata, label_key)
 
     scores = scib_metrics.nmi_ari_cluster_labels_leiden(
-        X=adata.obsp['connectivities'],
+        X=scanpy_to_neighborsresults(adata),
         labels=labels,
         optimize_resolution=True,
     )

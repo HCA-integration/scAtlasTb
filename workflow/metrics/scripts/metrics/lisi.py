@@ -1,5 +1,5 @@
 import numpy as np
-from .utils import select_neighbors, rename_categories
+from .utils import select_neighbors, rename_categories, scanpy_to_neighborsresults
 
 
 def clisi(adata, output_type, batch_key, label_key, **kwargs):
@@ -26,7 +26,7 @@ def clisi_y(adata, output_type, batch_key, label_key, **kwargs):
     labels = rename_categories(adata, label_key)
     
     return scib_metrics.clisi_knn(
-        X=adata.obsp['distances'],
+        X=scanpy_to_neighborsresults(adata),
         labels=labels
     ).mean()
 
@@ -45,7 +45,7 @@ def ilisi(adata, output_type, batch_key, label_key, **kwargs):
 
 def ilisi_y(adata, output_type, batch_key, label_key, **kwargs):
     import scib_metrics
-
+    
     if output_type == 'knn':
         return np.nan
     
@@ -53,6 +53,6 @@ def ilisi_y(adata, output_type, batch_key, label_key, **kwargs):
     batches = rename_categories(adata, batch_key)
 
     return scib_metrics.ilisi_knn(
-        X=adata.obsp['distances'],
+        X=scanpy_to_neighborsresults(adata),
         batches=batches
     ).mean()

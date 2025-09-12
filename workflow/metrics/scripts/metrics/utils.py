@@ -1,3 +1,4 @@
+import numpy as np
 import scanpy as sc
 import pandas as pd
 
@@ -47,3 +48,26 @@ def select_neighbors(adata, output_type):
     adata.obsp['distances'] = adata.obsp[distances_key]
     
     return adata
+
+
+def scanpy_to_neighborsresults(adata):
+    from scib_metrics.nearest_neighbors import NeighborsResults
+    
+    n_neighbors = adata.uns["neighbors"]["params"]["n_neighbors"]
+    n_obs = adata.n_obs
+    
+    # convert sparse to dense neighbor lists
+    distances = np.full((n_obs, n_neighbors), np.inf)
+    indices = np.full((n_obs, n_neighbors), -1)
+
+    # use scanpy's stored distances (CSR sparse)
+    dist_matrix = adata.obsp["distances"].tocsr()
+
+    for i in range(n_obs):
+        row = dist_matrix[i].indices
+        dists = dist_matrix[i].data
+        order = np.argsort(dists)[:n_neighbors]  # sort neighbors by distance
+        indices[i, :len(order)] = row[order]
+        distances[i, :len(order)] = dists[order]
+
+    return NeighborsResults(indices=indices, distances=distances)

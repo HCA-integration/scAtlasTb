@@ -1,15 +1,15 @@
 import numpy as np
-from .utils import rename_categories, select_neighbors
+from .utils import rename_categories, select_neighbors, scanpy_to_neighborsresults
 
 
 def kbet_y(adata, output_type, batch_key, label_key, **kwargs):
     import scib_metrics
-
+    
     adata = select_neighbors(adata, output_type)
     batches = rename_categories(adata, batch_key)
 
     score, _ , _ = scib_metrics.kbet(
-        X=adata.obsp['distances'],
+        X=scanpy_to_neighborsresults(adata),
         batches=batches,
     )
 

@@ -1,6 +1,6 @@
 import numpy as np
 import scanpy as sc
-from .utils import select_neighbors, rename_categories
+from .utils import select_neighbors, rename_categories, scanpy_to_neighborsresults
 
 
 def ari(adata, output_type, batch_key, label_key, cluster_key, **kwargs):
@@ -28,7 +28,7 @@ def ari_leiden_y(adata, output_type, batch_key, label_key, **kwargs):
     labels = rename_categories(adata, label_key)
 
     scores = scib_metrics.nmi_ari_cluster_labels_leiden(
-        X=adata.obsp['connectivities'],
+        X=scanpy_to_neighborsresults(adata),
         labels=labels,
         optimize_resolution=True,
     )
@@ -36,16 +36,13 @@ def ari_leiden_y(adata, output_type, batch_key, label_key, **kwargs):
 
 
 def ari_kmeans_y(adata, output_type, batch_key, label_key, **kwargs):
-    import scib_metrics
-
+    from scib_metrics import nmi_ari_cluster_labels_kmeans
+    
     labels = rename_categories(adata, label_key)
     adata = select_neighbors(adata, output_type)
 
-    X = adata.obsp['connectivities']
-    X = X if isinstance(X, np.ndarray) else X.toarray()
-
     scores = scib_metrics.nmi_ari_cluster_labels_kmeans(
-        X=X,
+        X=scanpy_to_neighborsresults(adata),
         labels=labels,
     )
     return scores['ari']
