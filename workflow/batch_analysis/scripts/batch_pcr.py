@@ -138,7 +138,7 @@ chunk_size = max(1, n_threads)
 pcr_scores = chunked_parallel_jobs(all_jobs, chunk_size, n_threads)
 
 # Set permuted score when covariate is the same as the group variable
-if n_permute == 0 :
+if n_permute == 0:
     # permutations wouldn't change values in this case, impute same value as covariate score
     perm_score = (f'{covariate}-1', True, pcr_scores[0][2])
     pcr_scores.append(perm_score)
@@ -155,7 +155,10 @@ df['perm_mean'] = df.loc[df['permuted'], 'pcr'].mean()
 df['perm_std'] = df.loc[df['permuted'], 'pcr'].std()
 df['z_score'] = (df['pcr'] - df['perm_mean']) / df['perm_std']
 df['signif'] = df['z_score'] > 1.5
-df['p-val'] = df.loc[df['permuted'], 'signif'].sum() / n_permute
+if n_permute == 0:
+    df['p-val'] = np.nan
+else:
+    df['p-val'] = df.loc[df['permuted'], 'signif'].sum() / n_permute
 
 print(df, flush=True)
 df.to_csv(output_file, sep='\t', index=False)
