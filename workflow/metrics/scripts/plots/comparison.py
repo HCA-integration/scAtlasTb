@@ -32,6 +32,7 @@ yoseflab_metrics = [
     'clisi_y',
     'asw_label_y',
     'asw_batch_y',
+    'bras_batch',
     'isolated_label_asw_y',
     'graph_connectivity_y',
     'pcr_y'

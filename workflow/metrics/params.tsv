@@ -21,6 +21,7 @@ nmi_leiden_y	bio_conservation	full,embed,knn	knn	False	False	False	False	scib_me
 nmi_kmeans_y	bio_conservation	full,embed,knn	knn	False	False	False	False	scib_metrics	gpu	1
 asw_label_y	bio_conservation	full,embed	embed	False	False	False	False	scib_metrics	gpu	1
 asw_batch_y	batch_correction	full,embed	embed	False	False	False	False	scib_metrics	gpu	1
+bras_batch	batch_correction	full,embed	embed	False	False	False	False	scib_metrics	gpu	1
 ilisi_y	batch_correction	full,embed	knn	False	False	False	False	scib_metrics	gpu	1
 clisi_y	bio_conservation	full,embed	knn	False	False	False	False	scib_metrics	gpu	1
 isolated_label_asw_y	bio_conservation	full,embed	embed	False	False	False	False	scib_metrics	gpu	1

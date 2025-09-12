@@ -1,6 +1,5 @@
 name: scib_metrics
 channels:
-  - nvidia/label/cuda-11.4.1
   - conda-forge
 dependencies:
   - python=3.11
@@ -20,17 +19,5 @@ dependencies:
   # - faiss-gpu
   - pip<24.1
   - pip:
-    # requirements taken from https://github.com/google/jax/issues/13758#issuecomment-1384857047
-    - clu==0.0.6
-    - flax==0.6.3
-    # - --find-links https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
-    # - jax==0.3.25
-    # - jaxlib==0.3.25+cuda11.cudnn82
-    - jax==0.4.23
-    - jaxlib==0.4.23
-    - ml-collections==0.1.1
-    - optax==0.1.4
-    - orbax<0.1.6
-    - orbax-checkpoint<0.1.6
     - numpy<2.0
-    - scib-metrics==0.4.1
+    - scib-metrics

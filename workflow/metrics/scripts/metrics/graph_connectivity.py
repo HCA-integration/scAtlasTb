@@ -1,4 +1,4 @@
-from .utils import select_neighbors, rename_categories
+from .utils import select_neighbors, rename_categories, scanpy_to_neighborsresults
 
 
 def graph_connectivity(adata, output_type, batch_key, label_key, **kwargs):
@@ -18,7 +18,7 @@ def graph_connectivity_y(adata, output_type, batch_key, label_key, **kwargs):
     adata = select_neighbors(adata, output_type)
     labels = rename_categories(adata, label_key)
 
-    return scib_metrics.clisi_knn(
-        X=adata.obsp['distances'],
+    return scib_metrics.graph_connectivity(
+        X=scanpy_to_neighborsresults(adata),
         labels=labels
     )
