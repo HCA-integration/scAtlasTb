@@ -8,13 +8,12 @@ rule run_method:
        resources: gpu={resources.gpu} mem_mb={resources.mem_mb} partition={resources.partition} qos={resources.qos}
        """
     input:
-        zarr=lambda wildcards: mcfg.get_input_file(**wildcards),
-        prepare=rules.prepare.output.zarr,
+        zarr=rules.prepare.output.zarr,
+        bulks=rules.prepare.output.bulks,
         script=lambda wildcards: workflow.source_path(mcfg.get_from_parameters(wildcards, 'script'))
     output:
-        zarr=directory(mcfg.out_dir / f'{paramspace.wildcard_pattern}.zarr'),
+        zarr=directory(mcfg.out_dir / 'run_method' / f'{paramspace.wildcard_pattern}.zarr'),
     params:
-        sample_key=lambda wildcards: mcfg.get_from_parameters(wildcards, 'sample_key'),
         cell_type_key=lambda wildcards: mcfg.get_from_parameters(wildcards, 'cell_type_key'),
         use_rep=lambda wildcards: mcfg.get_from_parameters(wildcards, 'use_rep'),
         var_mask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'var_mask'),

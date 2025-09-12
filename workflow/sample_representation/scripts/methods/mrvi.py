@@ -3,7 +3,7 @@ import warnings
 import torch
 import scvi
 
-import patient_representation as pr
+import patpy as pr
 import pandas as pd
 import scanpy as sc
 
@@ -20,9 +20,9 @@ scvi.settings.progress_bar_style = 'tqdm'
 scvi.settings.num_threads = snakemake.threads
 
 input_file = snakemake.input.zarr
-prepare_file = snakemake.input.prepare
+bulk_file = snakemake.input.bulks
 output_file = snakemake.output.zarr
-sample_key = snakemake.params.get('sample_key')
+
 cell_type_key = snakemake.params.get('cell_type_key')
 use_rep = snakemake.params.get('use_rep')
 var_mask = snakemake.params.get('var_mask')
@@ -54,19 +54,24 @@ dask_compute(adata)
 
 logging.info(f'Calculating MrVI representation for "{cell_type_key}", using cell features from "{use_rep}"')
 representation_method = pr.tl.MrVI(
-    sample_key=sample_key,
-    cells_type_key=cell_type_key,
+    sample_key='group',
+    cell_group_key=cell_type_key,
     layer='X',
     max_epochs=max_epochs,
-    accelerator='gpu' if use_gpu else 'auto',
+    # accelerator='gpu' if use_gpu else 'auto',
 )
 representation_method.prepare_anndata(adata)
 
 # create new AnnData object for patient representations
-adata = sc.AnnData(obs=pd.DataFrame(index=representation_method.samples))
-adata.obsm['distances'] = representation_method.calculate_distance_matrix(force=True)
-# adata.obsm['X_emb'] = representation_method.patient_representations # TODO: needs to be computed
-samples = read_anndata(prepare_file, obs='obs').obs_names
+adata = sc.AnnData(
+    obs=pd.DataFrame(index=representation_method.samples),
+    obsm={
+        'X_emb': representation_method.sample_representation,
+        'X_pca': sc.pp.pca(representation_method.sample_representation),
+        'distances': representation_method.calculate_distance_matrix(force=True),
+    },
+)
+samples = read_anndata(bulk_file, obs='obs').obs_names
 adata = adata[samples].copy()
 
 # compute kNN graph
@@ -76,7 +81,7 @@ logging.info(f'Write "{output_file}"...')
 logging.info(adata.__str__())
 write_zarr_linked(
     adata,
-    in_dir=prepare_file,
+    in_dir=bulk_file,
     out_dir=output_file,
     files_to_keep=['obsm', 'obsp', 'uns']
 )

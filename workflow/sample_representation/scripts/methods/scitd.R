@@ -65,10 +65,9 @@ run_scITD <- function(
 
 
 input_file <- snakemake@input$zarr
-prepare_file <- snakemake@input$prepare
+bulk_file <- snakemake@input$bulks
 output_file <- snakemake@output$zarr
 
-sample_key <- snakemake@params$sample_key
 cell_type_key <- snakemake@params$cell_type_key
 use_rep <- snakemake@params$use_rep
 var_mask <- snakemake@params$var_mask
@@ -110,7 +109,7 @@ param_list <- initialize_params(
 rownames(adata$X) <- adata$obs_names
 colnames(adata$X) <- adata$var_names
 rownames(adata$obs) <- adata$obs_names
-adata$obs[['donors']] <- adata$obs[[sample_key]]
+adata$obs[['donors']] <- adata$obs[['group']]
 adata$obs[['ctypes']] <- adata$obs[[cell_type_key]]
 
 message("Create data container...")
@@ -162,9 +161,12 @@ pairwise_distances <- dist(results$scores, method = "euclidean")
 message("Creating new anndata object...")
 adata <- sc$AnnData(
     obs = data.frame(row.names = unique(sample_ids)),
-    obsm = list(distances = dist_matrix)
+    obsm = list(
+      distances = dist_matrix,
+      X_pca = sc$tl$pca(dist_matrix)
+    )
 )
-samples <- io$read_anndata(prepare_file, obs='obs')$obs_names
+samples <- io$read_anndata(bulk_file, obs='obs')$obs_names
 adata <- adata[samples]
 
 # compute kNN graph
@@ -174,7 +176,7 @@ message(paste("Writing to", output_file, "..."))
 print(adata)
 io$write_zarr_linked(
     adata,
-    in_dir=prepare_file,
+    in_dir=bulk_file,
     out_dir=output_file,
     files_to_keep=c('obsm', 'obsp', 'uns'),
 )

@@ -17,3 +17,5 @@ dependencies:
     - git+https://github.com/theislab/scarches.git@master
     - jax<0.4.14
     - jaxlib<0.4.14
+    - faiss-cpu<=1.9
+    - patpy

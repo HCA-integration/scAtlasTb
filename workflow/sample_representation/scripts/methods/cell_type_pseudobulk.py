@@ -1,7 +1,7 @@
 import logging
 import warnings
 
-import patient_representation as pr
+import patpy as pr
 import numpy as np
 import pandas as pd
 import scanpy as sc
@@ -14,9 +14,9 @@ logging.basicConfig(level=logging.INFO)
 
 sc.set_figure_params(dpi=100, frameon=False)
 input_file = snakemake.input.zarr
-prepare_file = snakemake.input.prepare
+bulk_file = snakemake.input.bulks
 output_file = snakemake.output.zarr
-sample_key = snakemake.params.get('sample_key')
+
 cell_type_key = snakemake.params.get('cell_type_key')
 use_rep = snakemake.params.get('use_rep')
 var_mask = snakemake.params.get('var_mask')
@@ -40,9 +40,9 @@ if var_mask is not None:
 dask_compute(adata)
 
 logging.info(f'Calculating Cell Type Pseudobulk representation for "{cell_type_key}", using cell features from "{use_rep}"')
-representation_method = pr.tl.CellTypePseudobulk(
-    sample_key=sample_key,
-    cells_type_key=cell_type_key,
+representation_method = pr.tl.GroupedPseudobulk(
+    sample_key='group',
+    cell_group_key=cell_type_key,
     layer='X',
 )
 representation_method.prepare_anndata(adata)  # Assuming that small cell types and samples are already filtered out
@@ -55,12 +55,17 @@ distances = representation_method.calculate_distance_matrix(
 )
 
 # create new AnnData object for patient representations
-adata = sc.AnnData(obs=pd.DataFrame(index=representation_method.samples))
-adata.obsm['distances'] = distances
-for i, cell_type in enumerate(representation_method.cell_types):
-    adata.obsm[cell_type]: representation_method.patient_representations[i]
-adata.obsm['X_emb'] = np.hstack(representation_method.patient_representations)
-samples = read_anndata(prepare_file, obs='obs').obs_names
+adata = sc.AnnData(
+    obs=pd.DataFrame(index=representation_method.samples),
+    obsm={'distances': distances} | {
+        cell_type: representation_method.sample_representation[i]
+        for i, cell_type in enumerate(representation_method.cell_groups)
+    }
+)
+adata.obsm['X_emb'] = np.hstack(representation_method.sample_representation)
+adata.obsm['X_pca'] = sc.pp.pca(adata.obsm['X_emb'])
+
+samples = read_anndata(bulk_file, obs='obs').obs_names
 adata = adata[samples].copy()
 
 # compute kNN graph
@@ -71,7 +76,7 @@ logging.info(f'Write "{output_file}"...')
 logging.info(adata.__str__())
 write_zarr_linked(
     adata,
-    in_dir=prepare_file,
+    in_dir=bulk_file,
     out_dir=output_file,
-    files_to_keep=['obsm', 'obsp', 'uns']
+    files_to_keep=['obsm', 'obsp', 'uns'],
 )

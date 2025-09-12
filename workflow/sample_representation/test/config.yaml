@@ -1,9 +1,10 @@
 output_dir: test/out
 images: test/images
 
-# defaults:
-#   datasets:
-#     - test
+defaults:
+  datasets:
+    - test_minimal
+    - test
 
 DATASETS:
   blood:
@@ -50,12 +51,19 @@ DATASETS:
           max_epochs: 1
         gloscope:
         # scitd:
+  
   test_minimal:
     input:
       sample_representation:
         test: test/input/pbmc68k.h5ad
     sample_representation:
-      sample_key: bulk_labels
+      sample_key: bulk_labels,batch
       raw_counts: layers/counts
       methods:
         pseudobulk:
+      colors:
+        - bulk_labels
+        - batch
+      use_rep:
+        - obsm/X_pca
+        - X
