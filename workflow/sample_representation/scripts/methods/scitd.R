@@ -166,7 +166,7 @@ adata <- sc$AnnData(
       X_pca = sc$tl$pca(dist_matrix)
     )
 )
-samples <- io$read_anndata(prepare_file, obs='obs')$obs_names
+samples <- io$read_anndata(bulk_file, obs='obs')$obs_names
 adata <- adata[samples]
 
 # compute kNN graph
@@ -176,7 +176,7 @@ message(paste("Writing to", output_file, "..."))
 print(adata)
 io$write_zarr_linked(
     adata,
-    in_dir=prepare_file,
+    in_dir=bulk_file,
     out_dir=output_file,
     files_to_keep=c('obsm', 'obsp', 'uns'),
 )
