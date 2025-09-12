@@ -57,9 +57,7 @@ adata.obs = adata.obs[select_columns].copy()
 # read setup file
 with open(setup_file, 'r') as f:
     setup = yaml.safe_load(f)
-# n_permute = setup['n_permute']
-# n_permute = min(snakemake.params.get('n_permute', 0), n_permute)
-n_permute = snakemake.params.get('n_permute', 0)
+n_permute = setup['n_permute']
 
 nonunique_map = (
     adata.obs.groupby(sample_key, observed=False)[covariate]

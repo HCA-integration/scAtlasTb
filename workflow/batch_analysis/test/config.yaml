@@ -13,38 +13,12 @@ DATASETS:
         - sex
         - disease
         - self_reported_ethnicity
-        - development_stage
-        - sequencing_protocol.method.ontology
-        - library_preparation_protocol.cell_barcode.barcode_read
-        - library_preparation_protocol.cell_barcode.barcode_offset
-        - library_preparation_protocol.cell_barcode.barcode_length
-        - library_preparation_protocol.input_nucleic_acid_molecule.ontology
-        - library_preparation_protocol.library_construction_method.ontology
-        - library_preparation_protocol.end_bias
-        - library_preparation_protocol.strand
-        - library_preparation_protocol.umi_barcode.barcode_read
-        - library_preparation_protocol.umi_barcode.barcode_offset
-        - library_preparation_protocol.umi_barcode.barcode_length
-        - collection_protocol.method.ontology
-        - enrichment_protocol.method.ontology
-        - cell_suspension.biomaterial_core.biomaterial_id
+        # - development_stage
       permute_covariates:
         - assay
-        - donor
-        - sequencing_protocol.method.ontology
-        - library_preparation_protocol.cell_barcode.barcode_read
-        - library_preparation_protocol.cell_barcode.barcode_offset
-        - library_preparation_protocol.cell_barcode.barcode_length
-        - library_preparation_protocol.input_nucleic_acid_molecule.ontology
-        - library_preparation_protocol.library_construction_method.ontology
-        - library_preparation_protocol.end_bias
-        - library_preparation_protocol.strand
-        - library_preparation_protocol.umi_barcode.barcode_read
-        - library_preparation_protocol.umi_barcode.barcode_offset
-        - library_preparation_protocol.umi_barcode.barcode_length
-        - collection_protocol.method.ontology
-        - enrichment_protocol.method.ontology
-        - cell_suspension.biomaterial_core.biomaterial_id
+        - sex
+        - disease
+        - self_reported_ethnicity
       n_permutations: 1000
       sample: sample,donor
   dummy:
@@ -53,5 +27,4 @@ DATASETS:
     batch_analysis:
       covariates:
         - assay
-      permute_covariates:
-        - assay
+      n_permutations: 100
