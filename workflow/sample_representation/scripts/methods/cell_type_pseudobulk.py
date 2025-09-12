@@ -14,9 +14,9 @@ logging.basicConfig(level=logging.INFO)
 
 sc.set_figure_params(dpi=100, frameon=False)
 input_file = snakemake.input.zarr
-prepare_file = snakemake.input.prepare
+bulk_file = snakemake.input.bulks
 output_file = snakemake.output.zarr
-sample_key = snakemake.params.get('sample_key')
+
 cell_type_key = snakemake.params.get('cell_type_key')
 use_rep = snakemake.params.get('use_rep')
 var_mask = snakemake.params.get('var_mask')
@@ -33,11 +33,6 @@ adata = read_anndata(
     stride=int(n_obs / 5),
 )
 
-# parse sample key
-sample_columns = [x.strip() for x in sample_key.split(',')]
-adata.obs['group'] = adata.obs[sample_columns].agg('-'.join, axis=1)
-sample_key = 'group'
-
 # subset HVGs
 if var_mask is not None:
     adata.var = read_anndata(input_file, var='var').var
@@ -46,7 +41,7 @@ dask_compute(adata)
 
 logging.info(f'Calculating Cell Type Pseudobulk representation for "{cell_type_key}", using cell features from "{use_rep}"')
 representation_method = pr.tl.GroupedPseudobulk(
-    sample_key=sample_key,
+    sample_key='group',
     cell_group_key=cell_type_key,
     layer='X',
 )
@@ -70,7 +65,7 @@ adata = sc.AnnData(
 adata.obsm['X_emb'] = np.hstack(representation_method.sample_representation)
 adata.obsm['X_pca'] = sc.pp.pca(adata.obsm['X_emb'])
 
-samples = read_anndata(prepare_file, obs='obs').obs_names
+samples = read_anndata(bulk_file, obs='obs').obs_names
 adata = adata[samples].copy()
 
 # compute kNN graph
@@ -81,7 +76,7 @@ logging.info(f'Write "{output_file}"...')
 logging.info(adata.__str__())
 write_zarr_linked(
     adata,
-    in_dir=prepare_file,
+    in_dir=bulk_file,
     out_dir=output_file,
-    files_to_keep=['obsm', 'obsp', 'uns']
+    files_to_keep=['obsm', 'obsp', 'uns'],
 )

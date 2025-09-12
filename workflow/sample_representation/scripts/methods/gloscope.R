@@ -12,10 +12,9 @@ misc <- import('utils.misc')
 sc <- import('scanpy')
 
 input_file <- snakemake@input$zarr
-prepare_file <- snakemake@input$prepare
+bulk_file <- snakemake@input$bulks
 output_file <- snakemake@output$zarr
 
-sample_key <- snakemake@params$sample_key
 use_rep <- snakemake@params$use_rep
 var_mask <- snakemake@params$var_mask
 k <- snakemake@params$k
@@ -44,7 +43,7 @@ misc$dask_compute(adata)
 
 embedding <- adata$X
 rownames(embedding) <- adata$obs_names
-sample_ids <- adata$obs[[sample_key]] # TOOD: is this correct?
+sample_ids <- adata$obs[['group']]
 # obs_dt <- data.table(adata$obs)
 # sample_dt <- obs_dt[, lapply(.SD, first), by = sample_key]
 
@@ -71,7 +70,7 @@ adata <- sc$AnnData(
         X_pca = sc$tl$pca(dist_matrix)
     )
 )
-samples <- io$read_anndata(prepare_file, obs='obs')$obs_names
+samples <- io$read_anndata(bulk_file, obs='obs')$obs_names
 adata <- adata[samples]
 
 # compute kNN graph
@@ -81,7 +80,7 @@ message(paste("Writing to", output_file, "..."))
 print(adata)
 io$write_zarr_linked(
     adata,
-    in_dir=prepare_file,
+    in_dir=bulk_file,
     out_dir=output_file,
     files_to_keep=c('obsm', 'obsp', 'uns'),
 )

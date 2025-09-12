@@ -65,10 +65,9 @@ run_scITD <- function(
 
 
 input_file <- snakemake@input$zarr
-prepare_file <- snakemake@input$prepare
+bulk_file <- snakemake@input$bulks
 output_file <- snakemake@output$zarr
 
-sample_key <- snakemake@params$sample_key
 cell_type_key <- snakemake@params$cell_type_key
 use_rep <- snakemake@params$use_rep
 var_mask <- snakemake@params$var_mask
@@ -110,7 +109,7 @@ param_list <- initialize_params(
 rownames(adata$X) <- adata$obs_names
 colnames(adata$X) <- adata$var_names
 rownames(adata$obs) <- adata$obs_names
-adata$obs[['donors']] <- adata$obs[[sample_key]]
+adata$obs[['donors']] <- adata$obs[['group']]
 adata$obs[['ctypes']] <- adata$obs[[cell_type_key]]
 
 message("Create data container...")
