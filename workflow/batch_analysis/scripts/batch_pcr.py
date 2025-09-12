@@ -61,8 +61,19 @@ with open(setup_file, 'r') as f:
 # n_permute = min(snakemake.params.get('n_permute', 0), n_permute)
 n_permute = snakemake.params.get('n_permute', 0)
 
-value_counts = adata.obs[[sample_key, covariate]].drop_duplicates().value_counts(covariate)
+nonunique_map = (
+    adata.obs.groupby(sample_key, observed=False)[covariate]
+    .unique()
+    .apply(lambda x: sorted(x))
+    .loc[lambda x: x.str.len() > 1]
+)
+assert nonunique_map.shape[0] == 0, \
+    f'Each sample (defined by {sample_key}) must have exactly one value for covariate {covariate}, '  \
+    f'but found values:\n{nonunique_map}'
+
+value_counts = adata.obs[[sample_key, covariate]].value_counts()
 logging.info(value_counts)
+
 if value_counts.max() == 1:
     logging.info('Sample key is the same as covariate, skipping permutation...')
     n_permute = 0
