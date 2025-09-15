@@ -110,7 +110,7 @@ def assemble_zarr(file, file_type, slot_map, in_dir_map):
         update_slot_map = {
             'obsm/X_pca': 'obsm/X_pca',
             'uns/pca': 'uns/pca',
-            # 'varm/PCs': 'varm/PCs',
+            'varm/PCs': 'varm/PCs',
         }
     elif file_type == 'neighbors':
         logging.info('add neighbors')
