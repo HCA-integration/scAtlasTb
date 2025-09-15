@@ -8,7 +8,7 @@ dependencies:
   - scanpy=1.11
   - leidenalg
   - louvain
-  - scikit-learn<1.6
+  - scikit-learn<1.6 # required by dask-ml
   - dask<2024.8
   - dask-ml
   - sparse
