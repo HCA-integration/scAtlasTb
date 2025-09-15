@@ -5,7 +5,7 @@ from scipy import sparse
 import pandas as pd
 import itertools
 from tqdm import tqdm
-
+import math
 from utils.misc import dask_compute
 from .bootstrap import bootstrap_metric
 # from utils.processing import sc as rsc
@@ -45,7 +45,7 @@ def morans_i_categorical(adata, covariate, num_mappings=10) -> float:
     unique_categories = adata.obs[covariate].unique()
     num_categories = len(unique_categories)
 
-    total_permutations = np.math.factorial(num_categories) # Determine if the number of mappings requested is feasible
+    total_permutations = math.factorial(num_categories) # Determine if the number of mappings requested is feasible
     
     if num_mappings >= total_permutations:
         # If the requested number of mappings exceeds or equals the total possible permutations, generate all permutations
@@ -144,3 +144,80 @@ def morans_i_genes(adata, output_type, gene_set, **kwargs):
         print(name, score, flush=True)
     
     return scores, metric_names
+
+
+def morans_i_genescore(adata, output_type, gene_set, **kwargs):
+    adata = dask_compute(adata, layers='X')
+    
+    metric = "M's I gene score"
+    metric_names = []
+    scores = []
+    
+    for set_name, gene_list in tqdm(gene_set.items(), desc='Compute Moran\'s I for gene sets'):
+        gene_list = parse_gene_names(adata, gene_list)
+        
+        gene_score_name = f'gene_score:{set_name}'
+        # random_gene_score_name = f'random_gene_scores:{len(gene_list)}'
+        
+        if gene_score_name not in adata.obs.keys():
+            raise ValueError(f'Gene score {gene_score_name} not found in adata.obs')
+        
+    
+        score = _morans_i(adata, covariate=gene_score_name)
+        
+        # random_gene_score = np.nanmean(
+        #     _morans_i(adata, covariate=adata.obsm[random_gene_score_name])
+        # )
+        
+        scores.extend([
+            score,
+            # score - random_gene_score,
+            # random_gene_score
+        ])
+        
+        metric_names.extend([
+            f'{metric}:{set_name}',
+        ])
+        
+    scores = [max(s, 0) for s in scores]  # ensure score is positive
+    for name, score in zip(metric_names, scores):
+        print(name, score, flush=True)
+    
+    return scores, metric_names
+
+
+def morans_i_genescore_random(adata, output_type, gene_set, **kwargs):
+    adata = dask_compute(adata, layers='X')
+    
+    metric = "M's I gene score random"
+    metric_names = []
+    scores = []
+    
+    for set_name, gene_list in tqdm(gene_set.items(), desc='Compute Moran\'s I for gene sets'):
+        gene_list = parse_gene_names(adata, gene_list)
+        
+        # gene_score_name = f'gene_score:{set_name}'
+        random_gene_score_name = f'random_gene_scores:{len(gene_list)}'
+        
+        if random_gene_score_name not in adata.obsm.keys():
+            raise ValueError(f'Gene score {random_gene_score_name} not found in adata.obsm')
+
+        
+        random_gene_score = np.nanmean(
+            _morans_i(adata, covariate=adata.obsm[random_gene_score_name])
+        )
+        
+        scores.extend([
+            random_gene_score,
+        ])
+        
+        metric_names.extend([
+            f'{metric}_m:{set_name}',
+        ])
+        
+    scores = [max(s, 0) for s in scores]  # ensure score is positive
+    for name, score in zip(metric_names, scores):
+        print(name, score, flush=True)
+    
+    return scores, metric_names
+

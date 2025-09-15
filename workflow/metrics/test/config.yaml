@@ -102,6 +102,8 @@ DATASETS:
         - cell_cycle
         - morans_i
         - morans_i_genes
+        - morans_i_genescore
+        - morans_i_genescore_random
         - pcr
         - pcr_genes
   
