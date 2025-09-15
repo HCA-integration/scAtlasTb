@@ -21,10 +21,26 @@ DATASETS:
         - self_reported_ethnicity
       n_permutations: 1000
       sample: sample,donor
-  dummy:
+  
+  simple:
     input:
       batch_analysis: test/input/blood_pca.zarr
     batch_analysis:
       covariates:
         - assay
       n_permutations: 100
+      highly_variable_genes:
+      pca:
+
+  small:
+    input:
+      batch_analysis: test/input/pbmc68k.h5ad
+    batch_analysis:
+      sample: batch, bulk_labels
+      covariates:
+        - bulk_labels
+        - batch
+        - is_cd14_mono
+      normalize:
+      highly_variable_genes:
+      pca:

@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO)
 from utils.io import read_anndata
 
 
-input_file = snakemake.input.anndata
+input_file = snakemake.input[0]
 setup_file = snakemake.input.setup
 output_file = snakemake.output.tsv
 covariate = snakemake.wildcards.covariate

@@ -11,12 +11,24 @@ from utils.ModuleConfig import ModuleConfig
 mcfg = ModuleConfig(
     module_name='batch_analysis',
     config=config,
-    config_params=['covariates', 'permute_covariates', 'n_permutations', 'sample'],
+    config_params=[
+        'covariates',
+        'permute_covariates',
+        'n_permutations',
+        'sample',
+        'normalize',
+        'highly_variable_genes',
+        'pca',
+    ],
     dtypes={
         'n_permutations': int,
     }
 )
 paramspace = mcfg.get_paramspace()
+
+module preprocessing:
+    snakefile: "../../preprocessing/rules/rules.smk"
+    config: config
 
 module common:
     snakefile: "../common/Snakefile"
@@ -25,6 +37,7 @@ module common:
 use rule * from common as common_ *
 
 
+include: 'rules/prepare.smk'
 include: 'rules/batch_pcr.smk'
 # TODO: add batch ingestion workflow
 

@@ -1,6 +1,6 @@
 checkpoint determine_covariates:
     input:
-        anndata=lambda wildcards: mcfg.get_input_file(**wildcards)
+        zarr=lambda wildcards: get_file(wildcards, 'pca'),
     output:
         covariate_setup=directory(mcfg.out_dir / paramspace.wildcard_pattern / 'batch_pcr' / 'covariate_setup'),
     params:
@@ -32,8 +32,7 @@ def get_from_checkpoint(wildcards, pattern=None):
 
 rule batch_pcr:
     input:
-        anndata=lambda wildcards: mcfg.get_input_file(**wildcards),
-        # anndata=rules.preprocessing_pca.output.zarr,
+        zarr=lambda wildcards: get_file(wildcards, 'pca'),
         setup=get_checkpoint_output,
     output:
         tsv=mcfg.out_dir / paramspace.wildcard_pattern / 'batch_pcr' / '{covariate}.tsv',

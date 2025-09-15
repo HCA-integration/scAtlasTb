@@ -1,12 +1,10 @@
 import logging
 logging.basicConfig(level=logging.INFO)
-from anndata.experimental import read_elem
-import zarr
 from pprint import pformat
 from pathlib import Path
+from utils.io import read_anndata
 
-
-input_file = snakemake.input.anndata
+input_file = snakemake.input[0]
 output_dir = snakemake.output[0]
 sample_key = snakemake.params.get('sample_key')
 Path(output_dir).mkdir(parents=True)
@@ -18,12 +16,7 @@ if perm_covariates is None:
 n_perms = snakemake.params.get('n_permute')
 
 logging.info(f'Read {input_file}...')
-if input_file.endswith('.h5ad'):
-    obs = read_anndata(input_file).obs
-else:
-    z = zarr.open(input_file)
-    obs = read_elem(z['obs'])
-
+obs = read_anndata(input_file).obs
 
 def covariate_valid(obs, covariate):
     return (covariate in obs.columns) and (obs[covariate][obs[covariate].notna()].nunique() >= 2)
