@@ -74,6 +74,9 @@ def sparse_dataset_as_dask(x, stride: int = 1000):
     if rem:
         chunks.append(make_dask_chunk(x, cur_pos, x.shape[0]))
 
+    if not chunks:  # empty chunks
+        return da.empty(x.shape, dtype=x.dtype)
+    
     return da.concatenate(chunks, axis=0)
 
 
