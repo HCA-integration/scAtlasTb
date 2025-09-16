@@ -15,6 +15,7 @@ mcfg = ModuleConfig(
         'covariates',
         'permute_covariates',
         'n_permutations',
+        'max_threads',
         'sample',
         'raw_counts',
         'normalize',
