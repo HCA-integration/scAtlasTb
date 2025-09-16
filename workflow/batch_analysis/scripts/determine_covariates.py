@@ -16,7 +16,7 @@ if perm_covariates is None:
 n_perms = snakemake.params.get('n_permute')
 
 logging.info(f'Read {input_file}...')
-obs = read_anndata(input_file).obs
+obs = read_anndata(input_file, obs='obs', verbose=False).obs
 
 def covariate_valid(obs, covariate):
     return (covariate in obs.columns) and (obs[covariate][obs[covariate].notna()].nunique() >= 2)
