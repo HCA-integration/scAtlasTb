@@ -1,0 +1,6 @@
+	min	max	scale	side	min_pass_rate
+n_counts	1000.00	NaN	log	min_only	0.1
+n_genes	500.00	NaN	log	min_only	0.1
+percent_mito	0.01	20.0	log	max_only	0.1
+percent_ribo	0.00	100.0	log	both	0.1
+percent_hb	NaN	1.0	log	max_only	0.1
