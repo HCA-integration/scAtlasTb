@@ -8,6 +8,7 @@ logging.basicConfig(level=logging.INFO)
 from dask import array as da
 from dask import config as da_config
 da_config.set(num_workers=snakemake.threads)
+import anndata as ad
 
 from utils.accessors import subset_hvg
 from utils.io import read_anndata, write_zarr_linked
@@ -56,10 +57,10 @@ logging.info('Subset to highly variable genes...')
 hvg_key = args.pop('mask_var', 'highly_variable')
 var = adata.var.copy()
 adata_pca, _ = subset_hvg(adata, var_column=hvg_key, compute_dask=not dask)
-adata = sc.AnnData(obs=adata.obs, var=var)
+adata = ad.AnnData(obs=adata.obs, var=var)
 
 if USE_GPU:
-    sc.get.anndata_to_GPU(adata)
+    sc.get.anndata_to_GPU(adata_pca)
 
 # scaling TODO: move to separate rule
 if scale:
@@ -80,6 +81,8 @@ for key, varm in adata_pca.varm.items():
     )
     full_arr[adata.var_names.isin(adata_pca.var_names)] = varm
     adata.varm[key] = full_arr
+
+del adata_pca
 
 logging.info(f'Write to {output_file}...')
 logging.info(adata.__str__())
