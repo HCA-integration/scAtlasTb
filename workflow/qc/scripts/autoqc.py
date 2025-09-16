@@ -12,7 +12,7 @@ from utils.io import read_anndata, write_zarr_linked
 input_file = snakemake.input[0]
 output_file = snakemake.output[0]
 layer = snakemake.params['layer']
-metrics_params = snakemake.input.get('metrics_params')
+metrics_params_file = snakemake.input.get('metrics_params')
 gaussian_kwargs = snakemake.params.get('gaussian_kwargs', {})
 QC_FLAGS = [
     'n_counts',
@@ -49,15 +49,13 @@ if 'feature_name' in adata.var.columns:
 
 logging.info('Calculate QC metrics...')
 sctk.calculate_qc(adata)
-print(adata.var[['mito', 'ribo', 'hb']].sum())
 
 logging.info('Determine parameters for scAutoQC...')
-default_params = sctk.default_metric_params_df
-if metrics_params:
-    user_params = pd.read_table(metrics_params, index_col=0)
+metrics_params = sctk.default_metric_params_df
+if metrics_params_file:
+    user_params = pd.read_table(metrics_params_file, index_col=0)
     # update default parameters with user-provided parameters
-    default_params.update(user_params)
-metrics_params = default_params
+    metrics_params.update(user_params)
 
 logging.info(f'\n{metrics_params}')
 
