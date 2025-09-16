@@ -4,7 +4,7 @@ This module provides an exploratory framework for understanding the technical ef
 
 ## Features
 - Automated batch effect analysis and permutation-based significance testing
-- Optional preprocessinbg pipeline: normalization, gene filtering, PCA
+- Optional preprocessing pipeline: normalization, gene filtering, PCA
 - Parallelized computation of batch PCR for scalability
 - Flexible configuration for covariates, permutations, and sample keys
 - Output includes per-covariate PCR scores, permutation z-scores, and summary plots
