@@ -1,6 +1,6 @@
 checkpoint determine_covariates:
     input:
-        anndata=lambda wildcards: mcfg.get_input_file(**wildcards)
+        zarr=lambda wildcards: get_file(wildcards, 'pca'),
     output:
         covariate_setup=directory(mcfg.out_dir / paramspace.wildcard_pattern / 'batch_pcr' / 'covariate_setup'),
     params:
@@ -32,8 +32,7 @@ def get_from_checkpoint(wildcards, pattern=None):
 
 rule batch_pcr:
     input:
-        anndata=lambda wildcards: mcfg.get_input_file(**wildcards),
-        # anndata=rules.preprocessing_pca.output.zarr,
+        zarr=lambda wildcards: get_file(wildcards, 'pca'),
         setup=get_checkpoint_output,
     output:
         tsv=mcfg.out_dir / paramspace.wildcard_pattern / 'batch_pcr' / '{covariate}.tsv',
@@ -42,7 +41,12 @@ rule batch_pcr:
     conda:
         get_env(config, 'scib')
     threads:
-        lambda wildcards: max(1, min(50, mcfg.get_from_parameters(wildcards, 'n_permutations', check_query_keys=False)))
+        lambda w: max(
+            1, min(
+                mcfg.get_from_parameters(w, 'max_threads', check_query_keys=False, default=50),
+                mcfg.get_from_parameters(w, 'n_permutations', check_query_keys=False)
+            )
+        )
     resources:
         partition=mcfg.get_resource(profile='cpu',resource_key='partition'),
         qos=mcfg.get_resource(profile='cpu',resource_key='qos'),

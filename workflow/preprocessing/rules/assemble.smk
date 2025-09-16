@@ -23,15 +23,13 @@ use rule normalize from preprocessing as preprocessing_normalize with:
         mem_mb=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w),resource_key='mem_mb',attempt=attempt, factor=1),
 
 
-rule filter_genes:
+use rule filter_genes from preprocessing as preprocessing_filter_genes with:
     input:
         zarr=rules.preprocessing_normalize.output.zarr,
     output:
         zarr=directory(mcfg.out_dir / paramspace.wildcard_pattern / 'filtered_genes.zarr'),
     params:
         dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=True),
-    conda:
-        get_env(config, 'scanpy')
     threads:
         lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_threads', default=10)
     resources:
@@ -39,8 +37,6 @@ rule filter_genes:
         qos=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='qos',attempt=attempt),
         gpu=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='gpu',attempt=attempt),
         mem_mb=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='mem_mb',attempt=attempt, factor=1),
-    script:
-        '../scripts/filter_genes.py'
 
 
 use rule highly_variable_genes from preprocessing as preprocessing_highly_variable_genes with:

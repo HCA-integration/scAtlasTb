@@ -15,6 +15,16 @@ rule normalize:
         '../scripts/normalize.py'
 
 
+rule filter_genes:
+    input: '{dataset}.h5ad'
+    output:
+        zarr=directory('{dataset}_normalized.zarr'),
+    conda:
+        get_env(config, 'scanpy')
+    script:
+        '../scripts/filter_genes.py'
+
+
 rule highly_variable_genes:
     input:
         zarr='{dataset}.h5ad',

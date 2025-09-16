@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO)
 from utils.io import read_anndata
 
 
-input_file = snakemake.input.anndata
+input_file = snakemake.input[0]
 setup_file = snakemake.input.setup
 output_file = snakemake.output.tsv
 covariate = snakemake.wildcards.covariate
@@ -69,7 +69,7 @@ assert nonunique_map.shape[0] == 0, \
     f'Each sample (defined by {sample_key}) must have exactly one value for covariate {covariate}, '  \
     f'but found values:\n{nonunique_map}'
 
-value_counts = adata.obs[[sample_key, covariate]].value_counts()
+value_counts = adata.obs[[sample_key, covariate]].drop_duplicates().value_counts(covariate)
 logging.info(value_counts)
 
 if value_counts.max() == 1:
@@ -79,13 +79,17 @@ if value_counts.max() == 1:
 logging.info(f'Calculating PCR scores for {n_permute} permutations (using {n_threads} threads)')
 
 
-def run_pcr(adata, covariate, i, sample_key, sample_ids, cov_values, seed, **kwargs):
+def run_pcr(adata, covariate, sample_key, i, seed, **kwargs):
     is_permuted = i > 0
     if is_permuted:
+        # aggregate covariate per sample for permutation
+        cov_per_sample = adata.obs \
+            .groupby(sample_key, observed=True) \
+            .agg({covariate: 'first'})
         # Permute covariate per sample
         rng = np.random.default_rng([i, seed]) # use random seed unique to permutation
-        permuted_values = rng.permutation(cov_values)
-        cov_map = dict(zip(sample_ids, permuted_values))
+        permuted_values = rng.permutation(cov_per_sample[covariate].values)
+        cov_map = dict(zip(cov_per_sample.index.values, permuted_values))
         covariate_array = adata.obs[sample_key].map(cov_map)
     else:
         # Use original covariate
@@ -117,18 +121,13 @@ def chunked_parallel_jobs(jobs, chunk_size, n_threads):
     return results
 
 
-# aggregate covariate per sample for permutation
-cov_per_sample = adata.obs.groupby(sample_key, observed=True).agg({covariate: 'first'})
-
 all_jobs = [
     delayed(run_pcr)(
         adata=adata,
         covariate=covariate,
+        sample_key=sample_key,
         i=i,
         seed=42,
-        sample_key=sample_key,
-        sample_ids=cov_per_sample.index.values,
-        cov_values=cov_per_sample[covariate].values,
         verbose=False,
         linreg_method='numpy',
     ) for i in range(n_permute + 1)
