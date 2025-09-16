@@ -37,6 +37,7 @@ rule get_thresholds:
         tsv=mcfg.out_dir / params.wildcard_pattern / 'thresholds.tsv',
         qc_stats=mcfg.out_dir / params.wildcard_pattern / 'qc_stats.tsv',
     params:
+        scautoqc_metrics=lambda wildcards: mcfg.get_from_parameters(wildcards, 'scautoqc_metrics', default=['n_counts', 'n_genes', 'percent_mito']),
         thresholds=lambda wildcards: mcfg.get_from_parameters(wildcards, 'thresholds', default={}),
         alternative_thresholds=lambda wildcards: mcfg.get_from_parameters(wildcards, 'alternative_thresholds', default={}),
     conda:

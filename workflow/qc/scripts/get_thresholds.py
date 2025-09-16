@@ -65,7 +65,7 @@ output_qc_stats = snakemake.output.qc_stats
 
 adata = read_anndata(input_file, obs='obs', uns='uns', verbose=False)
 
-threshold_keys = ['n_counts', 'n_genes', 'percent_mito']
+threshold_keys = snakemake.params.get('scautoqc_metrics')
 user_thresholds = snakemake.params.get('thresholds')
 alternative_thresholds = snakemake.params.get('alternative_thresholds')
 autoqc_thresholds = adata.uns.get('scautoqc_ranges')

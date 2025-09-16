@@ -16,6 +16,12 @@ DATASETS:
         - donor
         - development_stage
         - cell_type
+      scautoqc_metrics:
+        - n_counts
+        - n_genes
+        - percent_mito
+        - percent_ribo
+        - percent_hb
       scautoqc_metrics_params: test/scautoqc_params.tsv
       scautoqc_gaussian_kwargs:
         n_components: [1, 2, 3, 4]
