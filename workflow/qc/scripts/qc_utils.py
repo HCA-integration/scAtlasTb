@@ -4,7 +4,7 @@ import pandas as pd
 import anndata as ad
 
 
-def parse_parameters(adata: ad.AnnData, params: dict, filter_hues: list = False):
+def parse_parameters(adata: ad.AnnData, params: dict, filter_hues: bool = False):
     dataset = params.get('dataset', 'None')
     hues = params.get('hue', [])
     

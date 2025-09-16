@@ -49,7 +49,6 @@ sns.countplot(
     x='qc_status',
     data=adata.obs,
     hue='qc_status',
-    palette='muted', # 'Set2'
 )
 ax = plt.gca()
 for pos in ['right', 'top']: 
@@ -96,12 +95,12 @@ def plot_composition(adata, group_key, plot_dir):
         for idx, bar in zip(counts.index, bars):
             bars_per_group[idx].append(bar)
 
-        ax1.legend(
-            title="QC Status",
-            loc="best",
-            frameon=False,
-        )
-
+    ax1.legend(
+        title="QC Status",
+        loc="best",
+        frameon=False,
+    )
+    
     sns.barplot(
         data=grouped_frac,
         x='fraction_removed',
@@ -173,8 +172,7 @@ def plot_composition(adata, group_key, plot_dir):
                 )
                 # add spacing for next bar in group
                 outside_x += (text_width_px * (x_max - x_min) / bbox.width) + offset
-    
-    
+
     f.savefig(plot_dir / f'by={group_key}.png', bbox_inches='tight')
     plt.close()
 
@@ -210,7 +208,7 @@ for i, qc_metric in enumerate(threshold_keys):
         x='qc_status',
         y=qc_metric,
         hue='qc_status',
-        palette='muted', # 'Set2',
+        fill=False,
         inner='quartile',
         legend=False,
         ax=axes[i]
