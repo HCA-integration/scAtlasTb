@@ -16,6 +16,7 @@ mcfg = ModuleConfig(
         'permute_covariates',
         'n_permutations',
         'sample',
+        'raw_counts',
         'normalize',
         'highly_variable_genes',
         'pca',

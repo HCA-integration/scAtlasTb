@@ -15,6 +15,7 @@ use rule normalize from preprocessing as batch_analysis_normalize with:
         zarr=directory(mcfg.out_dir / 'prepare' / paramspace.wildcard_pattern / 'normalize.zarr'),
     params:
         args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'normalize', default={}),
+        raw_counts=lambda wildcards: mcfg.get_from_parameters(wildcards, 'raw_counts'),
     resources:
         partition=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='partition',attempt=attempt),
         qos=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='qos',attempt=attempt),
