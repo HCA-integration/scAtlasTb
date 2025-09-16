@@ -69,7 +69,7 @@ assert nonunique_map.shape[0] == 0, \
     f'Each sample (defined by {sample_key}) must have exactly one value for covariate {covariate}, '  \
     f'but found values:\n{nonunique_map}'
 
-value_counts = adata.obs[[sample_key, covariate]].value_counts()
+value_counts = adata.obs[[sample_key, covariate]].drop_duplicates().value_counts(covariate)
 logging.info(value_counts)
 
 if value_counts.max() == 1:

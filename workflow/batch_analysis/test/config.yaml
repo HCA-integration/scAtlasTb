@@ -28,7 +28,7 @@ DATASETS:
     batch_analysis:
       covariates:
         - assay
-      n_permutations: 100
+      n_permutations: 1000
       highly_variable_genes:
       pca:
 
