@@ -1,9 +1,33 @@
 output_dir: test/out
 images: test/images
 
+# defaults:
+#   datasets:
+#     - Lee2020_autoqc
 
 DATASETS:
-  Lee2020:
+  Lee2020_autoqc:
+    input:
+      qc:
+        Lee2020: test/input/load_data/harmonize_metadata/Lee2020.zarr
+    qc:
+      counts: X
+      hue:
+        - donor
+        - development_stage
+        - cell_type
+      scautoqc_metrics:
+        - n_counts
+        - n_genes
+        - percent_mito
+        - percent_ribo
+        - percent_hb
+      scautoqc_metrics_params: test/scautoqc_params.tsv
+      scautoqc_gaussian_kwargs:
+        n_components: [1, 2, 3, 4]
+        threshold: 0.1
+
+  Lee2020_user_thresholds:
     input:
       qc: 
         Lee2020: test/input/load_data/harmonize_metadata/Lee2020.zarr
@@ -15,6 +39,7 @@ DATASETS:
         - development_stage
         - cell_type
       thresholds_file: test/input/user_thresholds.tsv
+
   test:
     input:
       qc:

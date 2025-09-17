@@ -1,11 +1,20 @@
+def get_input(wildcards):
+    file_map = dict(zarr=mcfg.get_input_file(**wildcards))
+    metrics_params = mcfg.get_from_parameters(wildcards, 'scautoqc_metrics_params')
+    if metrics_params:
+        file_map['metrics_params'] = metrics_params
+    return file_map
+
+
 rule autoqc:
     input:
-        zarr=lambda wildcards: mcfg.get_input_file(**wildcards)
+        unpack(get_input)
     output:
-        zarr=directory(mcfg.out_dir / 'autoqc' / f'{params.wildcard_pattern}.zarr')
+        zarr=directory(mcfg.out_dir / 'autoqc' / f'{params.wildcard_pattern}.zarr'),
     params:
-        gauss_threshold=0.05,
         layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'counts', default='X'),
+        metrics_params=lambda wildcards: mcfg.get_from_parameters(wildcards, 'scautoqc_metrics_params'),
+        gaussian_kwargs=lambda wildcards: mcfg.get_from_parameters(wildcards, 'scautoqc_gaussian_kwargs', default={}),
     conda:
         get_env(config, 'qc')
     resources:
@@ -25,9 +34,10 @@ rule get_thresholds:
         zarr=rules.autoqc.output.zarr
     output:
         zarr=directory(mcfg.out_dir / f'{params.wildcard_pattern}.zarr'),
-        tsv=mcfg.image_dir / params.wildcard_pattern / 'thresholds.tsv',
-        qc_stats=mcfg.image_dir / params.wildcard_pattern / 'qc_stats.tsv'
+        tsv=mcfg.out_dir / params.wildcard_pattern / 'thresholds.tsv',
+        qc_stats=mcfg.out_dir / params.wildcard_pattern / 'qc_stats.tsv',
     params:
+        scautoqc_metrics=lambda wildcards: mcfg.get_from_parameters(wildcards, 'scautoqc_metrics', default=['n_counts', 'n_genes', 'percent_mito']),
         thresholds=lambda wildcards: mcfg.get_from_parameters(wildcards, 'thresholds', default={}),
         alternative_thresholds=lambda wildcards: mcfg.get_from_parameters(wildcards, 'alternative_thresholds', default={}),
     conda:

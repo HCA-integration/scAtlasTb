@@ -7,8 +7,9 @@ rule plot_joint:
         dataset=lambda wildcards: wildcards.file_id,
         hue=lambda wildcards: mcfg.get_from_parameters(wildcards, 'hue', default=[]),
         thresholds=lambda wildcards: mcfg.get_from_parameters(wildcards, 'thresholds', default={}),
+        scautoqc_metrics=lambda wildcards: mcfg.get_from_parameters(wildcards, 'scautoqc_metrics', default=['n_counts', 'n_genes', 'percent_mito']),
     threads:
-        lambda wildcards: max(1, min(5, len(mcfg.get_from_parameters(wildcards, 'hue', default=[]))))
+        lambda wildcards: max(1, min(10, len(mcfg.get_from_parameters(wildcards, 'hue', default=[]))))
     conda:
         get_env(config, 'plots')
     script:

@@ -17,6 +17,9 @@ mcfg = ModuleConfig(
     config_params=[
         'counts',
         'hue',
+        'scautoqc_metrics',
+        'scautoqc_metrics_params',
+        'scautoqc_gaussian_kwargs',
         'thresholds',
         'alternative_thresholds',
         'thresholds_file'

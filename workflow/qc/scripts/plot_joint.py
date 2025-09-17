@@ -32,8 +32,9 @@ print(adata, flush=True)
 # get parameters
 file_id = snakemake.wildcards.file_id
 threads = snakemake.threads
-dataset, hues = parse_parameters(adata, snakemake.params)
-hues = hues+['percent_mito', 'qc_status']
+dataset, hues = parse_parameters(adata, snakemake.params, filter_hues=True)
+scautoqc_metrics = snakemake.params.get('scautoqc_metrics', [])
+hues = list(set(hues+scautoqc_metrics+['qc_status']))
 
 
 # if no cells filtered out, save empty plots
@@ -147,7 +148,7 @@ def call_plot(df, x, y, log_x, log_y, hue, scatter_plot_kwargs, density_png, den
 
 
 thresholds = get_thresholds(
-    threshold_keys=['n_counts', 'n_genes', 'percent_mito'],
+    threshold_keys=scautoqc_metrics,
     autoqc_thresholds=adata.uns['scautoqc_ranges'],
     user_thresholds=snakemake.params.get('thresholds'),
 )
@@ -164,16 +165,24 @@ kde_plot_kwargs = dict(
     cmap='plasma',
     alpha=.8,
 )
-# adjust parameters for large datasets
 if adata.n_obs > 5e4:
     kde_plot_kwargs |= dict(
-        bw_adjust=2,
-        gridsize=50,
+        bw_adjust=4,      # smoother for large data
+        gridsize=75,      # moderate grid
+        thresh=0.2,       # ignore more low-density
+        levels=5,         # fewer contours
     )
 
 coordinates = [
     ('n_counts', 'n_genes', 10, 10),
     ('n_genes', 'percent_mito', 2, 1),
+    ('n_genes', 'percent_ribo', 2, 1),
+    ('n_genes', 'percent_hb', 2, 1),
+]
+# filter to configured metrics
+coordinates = [
+    c for c in coordinates if
+    all(x in scautoqc_metrics for x in c[:2])
 ]
 
 # # subset to max of 300k cells due to high computational cost
