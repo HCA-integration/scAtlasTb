@@ -6,6 +6,8 @@ import sctk
 import matplotlib.pyplot as plt
 import logging
 logging.basicConfig(level=logging.INFO)
+import dask
+dask.config.set(scheduler="single-threaded")
 
 from utils.io import read_anndata, write_zarr_linked
 
