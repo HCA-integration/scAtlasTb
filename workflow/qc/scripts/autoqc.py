@@ -41,7 +41,7 @@ adata = read_anndata(
 if adata.n_obs == 0:
     logging.info(f'Write empty zarr file to {output_file}...')
     columns = adata.obs.columns.tolist() + QC_FLAGS
-    adata.obs = pd.DataFrame(columns=list(set(columns)))
+    adata.obs = pd.DataFrame(columns=list(dict.fromkeys(columns)))
     write_zarr_linked(adata, input_file, output_file, files_to_keep=files_to_keep)
     exit(0)
 
