@@ -33,7 +33,7 @@ print(adata, flush=True)
 file_id = snakemake.wildcards.file_id
 threads = snakemake.threads
 dataset, hues = parse_parameters(adata, snakemake.params, filter_hues=True)
-scautoqc_metrics = snakemake.params.get('scautoqc_metrics')
+scautoqc_metrics = snakemake.params.get('scautoqc_metrics', [])
 hues = list(set(hues+scautoqc_metrics+['qc_status']))
 
 
