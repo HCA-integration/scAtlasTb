@@ -32,7 +32,7 @@ print(adata, flush=True)
 # get parameters
 file_id = snakemake.wildcards.file_id
 threads = snakemake.threads
-dataset, hues = parse_parameters(adata, snakemake.params)
+dataset, hues = parse_parameters(adata, snakemake.params, filter_hues=True)
 scautoqc_metrics = snakemake.params.get('scautoqc_metrics')
 hues = list(set(hues+scautoqc_metrics+['qc_status']))
 
@@ -164,11 +164,6 @@ kde_plot_kwargs = dict(
     fill=True,
     cmap='plasma',
     alpha=.8,
-    bw_adjust=3,
-    gridsize=30,
-    thresh=0.1,
-    cut=0,
-    levels=10,
 )
 if adata.n_obs > 5e4:
     kde_plot_kwargs |= dict(
