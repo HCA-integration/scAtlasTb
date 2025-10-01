@@ -1,12 +1,12 @@
 rule majority_voting:
     input:
-        zarr=lambda wildcards: mcfg.get_input_file(**wildcards),
+        zarr=lambda w: mcfg.get_input_file(**w),
     output:
         zarr=directory(mcfg.out_dir / f'{paramspace.wildcard_pattern}.zarr'),
-        plots=directory(mcfg.image_dir / f'{paramspace.wildcard_pattern}'),
     params:
-        majority_reference=lambda wildcards: mcfg.get_from_parameters(wildcards, 'majority_reference'),
-        majority_consensus=lambda wildcards: mcfg.get_from_parameters(wildcards, 'majority_consensus'),
+        reference_key=lambda w: mcfg.get_from_parameters(w, 'majority_reference').get('reference_key'),
+        query_key=lambda w: mcfg.get_from_parameters(w, 'majority_reference').get('query_key'),
+        crosstab_kwargs=lambda w: mcfg.get_from_parameters(w, 'majority_reference').get('crosstab_kwargs', {}),
     conda:
         get_env(config, 'scanpy', env_dir='envs')
     resources:
