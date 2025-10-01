@@ -13,7 +13,3 @@ DATASETS:
         query_key: louvain
         crosstab_kwargs:
           dropna: False
-      majority_consensus:
-        columns:
-          - bulk_labels
-          - na_.*

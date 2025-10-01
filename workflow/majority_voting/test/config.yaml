@@ -1,0 +1,14 @@
+output_dir: test/out
+images: test/images
+
+
+DATASETS:
+  test:
+    input:
+      majority_voting:
+        file_1: test/input/pbmc68k.h5ad
+    majority_voting:
+      threshold: 0.6
+      columns:
+        - bulk_labels
+        - na_.*
