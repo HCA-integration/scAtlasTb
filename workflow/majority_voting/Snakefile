@@ -1,0 +1,56 @@
+from pathlib import Path
+import pandas as pd
+
+from utils.environments import get_env
+from utils.ModuleConfig import ModuleConfig
+
+
+mcfg = ModuleConfig(
+    module_name='majority_voting',
+    config=config,
+    config_params=['columns', 'threshold'],
+)
+paramspace = mcfg.get_paramspace()
+
+
+rule majority_voting:
+    input:
+        zarr=lambda wildcards: mcfg.get_input_file(**wildcards),
+    output:
+        zarr=directory(mcfg.out_dir / f'{paramspace.wildcard_pattern}.zarr'),
+        plots=directory(mcfg.image_dir / f'{paramspace.wildcard_pattern}'),
+    params:
+        columns=lambda wildcards: mcfg.get_from_parameters(wildcards, 'columns'),
+        threshold=lambda wildcards: mcfg.get_from_parameters(wildcards, 'threshold'),
+    conda:
+        get_env(config, 'scanpy', env_dir='envs')
+    resources:
+        partition=lambda w: mcfg.get_resource(profile='cpu',resource_key='partition'),
+        qos=lambda w: mcfg.get_resource(profile='cpu',resource_key='qos'),
+        mem_mb=lambda w: mcfg.get_resource(profile='cpu',resource_key='mem_mb'),
+    script:
+        'scripts/majority_voting.py'
+
+
+rule all:
+    input:
+        mcfg.get_output_files(rules.majority_voting.output)
+    default_target: True
+    localrule: True
+
+
+module common:
+    snakefile: "../common/Snakefile"
+    config: config
+
+use rule * from common as common_ *
+
+
+rule dependency_graph:
+    input:
+        expand(
+            rules.common_dependency_graph.input,
+            images=mcfg.image_dir,
+            target='all'
+        )
+    localrule: True
