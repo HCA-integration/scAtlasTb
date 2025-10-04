@@ -39,4 +39,4 @@ Additionally to the predicted labels, the module evaluates how strongly cells ag
 
 * `<image_dir>/majority_voting/dataset~<datasets>/file_id~<file_id>/majority_consensus_agreement.tsv`: Summary statistic of majority voting containing fractions of cells for every consensus label and agreement level.
 
-* `<image_dir>/majority_voting/dataset~<datasets>/file_id~<file_id>/majority_consensus_agreement.tsv`: Agreement bar plot showing the fraction of cells that have low agreement for each consensus label.
+* `<image_dir>/majority_voting/dataset~<datasets>/file_id~<file_id>/majority_consensus_frac.png`: Agreement bar plot showing the fraction of cells that have low agreement for each consensus label.
