@@ -27,11 +27,3 @@ for file in files:
     categories = obs[reference].unique()
     for ref in obs[key].unique():
         assert ref in categories, f'{ref} not in "{key}":\n {categories}'
-    
-    print('assert majority consensus...')
-    maj_cons = module_config.get('majority_consensus', {})
-    key = 'majority_consensus'
-    categories = obs[key].unique()
-    for cluster_key in maj_cons.get('cluster_keys', []):
-        for ref in obs[cluster_key].unique():
-            assert ref in categories, f'{ref} not in "{key}":\n {categories}'

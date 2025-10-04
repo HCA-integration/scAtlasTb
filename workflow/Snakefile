@@ -169,6 +169,10 @@ module label_transfer:
     snakefile: "label_transfer/Snakefile"
     config: config
 
+module majority_voting:
+    snakefile: "majority_voting/Snakefile"
+    config: config
+
 module label_harmonization:
     snakefile: "label_harmonization/Snakefile"
     config: config
@@ -207,6 +211,7 @@ use rule * from split_data as split_data_ *
 use rule * from subset as subset_ *
 use rule * from celltype_prediction as celltype_prediction_ *
 use rule * from label_transfer as label_transfer_ *
+use rule * from majority_voting as majority_voting_ * 
 use rule * from label_harmonization as label_harmonization_ *
 use rule * from relabel as relabel_ *
 use rule * from integration as integration_ *
