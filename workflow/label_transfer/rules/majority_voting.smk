@@ -4,9 +4,9 @@ rule majority_voting:
     output:
         zarr=directory(mcfg.out_dir / f'{paramspace.wildcard_pattern}.zarr'),
     params:
-        reference_key=lambda w: mcfg.get_from_parameters(w, 'majority_reference').get('reference_key'),
-        query_key=lambda w: mcfg.get_from_parameters(w, 'majority_reference').get('query_key'),
-        crosstab_kwargs=lambda w: mcfg.get_from_parameters(w, 'majority_reference').get('crosstab_kwargs', {}),
+        reference_key=lambda w: mcfg.get_from_parameters(w, 'majority_reference', default={}).get('reference_key'),
+        query_key=lambda w: mcfg.get_from_parameters(w, 'majority_reference', default={}).get('query_key'),
+        crosstab_kwargs=lambda w: mcfg.get_from_parameters(w, 'majority_reference', default={}).get('crosstab_kwargs', {}),
     conda:
         get_env(config, 'scanpy', env_dir='envs')
     resources:
