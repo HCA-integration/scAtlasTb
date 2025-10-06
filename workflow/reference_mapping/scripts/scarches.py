@@ -4,97 +4,135 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 import scarches
+import torch
 
 from utils.io import read_anndata, write_zarr_linked
+from utils.misc import dask_compute
+from openpipelines_functions import _align_query_with_registry, _detect_base_model
 
 
 input_file = snakemake.input.zarr
-model_file = snakemake.input.model
+model_input = snakemake.input.model
 output_file = snakemake.output.zarr
+model_output = snakemake.output.model
+
+tmpdir = snakemake.resources.tmpdir
+layer = snakemake.params.get('layer', 'X')
+var_key = snakemake.params.get('var_key')
+
+model_params = dict(
+    freeze_dropout=True,
+) | snakemake.params.get('model_params', {})
+
+train_params = dict(
+    max_epochs=10,
+    early_stopping=True,
+    check_val_every_n_epoch=1,
+) | snakemake.params.get('train_kwargs', {})
+
+batch_key = model_params.pop('batch_key')
+labels_key = model_params.pop('labels_key', None)
+size_factor_key = model_params.pop('size_factor_key', None)
+categorical_covariate_keys = model_params.pop('categorical_covariate_keys', [])
+continuous_covariate_keys = model_params.pop('continuous_covariate_keys', [])
+
+logging.info('Get reference model...')
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model_torch = torch.load(model_input, map_location=device, weights_only=False)
+assert 'var_names' in model_torch.keys(), f'var_names not found in model file {model_input}, make sure to provide a valid scArches model'
 
 logging.info('Read adata...')
-adata = read_anndata(input_file, obs='obs', obsm='obsm')
+adata = read_anndata(
+    input_file,
+    X=layer,
+    obs='obs',
+    var='var',
+)
 
-def check_order(x, y):
-    return((x.var.index == y.gene_symbol).all() or (x.var.index == y["Unnamed: 0"]).all())
+# subset to genes used by reference model
+logging.info('Subsetting genes')
+var_names = adata.var_names if var_key is None else adata.var[var_key]
+adata.var['scarches_features'] = var_names.isin(model_torch['var_names'])
+assert adata.var['scarches_features'].sum() > 0, \
+    'No overlapping genes between query and reference model.' \
+    f'{var_names}\n{model["var_names"]}'
 
-surgery_epochs = snakemake.params['surgery_epochs']
-early_stopping_kwargs_surgery = snakemake.params['early_stopping_kwargs_surgery']
+# gene order must be the same
+adata = adata[:, adata.var['scarches_features']].copy()
+dask_compute(adata)
 
-reference_model_dir = str(Path(snakemake.input.model).parent)
-# model_dir = str(Path(snakemake.output.model).parent)
-batch_variable = snakemake.params.batch
+logging.info('Detect base model')
+model_path = str(Path(model_input).parent)
+model = _detect_base_model(model_path)
+logging.info(model)
 
-adata_query = sc.read(snakemake.input.h5ad)
-adata_query.obs["dataset"] = snakemake.wildcards.dataset
-# adata_query.X = adata_query.layers['soupX_counts']
+logging.info('Align query to model')
+adata = _align_query_with_registry(
+    adata,
+    model_path,
+    batch_key=batch_key,
+    labels_key=labels_key, # Note: called "labels_key" by SCVI
+    size_factor_key=size_factor_key,
+    categorical_covariate_keys=categorical_covariate_keys,
+    continuous_covariate_keys=continuous_covariate_keys,
+)
+logging.info(adata.__str__())
 
-# remove bc incompatible with adapter training
-del adata_query.varm
-del adata_query.obsm
-del adata_query.obsp
-del adata_query.layers
-del adata_query.uns
+# prepare SCVI model
+adata.varm.clear()
+model.prepare_query_anndata(
+    adata,
+    model_path
+)
+## shouldn't fail, since genes were matched before
+# except ValueError:
+#     model_genes = model.prepare_query_anndata(
+#         adata,
+#         model_path,
+#         return_reference_var_names=True
+#     ).tolist()
+#     raise ValueError(
+#         "Could not perform model.prepare_model_anndata, likely because the model was trained with"\
+#         "different var names then were found in the index. \n\n"\
+#         f"model var_names: {model_genes} \n\n"\
+#         f"query data var_names: {adata.var_names.tolist()}"
+#     )
 
-# map gene names to gene IDs
-gene_map = pd.read_csv(snakemake.input.gene_map)
-adata_query = utils.subset_and_pad_adata_object(adata_query, gene_map)
-print(adata_query)
-
-
-gene_set = gene_map.copy()
-gene_set = gene_set.rename(columns={gene_set.columns[0]: "Unnamed: 0"})
-# adata_query = pp.subset_and_pad_adata(gene_set, adata_query)
-if check_order(adata_query, gene_set):
-    print("Gene order is correct.")
-else:
-    print("WARNING: your gene order does not match the order of the HLCA reference.")
-    adata_query = adata_query[:, gene_set.gene_symbol.tolist()].copy()
-    print("Matching now?",  check_order(adata_query, gene_map))
-
-adata_query.obs["scanvi_label"] = "unlabeled"
-
-
-# split by batch
-query_batches = adata_query.obs[batch_variable].unique()
-ad_trained_list = []
-
-for batch in query_batches:
-    print(f"Query ({batch_variable}):", batch)
-    ad = adata_query[adata_query.obs[batch_variable] == batch].copy()
-    
-    print("Shape:", ad.shape)
-    
-    # load model and set relevant variables:
-    print('Load model...')
-    model = scarches.models.SCANVI.load_query_data(
-        ad,
-        reference_model_dir,
-        freeze_dropout=True,
+try:
+    # Load query data into the model
+    vae_query = model.load_query_data(
+        adata,
+        model_path,
+        **model_params,
     )
-    model._unlabeled_indices = np.arange(adata_query.n_obs)
-    model._labeled_indices = []
-    print("Labelled Indices: ", len(model._labeled_indices))
-    print("Unlabelled Indices: ", len(model._unlabeled_indices))
+except KeyError:
+    from tempfile import TemporaryDirectory
 
-    # now train surgery model using reference model and query adata
-    print('Train model...')
-    model.train(
-        max_epochs=surgery_epochs,
-        early_stopping=True
+    logging.info(
+        "Older models do not have the 'setup_method_name' key saved with the model."
+        "Assume these were generated from an anndata object."
     )
+    model_torch["attr_dict"]["registry_"]["setup_method_name"] = "setup_anndata"
 
-    # get latent representation
-    ad.obsm['X_scarches'] = model.get_latent_representation(adata=ad)
+    with TemporaryDirectory(dir=tmpdir) as tempdir:
+        temp_file_name = Path(tempdir) / "model.pt"
+        torch.save(Path(model_torch).parent, temp_file_name)
+        del model_torch
+        vae_query = model.load_query_data(
+            adata,
+            tempdir,
+            **model_params,
+        )
 
-    # add anndata to list
-    ad_trained_list.append(ad)
+# Train scArches model for query mapping
+vae_query.train(**train_params)
 
-adata_query = sc.concat(ad_trained_list)
-logging.info(adata_query.__str__())
+# get latent representation
+adata.obsm['X_emb'] = vae_query.get_latent_representation(adata=adata)
+logging.info(adata.__str__())
 
 # save
-# model.save(model_dir, overwrite=True)
+vae_query.save(model_output, overwrite=True)
 
 logging.info(f'Write to {output_file}...')
 write_zarr_linked(
