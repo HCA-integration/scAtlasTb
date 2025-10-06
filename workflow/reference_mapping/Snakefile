@@ -1,0 +1,39 @@
+from pathlib import Path
+import pandas as pd
+
+from utils.environments import get_env
+from utils.ModuleConfig import ModuleConfig
+
+
+mcfg = ModuleConfig(
+    module_name='reference_mapping',
+    config=config,
+    config_params=['scarches'],
+)
+paramspace = mcfg.get_paramspace()
+
+include: 'rules/scarches.smk'
+
+
+rule all:
+    input:
+        mcfg.get_output_files(rules.majority_voting.output)
+    default_target: True
+    localrule: True
+
+
+module common:
+    snakefile: "../common/Snakefile"
+    config: config
+
+use rule * from common as common_ *
+
+
+rule dependency_graph:
+    input:
+        expand(
+            rules.common_dependency_graph.input,
+            images=mcfg.image_dir,
+            target='all'
+        )
+    localrule: True
