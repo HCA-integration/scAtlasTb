@@ -55,7 +55,7 @@ var_names = adata.var_names if var_key is None else adata.var[var_key]
 adata.var['scarches_features'] = var_names.isin(model_torch['var_names'])
 assert adata.var['scarches_features'].sum() > 0, \
     'No overlapping genes between query and reference model.' \
-    f'{var_names}\n{model["var_names"]}'
+    f'{var_names}\n{model_torch["var_names"]}'
 
 # gene order must be the same
 adata = adata[:, adata.var['scarches_features']].copy()
@@ -116,7 +116,7 @@ except KeyError:
 
     with TemporaryDirectory(dir=tmpdir) as tempdir:
         temp_file_name = Path(tempdir) / "model.pt"
-        torch.save(Path(model_torch).parent, temp_file_name)
+        torch.save(model_torch, temp_file_name)
         del model_torch
         vae_query = model.load_query_data(
             adata,
