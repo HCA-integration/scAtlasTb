@@ -116,7 +116,7 @@ except KeyError:
 
     with TemporaryDirectory(dir=tmpdir) as tempdir:
         temp_file_name = Path(tempdir) / "model.pt"
-        torch.save(Path(model_torch).parent, temp_file_name)
+        torch.save(model_torch, temp_file_name)
         del model_torch
         vae_query = model.load_query_data(
             adata,
