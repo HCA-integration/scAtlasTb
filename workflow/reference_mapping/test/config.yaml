@@ -9,7 +9,7 @@ DATASETS:
         file_1: test/input/pbmc68k.h5ad
     reference_mapping:
       scarches:
-        model: test/input/model.pt
+        model: test/input/model
         layer: layers/counts
         model_params:
           batch_key: batch

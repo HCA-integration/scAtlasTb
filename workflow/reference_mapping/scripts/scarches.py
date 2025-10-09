@@ -4,6 +4,7 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 import scarches
+import anndata as ad
 import torch
 
 from utils.io import read_anndata, write_zarr_linked
@@ -12,7 +13,7 @@ from openpipelines_functions import _align_query_with_registry, _detect_base_mod
 
 
 input_file = snakemake.input.zarr
-model_input = snakemake.input.model
+model_path = snakemake.input.model
 output_file = snakemake.output.zarr
 model_output = snakemake.output.model
 
@@ -38,8 +39,8 @@ continuous_covariate_keys = model_params.pop('continuous_covariate_keys', [])
 
 logging.info('Get reference model...')
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model_torch = torch.load(model_input, map_location=device, weights_only=False)
-assert 'var_names' in model_torch.keys(), f'var_names not found in model file {model_input}, make sure to provide a valid scArches model'
+model_torch = torch.load(Path(model_path) / 'model.pt', map_location=device, weights_only=False)
+assert 'var_names' in model_torch.keys(), f'var_names not found in model "{model_path}", make sure to provide a valid scArches model'
 
 logging.info('Read adata...')
 adata = read_anndata(
@@ -68,7 +69,6 @@ assert adata.n_vars > 0, 'No overlapping genes.'
 dask_compute(adata)
 
 logging.info('Detect base model')
-model_path = str(Path(model_input).parent)
 model = _detect_base_model(model_path)
 logging.info(model)
 

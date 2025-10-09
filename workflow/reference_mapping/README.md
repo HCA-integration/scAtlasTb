@@ -27,9 +27,10 @@ DATASETS:
   test:
     input:
       reference_mapping:
-        file_1: test/input/query_data.h5ad
+        file_1: test/input/pbmc68k.h5ad
     reference_mapping:
       layer: X  # or layer name like 'counts'
+      model: test/input/model
       model_params:
         batch_key: sample_id
         labels_key: cell_type
@@ -44,23 +45,48 @@ DATASETS:
 ### Input
 
 The input AnnData object is the query dataset that should be mapped to the reference model.
-The reference model should be defined as a Pytorch model ('model.pt' file) under `scarches > model`.
+The reference model should be defined as a Pytorch model directory under `scarches > model`.
 
 ### Configuration Parameters
 
-- `layer`: Which data layer to use from the query AnnData ('X' for .X, or layer name)
-- `model_params`: Model-specific parameters for alignment
-  - `batch_key`: Column name in `.obs` for batch information
-  - `labels_key`: Column name in `.obs` for cell type labels
-  - `categorical_covariate`: List of categorical covariate column names in `.obs`
-  - `continuous_covariate`: List of continuous covariate column names in `.obs`
-- `train_kwargs`: Training parameters for the mapping process
-  - `max_epochs`: Maximum number of training epochs
-  - `early_stopping`: Whether to use early stopping
-  - `check_val_every_n_epoch`: Validation frequency
+- **`layer`** (default: `'X'`): Which data layer to use from the query AnnData object
+  - `'X'` uses the main expression matrix (`.X`)
+  - `'layers/counts'` uses the counts layer from `.layers['counts']`
+  - Any other string uses the corresponding layer from `.layers[layer_name]`
 
-> Note: The query data must have genes that overlap with the reference model's training data. Assuming that gene naming is consistent between the pre-trained model and the input AnnData object (`var_key`), the data is subsetting to the overlapping genes before training.
+- **`var_key`** (default: `None`): Column name in `.var` to use for gene matching between query and reference model
+  - If `None`, uses the `.var` index (var_names)
+  - Important for ensuring gene names are consistent between query and reference model
 
+- **`zero_pad_missing_genes`** (default: `False`): Whether to zero-pad genes present in reference but missing in query
+  - If `False`, only overlapping genes are used for mapping
+  - If `True`, missing genes are added with zero expression values
+
+#### Model Parameters (`model_params`)
+Parameters that align the query data structure with the reference model's expectations:
+
+- **`batch_key`**: Column name in `.obs` containing batch/sample information (required)
+- **`labels_key`**: Column name in `.obs` containing cell type labels (optional, can be `None` for unlabeled data)
+- **`categorical_covariate`**: List of categorical covariate column names in `.obs` (optional, e.g., `["donor", "condition"]`)
+- **`continuous_covariate`**: List of continuous covariate column names in `.obs` (optional, e.g., `["age", "BMI"]`)
+
+#### Training Parameters (`train_params`)
+Parameters that control the reference mapping training process (all optional):
+
+- **`max_epochs`**: Maximum number of training epochs (default: 100)
+- **`early_stopping`**: Whether to use early stopping to prevent overfitting (default: true)
+- **`check_val_every_n_epoch`**: How often to run validation during training (default: 5)
+
+> **Note:** The query data must have genes that overlap with the reference model's training data. Gene matching is performed using the `var_key` parameter or `.var` index. Only overlapping genes are used for mapping unless `zero_pad_missing_genes` is enabled.
+
+## Output
+
+The reference mapping workflow produces the following outputs:
+
+* `<out_dir>/reference_mapping/dataset~<dataset>/file_id~<file_id>.zarr`: Mapped AnnData object containing:
+  - **Latent embedding** (`obsm['X_emb']`): Low-dimensional representations in the reference space
+
+* `<out_dir>/reference_mapping/model/dataset~<dataset>/file_id~<file_id>/`: Updated model directory with query data integrated, ready for further reference mapping tasks
 ## Output
 
 The reference mapping workflow produces the following outputs:
