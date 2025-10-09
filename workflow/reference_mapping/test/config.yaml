@@ -1,0 +1,15 @@
+output_dir: test/out
+images: test/images
+
+
+DATASETS:
+  test:
+    input:
+      reference_mapping:
+        file_1: test/input/pbmc68k.h5ad
+    reference_mapping:
+      scarches:
+        model: test/input/model
+        layer: layers/counts
+        model_params:
+          batch_key: batch
