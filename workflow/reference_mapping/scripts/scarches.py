@@ -51,14 +51,20 @@ adata = read_anndata(
 
 # subset to genes used by reference model
 logging.info('Subsetting genes')
+model_genes = pd.Index(model_torch['var_names'])
 var_names = adata.var_names if var_key is None else adata.var[var_key]
-adata.var['scarches_features'] = var_names.isin(model_torch['var_names'])
-assert adata.var['scarches_features'].sum() > 0, \
-    'No overlapping genes between query and reference model.' \
-    f'{var_names}\n{model_torch["var_names"]}'
+missing = model_genes.difference(var_names)
 
-# gene order must be the same
-adata = adata[:, adata.var['scarches_features']].copy()
+if len(missing) > 0:
+    zero = ad.AnnData(
+        X=np.zeros((adata.n_obs, len(missing)), dtype=adata.X.dtype),
+        obs=adata.obs,
+        var=pd.DataFrame(index=missing)
+    )
+    adata = ad.concat([adata, zero], axis=1)
+
+adata = adata[:, model_genes].copy()
+assert adata.n_vars > 0, 'No overlapping genes.'
 dask_compute(adata)
 
 logging.info('Detect base model')
