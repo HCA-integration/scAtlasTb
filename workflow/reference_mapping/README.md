@@ -87,11 +87,3 @@ The reference mapping workflow produces the following outputs:
   - **Latent embedding** (`obsm['X_emb']`): Low-dimensional representations in the reference space
 
 * `<out_dir>/reference_mapping/model/dataset~<dataset>/file_id~<file_id>/`: Updated model directory with query data integrated, ready for further reference mapping tasks
-## Output
-
-The reference mapping workflow produces the following outputs:
-
-* `<out_dir>/reference_mapping/dataset~<dataset>/file_id~<file_id>.zarr`: Mapped AnnData object containing:
-  - **Latent embedding** (`obsm['X_emb']`): Low-dimensional representations in the reference space
-
-* `<out_dir>/reference_mapping/model/dataset~<dataset>/file_id~<file_id>/`: Updated model directory with query data integrated, ready for further reference mapping tasks
