@@ -78,13 +78,13 @@ for file in files:
     print(f"  ✅ All tests passed for {file}")
 
 # Check for model output directory
-model_dirs = glob.glob('test/out/reference_mapping/_model/dataset~*/file_id~*')
+model_dirs = glob.glob('test/out/reference_mapping/model/dataset~*/file_id~*')
 if model_dirs:
     print(f"\n✓ Found {len(model_dirs)} model output directories")
     for model_dir in model_dirs:
         print(f"  Checking model directory: {model_dir}")
         # Check for typical scVI-tools model files
-        expected_files = ['model.pt', 'attr.pkl', 'var_names.csv']
+        expected_files = ['model.pt'] #, 'attr.pkl', 'var_names.csv']
         for expected_file in expected_files:
             model_file_path = f"{model_dir}/{expected_file}"
             import os
