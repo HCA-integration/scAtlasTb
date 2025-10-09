@@ -58,10 +58,6 @@ The reference model should be defined as a Pytorch model directory under `scarch
   - If `None`, uses the `.var` index (var_names)
   - Important for ensuring gene names are consistent between query and reference model
 
-- **`zero_pad_missing_genes`** (default: `False`): Whether to zero-pad genes present in reference but missing in query
-  - If `False`, only overlapping genes are used for mapping
-  - If `True`, missing genes are added with zero expression values
-
 #### Model Parameters (`model_params`)
 Parameters that align the query data structure with the reference model's expectations:
 
@@ -77,7 +73,7 @@ Parameters that control the reference mapping training process (all optional):
 - **`early_stopping`**: Whether to use early stopping to prevent overfitting (default: true)
 - **`check_val_every_n_epoch`**: How often to run validation during training (default: 5)
 
-> **Note:** The query data must have genes that overlap with the reference model's training data. Gene matching is performed using the `var_key` parameter or `.var` index. Only overlapping genes are used for mapping unless `zero_pad_missing_genes` is enabled.
+> **Note:** The query data must have genes that overlap with the reference model's training data. Gene matching is performed using the `var_key` parameter or `.var` index. Only overlapping genes are used for mapping and missing genes from the query are padded with zeros.
 
 ## Output
 
