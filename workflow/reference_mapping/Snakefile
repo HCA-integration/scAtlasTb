@@ -8,7 +8,7 @@ from utils.ModuleConfig import ModuleConfig
 mcfg = ModuleConfig(
     module_name='reference_mapping',
     config=config,
-    config_params=['scarches'],
+    config_params=['scarches', 'threads'],
 )
 paramspace = mcfg.get_paramspace()
 

@@ -10,6 +10,8 @@ rule scarches:
         var_key=lambda wildcards: mcfg.get_from_parameters(wildcards, 'scarches', default={}).get('var_key'),
         model_params=lambda wildcards: mcfg.get_from_parameters(wildcards, 'scarches', default={}).get('model_params', {}),
         train_params=lambda wildcards: mcfg.get_from_parameters(wildcards, 'scarches', default={}).get('train_params', {}),
+    threads:
+        lambda wildcards: mcfg.get_from_parameters(wildcards, 'threads', default=10, as_type=int)
     conda:
         get_env(config, 'scarches', env_dir='envs')
     resources:
