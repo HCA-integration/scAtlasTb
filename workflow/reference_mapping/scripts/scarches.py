@@ -98,23 +98,23 @@ logging.info(adata.__str__())
 
 # prepare SCVI model
 adata.varm.clear()
-model.prepare_query_anndata(
-    adata,
-    model_path
-)
-## shouldn't fail, since genes were matched before
-# except ValueError:
-#     model_genes = model.prepare_query_anndata(
-#         adata,
-#         model_path,
-#         return_reference_var_names=True
-#     ).tolist()
-#     raise ValueError(
-#         "Could not perform model.prepare_model_anndata, likely because the model was trained with"\
-#         "different var names then were found in the index. \n\n"\
-#         f"model var_names: {model_genes} \n\n"\
-#         f"query data var_names: {adata.var_names.tolist()}"
-#     )
+try:
+    model.prepare_query_anndata(
+        adata,
+        model_path
+    )
+except ValueError:
+    model_genes = model.prepare_query_anndata(
+        adata,
+        model_path,
+        return_reference_var_names=True
+    ).tolist()
+    raise ValueError(
+        "Could not perform model.prepare_query_anndata, likely because the model was trained with"
+        " different var names then were found in the index. \n\n"
+        f"model var_names: {model_genes} \n\n"
+        f"query data var_names: {adata.var_names.tolist()}"
+    )
 
 try:
     # Load query data into the model
