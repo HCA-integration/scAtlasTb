@@ -108,6 +108,11 @@ def _align_query_with_registry(adata_query, model_path, **kwargs):
         model_key = model_registry.get(registry_key)
         query_key = kwargs.get(registry_key)
         if model_key:
+            assert query_key, f"Expected {registry_key} to be provided"
+            assert query_key in adata_query.obs.columns, (
+                f"The provided {registry_key} '{query_key}' was not found in the query .obs"
+                f"{adata_query.obs.columns.tolist()}"
+            )
             query_obs[model_key] = adata_query.obs[query_key].values
 
     ## labels-key, relevant for AUTOZI, CondSCVI, LinearSCVI, PEAKVI, SCANVI, SCVI

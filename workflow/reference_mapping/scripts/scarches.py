@@ -6,6 +6,7 @@ import numpy as np
 import scarches
 import anndata as ad
 import torch
+from scipy import sparse
 
 from utils.io import read_anndata, write_zarr_linked
 from utils.misc import dask_compute
@@ -48,25 +49,36 @@ adata = read_anndata(
     X=layer,
     obs='obs',
     var='var',
+    dask=True,
+    backed=True,
 )
+logging.info(adata.__str__())
 
 # subset to genes used by reference model
 logging.info('Subsetting genes')
 model_genes = pd.Index(model_torch['var_names'])
 var_names = adata.var_names if var_key is None else adata.var[var_key]
-missing = model_genes.difference(var_names)
 
+adata = adata[:, var_names.isin(model_genes)].copy()
+assert adata.n_vars > 0, 'No overlapping genes.'
+logging.info(f'Found {adata.n_vars} overlapping genes.')
+dask_compute(adata)
+
+missing = model_genes.difference(var_names)
 if len(missing) > 0:
-    zero = ad.AnnData(
-        X=np.zeros((adata.n_obs, len(missing)), dtype=adata.X.dtype),
+    zero_padded = ad.AnnData(
+        X=sparse.csr_matrix((adata.n_obs, len(missing)), dtype=adata.X.dtype),
         obs=adata.obs,
         var=pd.DataFrame(index=missing)
     )
-    adata = ad.concat([adata, zero], axis=1)
-
-adata = adata[:, model_genes].copy()
-assert adata.n_vars > 0, 'No overlapping genes.'
-dask_compute(adata)
+    zero_padded = ad.concat([adata, zero_padded], axis=1)
+    adata = ad.AnnData(
+        X=zero_padded.X,
+        obs=adata.obs,
+        var=zero_padded.var
+    )
+    del zero_padded
+    logging.info(adata.__str__())
 
 logging.info('Detect base model')
 model = _detect_base_model(model_path)
