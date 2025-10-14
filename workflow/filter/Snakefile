@@ -10,15 +10,10 @@ mcfg = ModuleConfig(
     config=config,
     config_params=[
         'dask',
-        'backed',
         'subset',
         'remove_by_column',
         'remove_by_query',
     ],  # , 'keep_by_colum'
-    dtypes={
-        'dask': bool,
-        'backed': bool,
-    },
 )
 params = mcfg.get_paramspace()
 
@@ -45,9 +40,8 @@ use rule filter from filtering as filter with:
     params:
         remove_by_column=lambda wildcards: mcfg.get_from_parameters(wildcards, 'remove_by_column', default={}),
         remove_by_query=lambda wildcards: mcfg.get_from_parameters(wildcards, 'remove_by_query', default={}),
-        backed=lambda wildcards: mcfg.get_from_parameters(wildcards, 'backed'),
-        dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask'),
-        subset=lambda wildcards: mcfg.get_from_parameters(wildcards, 'subset'),
+        dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=True),
+        subset=lambda wildcards: mcfg.get_from_parameters(wildcards, 'subset', default=True),
     resources:
         mem_mb=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='mem_mb',attempt=attempt, factor=2),
 

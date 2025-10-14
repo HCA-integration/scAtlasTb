@@ -18,12 +18,9 @@ input_file = snakemake.input[0]
 output_file = snakemake.output[0]
 params = dict(snakemake.params)
 
-backed = params.get('backed', True)
-dask = params.get('dask', True)
-subset = params.get('subset', False)
+subset = params.get('subset', True)
 
-kwargs = {'obs': 'obs', 'var': 'var'}
-adata = read_anndata(input_file, **kwargs)
+adata = read_anndata(input_file, dask=True, backed=True)
 logging.info(adata.__str__())
 
 mask = pd.Series(np.full(adata.n_obs, True, dtype=bool), index=adata.obs_names)
@@ -61,38 +58,14 @@ else:
     adata = adata[adata.obs['filtered']].copy()
     logging.info(adata.__str__())
     
-    if Path(input_file).suffix == '.h5ad':
-        kwargs |= {
-            'X': 'X',
-            'layers': 'layers',
-            'raw': 'raw',
-            'obsm': 'obsm',
-            'obsp': 'obsp',
-        }
-        # filter out slots that aren't present in the input
-        func, _ = get_file_reader(input_file)
-        store = func(input_file, 'r')
-        kwargs = {k: v for k, v in kwargs.items() if k in store.keys()}
-        
-        logging.info('Read all slots for subsetting...')
-        obs = adata.obs # save updated obs
-        adata = read_anndata(
-            input_file,
-            backed=backed,
-            dask=dask,
-            **{k: v for k, v in kwargs.items() if k != 'obs'},
-        )
-        adata.obs = obs # updated obs
-        
-        write_zarr(adata, output_file, compute=True)
-    else:
-        var_mask = np.full(adata.n_vars, True, dtype=bool)
+    var_mask = np.full(adata.n_vars, True, dtype=bool)
 
-        logging.info(f'Write to {output_file}...')
-        write_zarr_linked(
-            adata,
-            input_file,
-            output_file,
-            files_to_keep=['obs'],
-            subset_mask=(mask.values, var_mask),
-        )
+    logging.info(f'Write to {output_file}...')
+    write_zarr_linked(
+        adata,
+        input_file,
+        output_file,
+        files_to_keep=['obs'],
+        compute=True, # for h5ad files, for zarr all slots other than obs will be dropped before writing
+        subset_mask=(mask.values, var_mask),
+    )
