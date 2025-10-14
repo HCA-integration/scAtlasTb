@@ -19,6 +19,7 @@ DATASETS:
         file_2.5: test/input/load_data/harmonize_metadata/SchulteSchrepping2020.zarr
     merge:
       merge_strategy: inner
+      keep_all_columns: true
       threads: 5
       stride: 500_000
       dask: true
