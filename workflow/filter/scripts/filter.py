@@ -20,7 +20,7 @@ params = dict(snakemake.params)
 
 backed = params.get('backed', True)
 dask = params.get('dask', True)
-subset = params.get('subset', False)
+subset = params.get('subset', True)
 
 adata = read_anndata(input_file, dask=dask, backed=backed)
 logging.info(adata.__str__())
