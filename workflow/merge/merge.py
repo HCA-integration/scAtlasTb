@@ -206,6 +206,13 @@ for _ad in adatas:
     # add new columns to adata.var
     adata.var.loc[var_names, _ad.var.columns] = _ad.var.loc[var_names, :]
 
+if keep_all_columns:
+    logging.info('Merging obs columns...')
+    obs_dfs = [_ad.obs for _ad in adatas]
+    merged_obs = pd.concat(obs_dfs, axis=0, join='outer', ignore_index=False)
+    merged_obs = merged_obs.loc[~merged_obs.index.duplicated(keep='first')]
+    adata.obs = adata.obs.combine_first(merged_obs)
+
 # fix dtypes
 adata.var = adata.var.infer_objects()
 logging.info(adata.var)
