@@ -8,8 +8,6 @@ DATASETS:
       filter: test/input/load_data/harmonize_metadata/Lee2020.zarr
     filter:
       subset: false
-      dask: true
-      backed: true
       remove_by_column:
         sample:
           - Schulte-Schrepping_C2P01H_d0

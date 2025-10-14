@@ -18,11 +18,9 @@ input_file = snakemake.input[0]
 output_file = snakemake.output[0]
 params = dict(snakemake.params)
 
-backed = params.get('backed', True)
-dask = params.get('dask', True)
 subset = params.get('subset', True)
 
-adata = read_anndata(input_file, dask=dask, backed=backed)
+adata = read_anndata(input_file, dask=True, backed=True)
 logging.info(adata.__str__())
 
 mask = pd.Series(np.full(adata.n_obs, True, dtype=bool), index=adata.obs_names)
