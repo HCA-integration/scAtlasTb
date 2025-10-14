@@ -443,7 +443,7 @@ def write_zarr(adata, file, compute=False):
     if compute:
         adata = dask_compute(adata)
     
-    adata.write_zarr(file) # doesn't seem to work with dask array
+    adata.write_zarr(file)
 
 
 def link_file(in_file, out_file, relative_path=True, overwrite=False, verbose=True):
@@ -594,6 +594,7 @@ def write_zarr_linked(
     in_dir_map: MutableMapping = None,
     verbose: bool = True,
     subset_mask: tuple = None,
+    compute: bool = False,
 ):
     """
     Write adata to linked zarr file
@@ -609,7 +610,7 @@ def write_zarr_linked(
     else:
         in_dir = Path(in_dir)
         if not in_dir.name.endswith(('.zarr', '.zarr/', '.zarr/raw')):
-            adata.write_zarr(out_dir)
+            write_zarr(adata, out_dir, compute=compute)
             return
         in_dirs = [f.name for f in in_dir.iterdir()]
     
@@ -651,7 +652,7 @@ def write_zarr_linked(
             delattr(adata, slot)
     
     # write zarr file
-    write_zarr(adata, out_dir)
+    write_zarr(adata, out_dir, compute=compute)
     
     # link files
     link_zarr(
