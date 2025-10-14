@@ -5,7 +5,6 @@ import gc
 import faulthandler
 faulthandler.enable()
 from scipy.sparse import issparse
-import tqdm.dask as tdask
 from tqdm import tqdm
 import pandas as pd
 import yaml
@@ -131,17 +130,6 @@ if dask:
     adata = sc.concat(adatas, join=merge_strategy)
     print(adata, flush=True)
 
-    for _ad in adatas:
-        remove_slots(_ad)
-        gc.collect()
-    
-    #if backed:
-    #    with tdask.TqdmCallback(desc='Persist'): # ProgressBar():
-    #        adata = apply_layers(adata, func=lambda x: x.rechunk((stride, -1)).persist() if isinstance(x, da.Array) else x)
-    #         adata = apply_layers(adata, func=lambda x: x.persist() if isinstance(x, da.Array) else x)
-    
-    # with tdask.TqdmCallback(desc='Rechunk'):
-    #     adata  = apply_layers(adata, func=lambda x: x.rechunk((stride, -1)))
     
 elif backed:
     logging.info('Read all files in backed mode...')
@@ -226,7 +214,6 @@ adata.uns['dataset'] = dataset
 logging.info(adata.__str__())
 
 logging.info(f'Write to {out_file}...')
-with tdask.TqdmCallback():
-    if isinstance(adata.X, da.Array):
-        print(adata.X.dask, flush=True)
-    write_zarr(adata, out_file)
+if isinstance(adata.X, da.Array):
+    print(adata.X.dask, flush=True)
+write_zarr(adata, out_file)
