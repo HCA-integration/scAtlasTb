@@ -204,7 +204,10 @@ def dask_compute(adata, layers: [str, list] = None, verbose: bool = True, **kwar
         
         if not isinstance(x, da.Array):
             return x
-        
+
+        if any(dim == 0 for dim in x.shape):
+            return np.empty(x.shape, dtype=x.dtype)
+
         context = TqdmCallback(desc='Dask compute', miniters=10, mininterval=5) if verbose else nullcontext()
         with context:
             if persist:

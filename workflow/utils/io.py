@@ -433,6 +433,8 @@ def write_zarr(adata, file, compute=False):
         
     # fix dtype for NaN obs columns
     for col in adata.obs.columns:
+        if adata.n_obs == 0:
+            continue
         if adata.obs[col].isna().any() or adata.obs[col].dtype.name == 'object':
             try:
                 adata.obs[col] = pd.to_numeric(adata.obs[col])
