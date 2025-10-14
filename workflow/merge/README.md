@@ -12,16 +12,25 @@ DATASETS:
       merge:
         file_1: test/input/load_data/harmonize_metadata/Lee2020.zarr
         file_1.1: test/input/load_data/harmonize_metadata/Lee2020.zarr
+        file_1.2: test/input/load_data/harmonize_metadata/Lee2020.zarr
+        file_1.3: test/input/load_data/harmonize_metadata/Lee2020.zarr
+        file_1.4: test/input/load_data/harmonize_metadata/Lee2020.zarr
         file_2: test/input/load_data/harmonize_metadata/SchulteSchrepping2020.zarr
         file_2.1: test/input/load_data/harmonize_metadata/SchulteSchrepping2020.zarr
+        file_2.2: test/input/load_data/harmonize_metadata/SchulteSchrepping2020.zarr
+        file_2.3: test/input/load_data/harmonize_metadata/SchulteSchrepping2020.zarr
+        file_2.4: test/input/load_data/harmonize_metadata/SchulteSchrepping2020.zarr
+        file_2.5: test/input/load_data/harmonize_metadata/SchulteSchrepping2020.zarr
     merge:
-      merge_strategy: inner ## how to merge overlapping genes/variables
-      keep_all_columns: true ## whether to keep all observation columns
-      threads: 5 ## number of threads for Dask processing
-      stride: 500_000 ## chunk size for processing
-      dask: true ## use Dask for distributed processing
-      backed: true ## use backed mode for memory efficiency
-      slots: ## which data slots to read from zarr files
+      merge_strategy: inner
+      keep_all_columns: true
+      allow_duplicate_obs: true
+      allow_duplicate_var: false
+      threads: 5
+      stride: 500_000
+      dask: true
+      backed: true
+      slots:
         X: X
         obs: obs
         var: var
@@ -33,6 +42,7 @@ DATASETS:
         file_2: test/input/pbmc68k.h5ad
     merge:
       merge_strategy: outer
+      allow_duplicate_obs: true
 ```
 
 ## Parameters
@@ -44,6 +54,14 @@ DATASETS:
 - **`keep_all_columns`**: Boolean flag for handling observation metadata
   - `true`: Merge all observation columns from all datasets
   - `false` (default): Only keep columns present in all datasets
+
+- **`allow_duplicate_obs`**: Allow duplicate observation (cell) names in the merged object
+  - `true`: Duplicates are allowed
+  - `false` (default): Duplicates are not allowed and will raise an error
+
+- **`allow_duplicate_var`**: Allow duplicate variable (gene) names in the merged object
+  - `true`: Duplicates are allowed
+  - `false` (default): Duplicates are not allowed and will raise an error
 
 - **`threads`**: Number of threads for Dask processing
   - Integer value (default: system dependent)
@@ -96,6 +114,7 @@ The workflow supports three different processing modes:
 - **Index Generation**: Creates new cell identifiers in format `{dataset}-{index}`
 - **Metadata Preservation**: Stores original cell names in `obs_names_before_{dataset}` column
 - **Dataset Tracking**: Adds dataset identifier to `adata.obs['file_id']` and `adata.uns['dataset']`
+- **Duplicate Handling**: Duplicate cell or gene names are checked and controlled by `allow_duplicate_obs` and `allow_duplicate_var` parameters
 
 ## Input/Output
 

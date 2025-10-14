@@ -20,6 +20,8 @@ DATASETS:
     merge:
       merge_strategy: inner
       keep_all_columns: true
+      allow_duplicate_obs: true
+      allow_duplicate_var: false
       threads: 5
       stride: 500_000
       dask: true
@@ -36,3 +38,4 @@ DATASETS:
         file_2: test/input/pbmc68k.h5ad
     merge:
       merge_strategy: outer
+      allow_duplicate_obs: true

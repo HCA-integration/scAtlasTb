@@ -71,6 +71,8 @@ out_file = snakemake.output.zarr
 
 merge_strategy = snakemake.params.get('merge_strategy', 'inner')
 keep_all_columns = snakemake.params.get('keep_all_columns', False)
+allow_duplicate_obs = snakemake.params.get('allow_duplicate_obs', False)
+allow_duplicate_vars = snakemake.params.get('allow_duplicate_vars', False)
 backed = snakemake.params.get('backed', False)
 dask = snakemake.params.get('dask', False)
 stride = snakemake.params.get('stride', 500_000)
@@ -175,6 +177,12 @@ else:
         adatas.append(_ad)
         gc.collect()
 
+# Assert no duplicates in the merged object
+if not allow_duplicate_obs:
+    assert not adata.obs_names.duplicated().any(), "Duplicate obs_names found in merged AnnData object"
+
+if not allow_duplicate_vars:
+    assert not adata.var_names.duplicated().any(), "Duplicate var_names found in merged AnnData object"
 
 # merge lost annotations
 logging.info('Add gene info...')
