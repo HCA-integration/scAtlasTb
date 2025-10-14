@@ -5,7 +5,6 @@ import gc
 import faulthandler
 faulthandler.enable()
 from scipy.sparse import issparse
-import tqdm.dask as tdask
 from tqdm import tqdm
 import pandas as pd
 import yaml
@@ -72,6 +71,8 @@ out_file = snakemake.output.zarr
 
 merge_strategy = snakemake.params.get('merge_strategy', 'inner')
 keep_all_columns = snakemake.params.get('keep_all_columns', False)
+allow_duplicate_obs = snakemake.params.get('allow_duplicate_obs', False)
+allow_duplicate_vars = snakemake.params.get('allow_duplicate_vars', False)
 backed = snakemake.params.get('backed', False)
 dask = snakemake.params.get('dask', False)
 stride = snakemake.params.get('stride', 500_000)
@@ -106,12 +107,10 @@ if len(files) == 0:
     AnnData().write_zarr(out_file)
     exit(0)
 
-adatas = []
-
 if dask:
     logging.info('Read all files with dask...')
-    for file_id, file_path in tqdm(files.items(), desc='Read files', miniters=1):
-        _ad = read_adata(
+    adatas = (
+        read_adata(
             file_path,
             file_id=file_id,
             backed=backed,
@@ -120,35 +119,20 @@ if dask:
             **slots,
             log=False,
         )
-        # logging.info(f'{file_id} shape: {_ad.shape}')
-        
-        #with tdask.TqdmCallback(desc='Persist'):
-            # _ad = apply_layers(_ad, func=lambda x: x.persist())
-        
-        adatas.append(_ad)
+        for file_id, file_path in tqdm(files.items(), desc='Read files', miniters=1)
+    )
     
     # concatenate
     adata = sc.concat(adatas, join=merge_strategy)
     print(adata, flush=True)
 
-    for _ad in adatas:
-        remove_slots(_ad)
-        gc.collect()
-    
-    #if backed:
-    #    with tdask.TqdmCallback(desc='Persist'): # ProgressBar():
-    #        adata = apply_layers(adata, func=lambda x: x.rechunk((stride, -1)).persist() if isinstance(x, da.Array) else x)
-    #         adata = apply_layers(adata, func=lambda x: x.persist() if isinstance(x, da.Array) else x)
-    
-    # with tdask.TqdmCallback(desc='Rechunk'):
-    #     adata  = apply_layers(adata, func=lambda x: x.rechunk((stride, -1)))
     
 elif backed:
     logging.info('Read all files in backed mode...')
-    adatas = [
+    adatas = (
         read_adata(file_path, file_id=file_id, backed=backed, dask=dask)
         for file_id, file_path in files.items()
-    ]
+    )
     dc = AnnCollection(
         adatas,
         join_obs='outer',
@@ -168,6 +152,7 @@ elif backed:
 
 else:
 
+    adatas = []
     adata = None
     for file_id, file_path in tqdm(files.items()):
         logging.info(f'Read {file_path}...')
@@ -192,30 +177,43 @@ else:
         adatas.append(_ad)
         gc.collect()
 
+# Assert no duplicates in the merged object
+if not allow_duplicate_obs:
+    assert not adata.obs_names.duplicated().any(), "Duplicate obs_names found in merged AnnData object"
+
+if not allow_duplicate_vars:
+    assert not adata.var_names.duplicated().any(), "Duplicate var_names found in merged AnnData object"
 
 # merge lost annotations
 logging.info('Add gene info...')
-for _ad in adatas:
+var_dfs = (
+    read_anndata(file, var='var', verbose=False).var
+    for file in files.values()
+)
+for var in var_dfs:
     # get intersection of var_names
-    var_names = list(set(adata.var_names).intersection(set(_ad.var_names)))
-    
-    # conver categorical columns to str
-    categorical_columns = _ad.var.select_dtypes(include='category').columns
-    _ad.var[categorical_columns] = _ad.var[categorical_columns].astype(str)
-    
-    # add new columns to adata.var
-    adata.var.loc[var_names, _ad.var.columns] = _ad.var.loc[var_names, :]
+    var_names = list(set(adata.var_names).intersection(set(var.index)))
 
-if keep_all_columns:
-    logging.info('Merging obs columns...')
-    obs_dfs = [_ad.obs for _ad in adatas]
-    merged_obs = pd.concat(obs_dfs, axis=0, join='outer', ignore_index=False)
-    merged_obs = merged_obs.loc[~merged_obs.index.duplicated(keep='first')]
-    adata.obs = adata.obs.combine_first(merged_obs)
+    # conver categorical columns to str
+    categorical_columns = var.select_dtypes(include='category').columns
+    var[categorical_columns] = var[categorical_columns].astype(str)
+
+    # add new columns to adata.var
+    adata.var.loc[var_names, var.columns] = var.loc[var_names, :]
 
 # fix dtypes
 adata.var = adata.var.infer_objects()
 logging.info(adata.var)
+
+if keep_all_columns:
+    logging.info('Merging obs columns...')
+    obs_dfs = (
+        read_anndata(file, obs='obs', verbose=False).obs
+        for file in files.values()
+    )
+    merged_obs = pd.concat(obs_dfs, axis=0, join='outer', ignore_index=False)
+    merged_obs = merged_obs.loc[~merged_obs.index.duplicated(keep='first')]
+    adata.obs = adata.obs.combine_first(merged_obs)
 
 # set new indices
 adata.obs[f'obs_names_before_{dataset}'] = adata.obs_names
@@ -226,7 +224,6 @@ adata.uns['dataset'] = dataset
 logging.info(adata.__str__())
 
 logging.info(f'Write to {out_file}...')
-with tdask.TqdmCallback():
-    if isinstance(adata.X, da.Array):
-        print(adata.X.dask, flush=True)
-    write_zarr(adata, out_file)
+if isinstance(adata.X, da.Array):
+    print(adata.X.dask, flush=True)
+write_zarr(adata, out_file)

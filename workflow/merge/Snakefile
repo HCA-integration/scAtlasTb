@@ -16,12 +16,16 @@ mcfg = ModuleConfig(
         'threads',
         'stride',
         'slots',
+        'allow_duplicate_obs',
+        'allow_duplicate_vars',
     ],
     mandatory_wildcards=['dataset'],
     dtypes=dict(
         dask=bool,
         backed=bool,
         threads=int,
+        allow_duplicate_obs=bool,
+        allow_duplicate_vars=bool,
     ),
 )
 params = mcfg.get_paramspace()
@@ -49,6 +53,8 @@ rule merge:
         stride=lambda wildcards: mcfg.get_from_parameters(wildcards, 'stride', default=500_000),
         slots=lambda wildcards: mcfg.get_from_parameters(wildcards, 'slots', default={}),
         keep_all_columns=lambda wildcards: mcfg.get_from_parameters(wildcards, 'keep_all_columns', default=False),
+        allow_duplicate_obs=lambda wildcards: mcfg.get_from_parameters(wildcards, 'allow_duplicate_obs', default=False),
+        allow_duplicate_vars=lambda wildcards: mcfg.get_from_parameters(wildcards, 'allow_duplicate_vars', default=False),
     conda:
         get_env(config, 'scanpy', env_dir='envs')
     threads:
