@@ -105,12 +105,10 @@ if len(files) == 0:
     AnnData().write_zarr(out_file)
     exit(0)
 
-adatas = []
-
 if dask:
     logging.info('Read all files with dask...')
-    for file_id, file_path in tqdm(files.items(), desc='Read files', miniters=1):
-        _ad = read_adata(
+    adatas = (
+        read_adata(
             file_path,
             file_id=file_id,
             backed=backed,
@@ -119,12 +117,8 @@ if dask:
             **slots,
             log=False,
         )
-        # logging.info(f'{file_id} shape: {_ad.shape}')
-        
-        #with tdask.TqdmCallback(desc='Persist'):
-            # _ad = apply_layers(_ad, func=lambda x: x.persist())
-        
-        adatas.append(_ad)
+        for file_id, file_path in tqdm(files.items(), desc='Read files', miniters=1)
+    )
     
     # concatenate
     adata = sc.concat(adatas, join=merge_strategy)
@@ -133,10 +127,10 @@ if dask:
     
 elif backed:
     logging.info('Read all files in backed mode...')
-    adatas = [
+    adatas = (
         read_adata(file_path, file_id=file_id, backed=backed, dask=dask)
         for file_id, file_path in files.items()
-    ]
+    )
     dc = AnnCollection(
         adatas,
         join_obs='outer',
@@ -156,6 +150,7 @@ elif backed:
 
 else:
 
+    adatas = []
     adata = None
     for file_id, file_path in tqdm(files.items()):
         logging.info(f'Read {file_path}...')
@@ -183,27 +178,34 @@ else:
 
 # merge lost annotations
 logging.info('Add gene info...')
-for _ad in adatas:
+var_dfs = (
+    read_anndata(file, var='var', verbose=False).var
+    for file in files.values()
+)
+for var in var_dfs:
     # get intersection of var_names
-    var_names = list(set(adata.var_names).intersection(set(_ad.var_names)))
-    
-    # conver categorical columns to str
-    categorical_columns = _ad.var.select_dtypes(include='category').columns
-    _ad.var[categorical_columns] = _ad.var[categorical_columns].astype(str)
-    
-    # add new columns to adata.var
-    adata.var.loc[var_names, _ad.var.columns] = _ad.var.loc[var_names, :]
+    var_names = list(set(adata.var_names).intersection(set(var.index)))
 
-if keep_all_columns:
-    logging.info('Merging obs columns...')
-    obs_dfs = [_ad.obs for _ad in adatas]
-    merged_obs = pd.concat(obs_dfs, axis=0, join='outer', ignore_index=False)
-    merged_obs = merged_obs.loc[~merged_obs.index.duplicated(keep='first')]
-    adata.obs = adata.obs.combine_first(merged_obs)
+    # conver categorical columns to str
+    categorical_columns = var.select_dtypes(include='category').columns
+    var[categorical_columns] = var[categorical_columns].astype(str)
+
+    # add new columns to adata.var
+    adata.var.loc[var_names, var.columns] = var.loc[var_names, :]
 
 # fix dtypes
 adata.var = adata.var.infer_objects()
 logging.info(adata.var)
+
+if keep_all_columns:
+    logging.info('Merging obs columns...')
+    obs_dfs = (
+        read_anndata(file, obs='obs', verbose=False).obs
+        for file in files.values()
+    )
+    merged_obs = pd.concat(obs_dfs, axis=0, join='outer', ignore_index=False)
+    merged_obs = merged_obs.loc[~merged_obs.index.duplicated(keep='first')]
+    adata.obs = adata.obs.combine_first(merged_obs)
 
 # set new indices
 adata.obs[f'obs_names_before_{dataset}'] = adata.obs_names
