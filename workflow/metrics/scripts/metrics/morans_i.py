@@ -167,18 +167,17 @@ def morans_i_genescore(adata, output_type, gene_set, use_random_gene_score=False
         random_gene_score_name = f'random_gene_scores:{len(gene_list)}'
 
         if use_random_gene_score:
-            if random_gene_score_name not in adata.obsm.keys():
-                raise ValueError(f'Gene score {random_gene_score_name} not found in adata.obsm')
+            raise NotImplementedError("The 'use_random_gene_score' option is not yet implemented.")
+            # if random_gene_score_name not in adata.obsm.keys():
+            #     raise ValueError(f'Gene score {random_gene_score_name} not found in adata.obsm')
             
 
-            random_gene_score = np.nanmean(
-            _morans_i(adata, covariate=adata.obsm[random_gene_score_name])
-            )
+            # random_gene_score = _morans_i(adata, covariate=adata.obsm[random_gene_score_name])
 
-            if random_gene_score == 0 or np.isnan(random_gene_score):
-                score = score
-            else:
-                score = score / random_gene_score
+            # if random_gene_score == 0 or np.isnan(random_gene_score):
+            #     score = score
+            # else:
+            #     score = score / random_gene_score
             
         
         scores.extend([
