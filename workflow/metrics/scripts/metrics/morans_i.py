@@ -167,8 +167,6 @@ def morans_i_genescore(adata, output_type, gene_set, use_random_gene_score=False
         random_gene_score_name = f'random_gene_scores:{len(gene_list)}'
 
         if use_random_gene_score:
-            raise NotImplementedError("The 'use_random_gene_score' option is not yet implemented.")
-        if use_random_gene_score:
             random_gene_score_name = f'random_gene_scores:{len(gene_list)}'
             raise NotImplementedError("The 'use_random_gene_score' option is not yet implemented.")
             #     raise ValueError(f'Gene score {random_gene_score_name} not found in adata.obsm')
