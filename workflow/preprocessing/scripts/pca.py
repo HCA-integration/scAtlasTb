@@ -39,6 +39,7 @@ logging.info(adata.__str__())
 if 'zero_center' in args:
     if args['zero_center'] == 'None':
         args['zero_center'] = None
+args['svd_solver'] = args.get('svd_solver', 'covariance_eigh')
 
 # add preprocessing arguments
 if 'preprocessing' not in adata.uns:

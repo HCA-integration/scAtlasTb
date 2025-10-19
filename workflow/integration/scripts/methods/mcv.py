@@ -51,6 +51,44 @@ def mse_sparse(a, b):
     return mean_squared_error(a, b)
 
 
+def split_data(X, var, batch_size=10_000):
+    # Process data splitting in batches
+    adata1_batches = []
+    adata2_batches = []
+    n_obs = X.shape[0]
+    
+    for start_idx in tqdm(range(0, n_obs, batch_size), desc="Splitting data"):
+        end_idx = min(start_idx + batch_size, n_obs)
+        
+        if hasattr(X, "compute"):
+            X_batch = X[start_idx:end_idx].compute()
+        else:
+            X_batch = X[start_idx:end_idx]
+        
+        # Convert batch to dense for processing
+        if issparse(X_batch):
+            X_batch = X_batch.toarray()
+        
+        X_batch = X_batch.astype(np.int32)
+        
+        # Split batch
+        mask = np.random.binomial(1, 0.5, size=X_batch.shape).astype(bool)
+        X1_batch = X_batch.copy()
+        X2_batch = X_batch.copy()
+        X1_batch[~mask] = 0  # Zero out non-selected elements
+        X2_batch[mask] = 0   # Zero out selected elements
+        
+        # Convert back to sparse
+        adata1_batches.append(ad.AnnData(csr_matrix(X1_batch), var=var))
+        adata2_batches.append(ad.AnnData(csr_matrix(X2_batch), var=var))
+
+    # Concatenate batches
+    adata1 = ad.concat(adata1_batches, axis=0)
+    adata2 = ad.concat(adata2_batches, axis=0)
+
+    return adata1, adata2
+
+
 def mcv_optimal_pcs_scanpy(adata, raw_name, max_pcs=100, scale_for_pca=True):
     """
     Molecular cross-validation to select optimal number of PCs with Scanpy.
@@ -60,35 +98,8 @@ def mcv_optimal_pcs_scanpy(adata, raw_name, max_pcs=100, scale_for_pca=True):
 
     print("MCV: Splitting train/test data", flush=True)
     np.random.seed(42)
-    if hasattr(X, "compute"):  # X is a dask array
-        # Avoid full densification; work with chunks
-        data = X.map_blocks(lambda arr: arr.data.astype(np.int32), dtype=np.int32)
-        data1 = data.map_blocks(lambda arr: np.random.binomial(arr, 0.5), dtype=np.int32)
-        data2 = data - data1
-        del data
-        indices = X.map_blocks(lambda arr: arr.indices, dtype=np.int32)
-        indptr = X.map_blocks(lambda arr: arr.indptr, dtype=np.int64)
 
-        # Compute only the final arrays
-        data1 = data1.compute()
-        data2 = data2.compute()
-        indices = indices.compute()
-        indptr = indptr.compute()
-    else:
-        data = X.data.astype(np.int32)
-        data1 = np.random.binomial(data, 0.5)
-        data2 = data - data1
-        del data
-        indices, indptr = X.indices, X.indptr
-
-    adata1 = ad.AnnData(
-        csr_matrix((data1, indices, indptr), shape=X.shape),
-        var=adata.var
-    )
-    adata2 = ad.AnnData(
-        csr_matrix((data2, indices, indptr), shape=X.shape),
-        var=adata.var
-    )
+    adata1, adata2 = split_data(X, adata.var)
 
     for ad_sub in tqdm(
         [adata1, adata2],
@@ -98,11 +109,10 @@ def mcv_optimal_pcs_scanpy(adata, raw_name, max_pcs=100, scale_for_pca=True):
         sc.pp.normalize_total(ad_sub, target_sum=1e4)
         sc.pp.log1p(ad_sub)
         if scale_for_pca:
-            ad_sub.X = da.from_array(ad_sub.X)
-            sc.pp.scale(ad_sub, zero_center=True, max_value=None)
+            sc.pp.scale(ad_sub, zero_center=False)
 
     print(f"MCV: Calculating {max_pcs} PCs", flush=True)
-    sc.pp.pca(adata1, n_comps=max_pcs)
+    sc.pp.pca(adata1, n_comps=max_pcs, svd_solver='covariance_eigh')
 
     # define search space
     k_range = np.concatenate([

@@ -97,10 +97,11 @@ if pca_kwargs.get('n_comps') == 'mcv':
 
 if scale:
     logging.info('Scale counts...')
-    sc.pp.scale(adata, zero_center=True, max_value=None)
+    sc.pp.scale(adata, zero_center=False)
 
 # recompute PCA according to user-defined hyperparameters
 logging.info(f'Compute PCA with parameters {pformat(pca_kwargs)}...')
+pca_kwargs['svd_solver'] = pca_kwargs.get('svd_solver', 'covariance_eigh')
 sc.pp.pca(adata, **pca_kwargs)
 adata = dask_compute(adata, layers='X_pca')
 del adata.X
@@ -108,8 +109,8 @@ del adata.X
 # run method
 logging.info(f'Run Harmony pytorch with parameters {pformat(hyperparams)}...')
 adata.obsm['X_emb'] = harmonize(
-    X=adata.obsm['X_pca'],
-    batch_mat=adata.obs,
+    adata.obsm['X_pca'],
+    adata.obs,
     use_gpu=use_gpu,
     n_jobs=snakemake.threads,
     **hyperparams
