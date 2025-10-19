@@ -12,6 +12,7 @@ n_cell_max = snakemake.params.get('n_cells')
 n_cell_max = np.iinfo(int).max if n_cell_max is None else int(n_cell_max)
 sample_key = snakemake.params.get('sample_key')
 per_sample = snakemake.params.get('per_sample')
+random_state = snakemake.params.get('seed', 42)
 
 files_to_keep = ['uns']
 
@@ -35,6 +36,7 @@ kwargs = dict(
     n_cell_max=n_cell_max,
     sample_key=sample_key,
     n_cells_per_sample=per_sample,
+    random_state=random_state,
 )
 
 logging.info(f'Apply subset strategy: {strategy} with {kwargs}...')
