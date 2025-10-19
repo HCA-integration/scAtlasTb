@@ -52,7 +52,13 @@ n_samples = len(adata.obs.loc[subset_mask, sample_key].unique())
 
 logging.info(f'Subset to {n_cells} cells, {n_samples} samples...')
 adata = adata[subset_mask].copy()
-adata.uns['subset'] = strategy
+adata.uns['subset'] = {
+    'strategy': strategy,
+    'n_cells': n_cell_max,
+    'sample_key': sample_key,
+    'per_sample': per_sample,
+    'seed': random_state,
+}
 logging.info(adata.__str__())
 
 # save
