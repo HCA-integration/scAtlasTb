@@ -103,7 +103,11 @@ logging.info(f'Set "{new_var_column}" from "{var_key}" in adata.var: {adata.var[
 
 logging.info('Compute PCA...')
 if output_type == 'full':
-    sc.pp.pca(adata, mask_var=new_var_column)
+    sc.pp.pca(
+        adata,
+        mask_var=new_var_column,
+        svd_solver='covariance_eigh',
+    )
     adata = dask_compute(adata, layers='X_pca')
     adata.obsm['X_emb'] = adata.obsm['X_pca']
     force_neighbors = True

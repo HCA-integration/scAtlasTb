@@ -101,6 +101,7 @@ if scale:
 
 # recompute PCA according to user-defined hyperparameters
 logging.info(f'Compute PCA with parameters {pformat(pca_kwargs)}...')
+pca_kwargs['svd_solver'] = pca_kwargs.get('svd_solver', 'covariance_eigh')
 sc.pp.pca(adata, **pca_kwargs)
 adata = dask_compute(adata, layers='X_pca')
 del adata.X
