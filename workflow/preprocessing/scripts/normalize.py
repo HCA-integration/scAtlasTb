@@ -12,7 +12,7 @@ import sparse
 
 from utils.processing import sc, USE_GPU
 from utils.io import read_anndata, write_zarr_linked
-from utils.misc import dask_compute, ensure_sparse
+from utils.misc import ensure_sparse
 
 
 input_file = snakemake.input[0]
@@ -87,7 +87,6 @@ logging.info(adata.__str__())
 
 if not input_file.endswith('.h5ad'):
     del adata.X
-adata = dask_compute(adata, layers='normcounts')
 
 write_zarr_linked(
     adata,
