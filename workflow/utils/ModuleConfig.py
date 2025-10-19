@@ -247,7 +247,7 @@ class ModuleConfig:
             targets = expand(pattern, zip, **wildcards, allow_missing=allow_missing)
         except WildcardError as e:
             raise ValueError(
-                f'WildcardError: {e}\ wildcards: {list(wildcards.keys())} for pattern "{pattern}"'
+                f'WildcardError: {e}\n wildcards: {list(wildcards.keys())} for pattern "{pattern}"'
                 f'\n{pformat(pd.DataFrame(wildcards))}'
             )
         
@@ -369,10 +369,10 @@ class ModuleConfig:
         self.set_default_target()
 
 
-    def get_profile(self, wildcards: [dict, Wildcards]):
+    def get_profile(self, wildcards: [dict, Wildcards], default='cpu', **kwargs):
         if 'resources' in self.parameters.wildcards_df.columns:
-            return self.get_from_parameters(wildcards, 'resources', default='cpu')
-        return 'cpu'
+            return self.get_from_parameters(wildcards, 'resources', default=default, **kwargs)
+        return default
 
 
     def get_resource(
