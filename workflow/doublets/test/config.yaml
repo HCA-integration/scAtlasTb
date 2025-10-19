@@ -1,7 +1,7 @@
 output_dir: test/out
 images: test/images
 
-use_gpu: true
+use_gpu: false
 
 DATASETS:
   Lee2020:
@@ -15,7 +15,7 @@ DATASETS:
   test:
     input:
       doublets:
-        test: test/input/pbmc68k.h5sad
+        test: test/input/pbmc68k.h5ad
         test2: test/input/pbmc68k.h5ad
     doublets:
       counts: layers/counts
