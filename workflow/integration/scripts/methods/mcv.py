@@ -98,11 +98,11 @@ def mcv_optimal_pcs_scanpy(adata, raw_name, max_pcs=100, scale_for_pca=True):
         sc.pp.normalize_total(ad_sub, target_sum=1e4)
         sc.pp.log1p(ad_sub)
         if scale_for_pca:
-            ad_sub.X = da.from_array(ad_sub.X)
-            sc.pp.scale(ad_sub, zero_center=True, max_value=None)
+            # ad_sub.X = da.from_array(ad_sub.X)
+            sc.pp.scale(ad_sub, zero_center=False)
 
     print(f"MCV: Calculating {max_pcs} PCs", flush=True)
-    sc.pp.pca(adata1, n_comps=max_pcs)
+    sc.pp.pca(adata1, n_comps=max_pcs, svd_solver='covariance_eigh')
 
     # define search space
     k_range = np.concatenate([
