@@ -89,14 +89,14 @@ use rule pca from preprocessing as preprocessing_pca with:
         scale=lambda wildcards: mcfg.get_from_parameters(wildcards, 'scale', default=False),
         dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=True),
     conda:
-        lambda w: get_env(config, 'scanpy', gpu_env='rapids_singlecell', no_gpu=mcfg.get_profile(w) == 'cpu')
+        lambda w: get_env(config, 'scanpy', gpu_env='rapids_singlecell', no_gpu=mcfg.get_profile(w, default='gpu') == 'cpu')
     threads:
         lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_threads', default=10)
     resources:
-        partition=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w),resource_key='partition',attempt=attempt),
-        qos=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w),resource_key='qos',attempt=attempt),
-        gpu=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w),resource_key='gpu',attempt=attempt),
-        mem_mb=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w),resource_key='mem_mb',attempt=attempt, factor=1),
+        partition=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w, default='gpu'),resource_key='partition',attempt=attempt),
+        qos=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w, default='gpu'),resource_key='qos',attempt=attempt),
+        gpu=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w, default='gpu'),resource_key='gpu',attempt=attempt),
+        mem_mb=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w, default='gpu'),resource_key='mem_mb',attempt=attempt, factor=1),
 
 
 use rule neighbors from preprocessing as preprocessing_neighbors with:
@@ -109,12 +109,12 @@ use rule neighbors from preprocessing as preprocessing_neighbors with:
     threads:
         lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_threads', default=10)
     conda:
-        lambda w: get_env(config, 'scanpy', gpu_env='rapids_singlecell', no_gpu=mcfg.get_profile(w) == 'cpu')
+        lambda w: get_env(config, 'scanpy', gpu_env='rapids_singlecell', no_gpu=mcfg.get_profile(w, default='gpu') == 'cpu')
     resources:
-        partition=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w),resource_key='partition',attempt=attempt),
-        qos=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w),resource_key='qos',attempt=attempt),
-        gpu=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w),resource_key='gpu',attempt=attempt),
-        mem_mb=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w),resource_key='mem_mb',attempt=attempt),
+        partition=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w, default='gpu'),resource_key='partition',attempt=attempt),
+        qos=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w, default='gpu'),resource_key='qos',attempt=attempt),
+        gpu=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w, default='gpu'),resource_key='gpu',attempt=attempt),
+        mem_mb=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w, default='gpu'),resource_key='mem_mb',attempt=attempt),
 
 
 use rule umap from preprocessing as preprocessing_umap with:
@@ -127,14 +127,14 @@ use rule umap from preprocessing as preprocessing_umap with:
     params:
         args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'umap', default={}),
     conda:
-        lambda w: get_env(config, 'scanpy', gpu_env='rapids_singlecell', no_gpu=mcfg.get_profile(w) == 'cpu')
+        lambda w: get_env(config, 'scanpy', gpu_env='rapids_singlecell', no_gpu=mcfg.get_profile(w, default='gpu') == 'cpu')
     threads:
         lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_threads', default=10)
     resources:
-        partition=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w),resource_key='partition',attempt=attempt),
-        qos=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w),resource_key='qos',attempt=attempt),
-        gpu=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w),resource_key='gpu',attempt=attempt),
-        mem_mb=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w),resource_key='mem_mb',attempt=attempt),
+        partition=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w, default='gpu'),resource_key='partition',attempt=attempt),
+        qos=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w, default='gpu'),resource_key='qos',attempt=attempt),
+        gpu=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w, default='gpu'),resource_key='gpu',attempt=attempt),
+        mem_mb=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w, default='gpu'),resource_key='mem_mb',attempt=attempt),
 
 
 def collect_files(wildcards):

@@ -95,8 +95,8 @@ adata = read_anndata(
     obs='obs',
     var='var',
     uns='uns',
-    backed=dask,
-    dask=dask,
+    backed=True,
+    dask=True,
 )
 logging.info(adata.__str__())
 for col in adata.var.columns:
@@ -165,6 +165,9 @@ else:
             # filter genes and cells that would break HVG function
             batch_mask = _filter_batch(_ad, batch_key=args.get('batch_key'))
             _ad = _ad[batch_mask, _ad.var['nonzero_genes']].copy()
+            
+            if not dask:
+                _ad = dask_compute(_ad)
             
             # if _ad.n_obs > 1e6:
             #     use_gpu = False
