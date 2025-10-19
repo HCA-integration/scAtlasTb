@@ -93,7 +93,7 @@ use rule pca from preprocessing as preprocessing_pca with:
     threads:
         lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_threads', default=10)
     resources:
-        partition=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w),resource_key='partition',attempt=attempt),
+        partition=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w, default='gpu'),resource_key='partition',attempt=attempt),
         qos=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w, default='gpu'),resource_key='qos',attempt=attempt),
         gpu=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w, default='gpu'),resource_key='gpu',attempt=attempt),
         mem_mb=lambda w, attempt: mcfg.get_resource(profile=mcfg.get_profile(w, default='gpu'),resource_key='mem_mb',attempt=attempt, factor=1),
