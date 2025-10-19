@@ -38,7 +38,7 @@ DATASETS:
 
 Notes about parameter names and mapping:
 - `sample_key`: the key in `adata.obs` that defines the samples/libraries to subset over.
-- `per_sample`: number of samples to subset to when using `within_sample` strategy.
+- `per_sample`: number of cells to keep per sample when using `within_sample` strategy.
 - `seed`: random seed for reproducible subsetting.
 - `strategy`: must match one of the implemented strategies: `by_sample` or `within_sample`.
 
