@@ -19,6 +19,9 @@ DATASETS:
         test2: test/input/pbmc68k.h5ad
     doublets:
       counts: layers/counts
+      methods:
+        - scrublet
+        - doubletdetection
 
 
 defaults:
