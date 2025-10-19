@@ -78,11 +78,22 @@ rule doubletdetection:
         '../scripts/doubletdetection.py'
 
 
+def collect_results(wildcards):
+    methods = mcfg.get_from_parameters(wildcards, 'methods', default=['scrublet'])
+    files = {'zarr': mcfg.get_input_file(**wildcards)}
+    if 'scrublet' in methods:
+        files['scrublet'] = get_from_checkpoint(wildcards, rules.scrublet.output.tsv)
+    if 'doubletdetection' in methods:
+        files['doubletdetection'] = get_from_checkpoint(wildcards, rules.doubletdetection.output.tsv)
+    return files
+
+
 rule collect:
     input:
-        zarr=lambda wildcards: mcfg.get_input_file(**wildcards),
-        scrublet=lambda wildcards: get_from_checkpoint(wildcards, rules.scrublet.output.tsv),
-        doubletdetection=lambda wildcards: get_from_checkpoint(wildcards, rules.doubletdetection.output.tsv),
+        unpack(collect_results)
+        # zarr=lambda wildcards: mcfg.get_input_file(**wildcards),
+        # scrublet=lambda wildcards: get_from_checkpoint(wildcards, rules.scrublet.output.tsv),
+        # doubletdetection=lambda wildcards: get_from_checkpoint(wildcards, rules.doubletdetection.output.tsv),
     output:
         zarr=directory(mcfg.out_dir / f'{params.wildcard_pattern}.zarr'),
     params:

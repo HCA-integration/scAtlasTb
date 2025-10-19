@@ -99,6 +99,9 @@ adata = read_anndata(
 with open(batches_txt, 'r') as f:
     batches = [line.strip().split('\t')[0] for line in f if line.strip()]
 
+if batch_key is not None:
+    adata = adata[adata.obs[batch_key].isin(batches), :].copy()
+
 results = (
     run_method(adata, batch_key, batch)
     for batch in tqdm(batches, desc='Run scrublet', miniters=1)

@@ -5,8 +5,8 @@ from utils.io import read_anndata, link_zarr, write_zarr_linked, ALL_SLOTS
 
 
 input_anndata = snakemake.input[0]
-input_scrublet = snakemake.input.scrublet
-input_doubletdetection = snakemake.input.doubletdetection
+input_scrublet = snakemake.input.get('scrublet')
+input_doubletdetection = snakemake.input.get('doubletdetection')
 output_zarr = snakemake.output.zarr
 layer = snakemake.params.get('layer', 'X')
 
@@ -21,18 +21,19 @@ if adata.n_obs == 0:
     write_zarr(adata, output_zarr)
     exit(0)
 
-scrub_scores = pd.concat([pd.read_table(f, index_col=0) for f in input_scrublet])
-scrub_scores.index = scrub_scores.index.astype(str)
-scrub_scores['scrublet_prediction'] = scrub_scores['scrublet_prediction'].astype(str)
+if input_scrublet:
+    scrub_scores = pd.concat([pd.read_table(f, index_col=0) for f in input_scrublet])
+    scrub_scores.index = scrub_scores.index.astype(str)
+    scrub_scores['scrublet_prediction'] = scrub_scores['scrublet_prediction'].astype(str)
+    print(scrub_scores)
+    adata.obs = adata.obs.merge(scrub_scores, left_index=True, right_index=True, how='left')
 
-doub_scores = pd.concat([pd.read_table(f, index_col=0) for f in input_doubletdetection])
-doub_scores.index = doub_scores.index.astype(str)
+if input_doubletdetection:
+    doub_scores = pd.concat([pd.read_table(f, index_col=0) for f in input_doubletdetection])
+    doub_scores.index = doub_scores.index.astype(str)
+    print(doub_scores)
+    adata.obs = adata.obs.merge(doub_scores, left_index=True, right_index=True, how='left')
 
-print(scrub_scores)
-print(doub_scores)
-
-adata.obs = adata.obs.merge(scrub_scores, left_index=True, right_index=True, how='left')
-adata.obs = adata.obs.merge(doub_scores, left_index=True, right_index=True, how='left')
 print(adata.obs)
 
 write_zarr_linked(
