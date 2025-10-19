@@ -97,7 +97,7 @@ if pca_kwargs.get('n_comps') == 'mcv':
 
 if scale:
     logging.info('Scale counts...')
-    sc.pp.scale(adata, zero_center=True, max_value=None)
+    sc.pp.scale(adata, zero_center=False)
 
 # recompute PCA according to user-defined hyperparameters
 logging.info(f'Compute PCA with parameters {pformat(pca_kwargs)}...')
