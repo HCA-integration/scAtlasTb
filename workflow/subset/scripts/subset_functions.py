@@ -1,5 +1,10 @@
 import numpy as np
 
+
+def shuffle_samples(adata, sample_key, random_state=42):
+    return adata.obs[sample_key].value_counts().sample(frac=1, random_state=random_state)
+
+
 def by_sample(
     adata,
     n_cell_max,
@@ -14,8 +19,7 @@ def by_sample(
     samples = []
     n_cells = 0
 
-    shuffled_samples = adata.obs[sample_key].value_counts().sample(frac=1, random_state=random_state)
-    
+    shuffled_samples = shuffle_samples(adata, sample_key, random_state=random_state)
     for sample, count in shuffled_samples.items():
         if len(samples) > 0 and n_cells > n_cell_max:
             break
@@ -48,8 +52,8 @@ def within_sample(
         n_cells_per_sample = int(n_cell_max / n_samples)
         
     print(f'Subset n_cell_max: {n_cell_max}, n_cells_per_sample: {n_cells_per_sample}', flush=True)
-    
-    shuffled_samples = np.random.permutation(adata.obs[sample_key].unique())
+
+    shuffled_samples = shuffle_samples(adata, sample_key, random_state=random_state).index
     subset_indices = []
     n_cells_flagged = 0
     for sample in shuffled_samples:
