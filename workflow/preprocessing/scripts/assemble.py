@@ -154,7 +154,7 @@ for file_type, file in file_map:
         #     adata.X = sparse.csr_matrix(adata.shape, dtype=np.int8)
         if adata.n_obs == 0:
             logging.info('No data, write empty file...')
-            adata.write_zarr(output_file)
+            write_zarr_linked(adata, in_dir=file, out_dir=output_file)
             exit(0)
 
     if file.endswith('.h5ad'):
