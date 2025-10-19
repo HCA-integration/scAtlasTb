@@ -8,7 +8,7 @@ from subset_functions import SUBSET_MAP
 
 input_file = snakemake.input[0]
 output_file = snakemake.output[0]
-strategy = snakemake.wildcards.strategy
+strategy = snakemake.params.get('strategy')
 n_cell_max = snakemake.params.get('n_cells')
 n_cell_max = np.iinfo(int).max if n_cell_max is None else int(n_cell_max)
 sample_key = snakemake.params.get('sample_key')

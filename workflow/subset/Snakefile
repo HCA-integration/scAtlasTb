@@ -11,8 +11,6 @@ mcfg = ModuleConfig(
     module_name,
     config,
     config_params=['strategy', 'n_cells', 'sample', 'label', 'per_sample'],
-    explode_by='strategy',
-    wildcard_names=['strategy'],
 )
 paramspace = mcfg.get_paramspace()
 
@@ -33,10 +31,11 @@ rule subset:
     input:
         lambda wildcards: mcfg.get_input_file(wildcards.dataset, wildcards.file_id),
     output:
-        zarr=directory(mcfg.out_dir / f'{paramspace.wildcard_pattern}.zarr')  # TODO: remove from wildcards and use as params
+        zarr=directory(mcfg.out_dir / f'{paramspace.wildcard_pattern}.zarr')
     resources:
         mem_mb=lambda wildcards, attempt: mcfg.get_resource(profile='cpu',resource_key='mem_mb', attempt=attempt),
     params:
+        strategy=lambda wildcards: mcfg.get_from_parameters(wildcards, 'strategy'),
         n_cells=lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_cells'),
         sample_key=lambda wildcards: mcfg.get_from_parameters(wildcards, 'sample'),
         label_key=lambda wildcards: mcfg.get_from_parameters(wildcards, 'label'),
