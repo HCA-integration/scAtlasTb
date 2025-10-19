@@ -109,8 +109,8 @@ del adata.X
 # run method
 logging.info(f'Run Harmony pytorch with parameters {pformat(hyperparams)}...')
 adata.obsm['X_emb'] = harmonize(
-    X=adata.obsm['X_pca'],
-    batch_mat=adata.obs,
+    adata.obsm['X_pca'],
+    adata.obs,
     use_gpu=use_gpu,
     n_jobs=snakemake.threads,
     **hyperparams
