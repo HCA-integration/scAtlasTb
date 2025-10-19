@@ -7,7 +7,7 @@ DATASETS:
     input:
       subset: test/input/load_data/merged/organ/blood.zarr
     subset:
-      sample: sample
+      sample_key: sample
       label: cell_type
       n_cells: 100_000
       strategy: by_sample
@@ -16,7 +16,7 @@ DATASETS:
     input:
       subset: test/input/load_data/merged/organ/blood.zarr
     subset:
-      sample: sample
+      sample_key: sample
       label: cell_type
       n_cells: 100_000
       per_sample: 50
@@ -26,7 +26,7 @@ DATASETS:
     input:
       subset: ../../data/pbmc68k.h5ad
     subset:
-      sample: phase
+      sample_key: phase
       n_cells: 600
       strategy: by_sample
   
@@ -34,7 +34,7 @@ DATASETS:
     input:
       subset: ../../data/pbmc68k.h5ad
     subset:
-      sample: phase
+      sample_key: phase
       n_cells: 600
       per_sample: 20
       strategy: within_sample

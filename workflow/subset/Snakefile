@@ -10,7 +10,14 @@ module_name = 'subset'
 mcfg = ModuleConfig(
     module_name,
     config,
-    config_params=['strategy', 'n_cells', 'sample', 'label', 'per_sample'],
+    config_params=[
+        'sample_key',
+        'strategy',
+        'n_cells',
+        'label',
+        'per_sample',
+        'seed',
+    ],
 )
 paramspace = mcfg.get_paramspace()
 
@@ -37,9 +44,10 @@ rule subset:
     params:
         strategy=lambda wildcards: mcfg.get_from_parameters(wildcards, 'strategy'),
         n_cells=lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_cells'),
-        sample_key=lambda wildcards: mcfg.get_from_parameters(wildcards, 'sample'),
+        sample_key=lambda wildcards: mcfg.get_from_parameters(wildcards, 'sample_key'),
         label_key=lambda wildcards: mcfg.get_from_parameters(wildcards, 'label'),
         per_sample=lambda wildcards: mcfg.get_from_parameters(wildcards, 'per_sample'),
+        seed=lambda wildcards: mcfg.get_from_parameters(wildcards, 'seed', default=42),
     conda:
         get_env(config, 'scanpy', env_dir='envs')
     script:
