@@ -25,7 +25,7 @@ defaults:
   datasets:
     - test
     - multi_wildcards
-    # - preprocessed
+    - preprocessed
     - harmony
     - scarches
     - scvi_tools
@@ -99,6 +99,7 @@ DATASETS:
     input:
       integration: test/input/pbmc68k.h5ad
     integration:
+      threads: 5
       label: bulk_labels
       batch: batch
       methods:
@@ -111,10 +112,13 @@ DATASETS:
         harmony_pytorch:
           sigma: 0.1
           batch_key: batch_2
-          n_comps: 30
+          n_comps:
+            - 30
+            - mcv
           scale: true
       umap_colors:
         - phase
+        - bulk_labels
 
   scarches:
     input:
