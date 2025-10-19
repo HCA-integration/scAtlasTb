@@ -191,7 +191,7 @@ write_zarr_linked(
 )
 
 # for backward compatibility
-logging.info(f'Write to legacy path {output_legacy}...')
+logging.info(f'Creating symbolic link at legacy path {output_legacy} for backward compatibility...')
 write_zarr_linked(
     adata=adata,
     in_dir=output_file,
