@@ -3,24 +3,38 @@ dataset_meta: test/datasets.tsv
 images: test/images
 
 DATASETS:
-  blood:
+  blood_by_sample:
     input:
       subset: test/input/load_data/merged/organ/blood.zarr
     subset:
       sample: sample
       label: cell_type
-      n_cells: 1000
+      n_cells: 100_000
+      strategy: by_sample
+
+  blood_within_sample:
+    input:
+      subset: test/input/load_data/merged/organ/blood.zarr
+    subset:
+      sample: sample
+      label: cell_type
+      n_cells: 100_000
       per_sample: 50
-      strategy:
-        - by_sample
-        - within_sample
-  test:
+      strategy: within_sample
+  
+  test_by_sample:
     input:
       subset: ../../data/pbmc68k.h5ad
     subset:
-      sample: batch
-      label: bulk_labels
-      per_sample: 50
-      strategy:
-        - by_sample
-        - within_sample
+      sample: phase
+      n_cells: 600
+      strategy: by_sample
+  
+  test_within_sample:
+    input:
+      subset: ../../data/pbmc68k.h5ad
+    subset:
+      sample: phase
+      n_cells: 600
+      per_sample: 20
+      strategy: within_sample
