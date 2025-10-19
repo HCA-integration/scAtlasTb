@@ -41,7 +41,7 @@ files_to_keep = ['obsm', 'uns']
 
 if 'X_pca' not in adata.obsm:
     logging.info('Compute PCA...')
-    sc.pp.pca(adata)
+    sc.pp.pca(adata, svd_solver='covariance_eigh')
 adata.obsm['X_emb'] = adata.obsm['X_pca']
 del adata.obsm['X_pca']
 dask_compute(adata, layers='X_emb')
