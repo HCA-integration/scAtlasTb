@@ -48,11 +48,6 @@ config_kwargs = {
         rename_config_params={'methods': 'method'},
         explode_by=['method', 'batch', 'label', 'var_mask'],
     ),
-    'subset': dict(
-        config_params=['strategy', 'n_cells', 'sample', 'label', 'per_sample'],
-        explode_by='strategy',
-        wildcard_names=['strategy'],
-    ),
     'merge': dict(
         mandatory_wildcards=['dataset'],
     ),

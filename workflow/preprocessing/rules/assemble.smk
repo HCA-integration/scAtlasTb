@@ -164,7 +164,8 @@ use rule assemble from preprocessing as preprocessing_assemble with:
     input:
         unpack(collect_files)
     output:
-        zarr=directory(mcfg.out_dir / paramspace.wildcard_pattern / 'preprocessed.zarr')
+        zarr=directory(mcfg.out_dir / f'{paramspace.wildcard_pattern}.zarr'),
+        zarr_old=directory(mcfg.out_dir / paramspace.wildcard_pattern / 'preprocessed.zarr')
     resources:
         mem_mb=mcfg.get_resource(profile='cpu',resource_key='mem_mb'),
     retries: 0
