@@ -11,7 +11,7 @@ rule plot_joint:
     threads:
         lambda wildcards: max(1, min(10, len(mcfg.get_from_parameters(wildcards, 'hue', default=[]))))
     conda:
-        get_env(config, 'plots')
+        get_env(config, 'scanpy')
     script:
         '../scripts/plot_joint.py'
 
@@ -28,7 +28,7 @@ rule plot_removed:
     threads:
         lambda wildcards: max(1, min(5, len(mcfg.get_from_parameters(wildcards, 'hue', default=[]))))
     conda:
-        get_env(config, 'plots')
+        get_env(config, 'scanpy')
     script:
         '../scripts/plot_removed.py'
 

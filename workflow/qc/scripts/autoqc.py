@@ -50,7 +50,14 @@ if 'feature_name' in adata.var.columns:
     adata.var_names = adata.var['feature_name'].astype(str)
 
 logging.info('Calculate QC metrics...')
-sctk.calculate_qc(adata)
+sctk.calculate_qc(
+    adata,
+    flags = {
+        "mito": r"(?i)^MT-",
+        "ribo": r"(?i)^RP[LS]",
+        "hb": r"(?i)^HB"
+    },
+)
 
 logging.info('Determine parameters for scAutoQC...')
 metrics_params = sctk.default_metric_params_df
