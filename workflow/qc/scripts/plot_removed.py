@@ -7,7 +7,7 @@ from pprint import pformat
 import logging
 from tqdm import tqdm
 import traceback
-import concurrent.futures
+from joblib import Parallel, delayed
 
 logging.basicConfig(level=logging.INFO)
 
@@ -178,24 +178,23 @@ def plot_composition(adata, group_key, plot_dir):
 
 
 logging.info('Plot compositions...')
-# for group_key in tqdm(groups):
-#     plot_composition(adata, group_key, plot_dir=output_plots)
 
-with concurrent.futures.ProcessPoolExecutor(max_workers=threads) as executor:
-    futures = [
-        executor.submit(
-            plot_composition,
-            adata,
-            group_key=group_key,
-            plot_dir=output_plots
-        ) for group_key in groups
-    ]
-    for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures)):
-        try:
-            future.result()
-        except Exception as e:
-            logging.error(f"Exception occurred: {e}")
-            traceback.print_exc()
+def _safe_plot(group_key):
+    try:
+        plot_composition(adata, group_key, plot_dir=output_plots)
+        return (group_key, None)
+    except Exception as e:
+        logging.error(f"Exception occurred in group {group_key}: {e}")
+        traceback.print_exc()
+        return (group_key, e)
+
+# run in parallel using joblib; results is a list of (group_key, error_or_None)
+results = Parallel(n_jobs=threads)(delayed(_safe_plot)(g) for g in groups)
+
+# log any errors
+errors = [r for r in results if r[1] is not None]
+if errors:
+    logging.error(f"{len(errors)} group(s) failed during plotting.")
 
 logging.info('Plot violin plots per QC metric...')
 n_cols = len(threshold_keys)
