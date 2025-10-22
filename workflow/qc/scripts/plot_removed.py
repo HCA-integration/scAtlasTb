@@ -63,19 +63,19 @@ plt.savefig(output_plots / 'cells_passed_all.png', bbox_inches='tight')
 plt.close()
 
 
-def plot_composition(adata, group_key, plot_dir):
-    n_groups = adata.obs[group_key].nunique()
+def plot_composition(df, group_key, plot_dir):
+    n_groups = df[group_key].nunique()
     if n_groups > 100:
         logging.info(f'Group {group_key} has too many unique values, skipping...')
         return
-    
-    grouped_frac = get_fraction_removed(adata.obs, group_key=group_key, key='qc_status')
+
+    grouped_frac = get_fraction_removed(df, group_key=group_key, key='qc_status')
     order = grouped_frac.sort_values('fraction_removed', ascending=False).index
-    adata.obs[group_key] = pd.Categorical(adata.obs[group_key], categories=order)
+    df[group_key] = pd.Categorical(df[group_key], categories=order)
 
     f, (ax1, ax2) = plt.subplots(1, 2, sharey=True, figsize=(14, 5 * (1 + n_groups/50)))
 
-    counts = adata.obs.groupby([group_key, 'qc_status'], observed=False).size().unstack(fill_value=0)
+    counts = df.groupby([group_key, 'qc_status'], observed=False).size().unstack(fill_value=0)
     bottom = pd.Series(0, index=counts.index)
     bars_per_group = {idx: [] for idx in counts.index}
 
@@ -179,22 +179,30 @@ def plot_composition(adata, group_key, plot_dir):
 
 logging.info('Plot compositions...')
 
-def _safe_plot(group_key):
+def safe_call_plot(*args, **kwargs):
     try:
-        plot_composition(adata, group_key, plot_dir=output_plots)
-        return (group_key, None)
+        plot_composition(*args, **kwargs)
+        return None
     except Exception as e:
-        logging.error(f"Exception occurred in group {group_key}: {e}")
+        logging.error(f"Error in plot job: {e}")
         traceback.print_exc()
-        return (group_key, e)
+        return e
 
-# run in parallel using joblib; results is a list of (group_key, error_or_None)
-results = Parallel(n_jobs=threads)(delayed(_safe_plot)(g) for g in groups)
+# run in parallel using joblib; results is a list of return values (None or Exception)
+results = Parallel(n_jobs=threads)(
+    delayed(safe_call_plot)(
+        adata.obs,
+        group_key=g,
+        plot_dir=output_plots
+    ) for g in tqdm(groups)
+)
 
 # log any errors
-errors = [r for r in results if r[1] is not None]
+errors = [(g, r) for g, r in zip(groups, results) if r is not None]
 if errors:
     logging.error(f"{len(errors)} group(s) failed during plotting.")
+    for g, e in errors:
+        logging.error(f"Group {g} failed: {e}")
 
 logging.info('Plot violin plots per QC metric...')
 n_cols = len(threshold_keys)
