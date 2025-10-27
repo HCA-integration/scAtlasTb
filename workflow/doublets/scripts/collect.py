@@ -18,7 +18,19 @@ else:
 adata = read_anndata(input_anndata, **kwargs)
 
 if adata.n_obs == 0:
-    write_zarr(adata, output_zarr)
+    if input_scrublet:
+        for col in pd.read_table(input_scrublet, index_col=0).columns:
+            adata.obs[col] = pd.NA
+    if input_doubletdetection:
+        for col in pd.read_table(input_doubletdetection, index_col=0).columns:
+            adata.obs[col] = pd.NA
+    write_zarr_linked(
+        adata,
+        input_anndata,
+        output_zarr,
+        files_to_keep=['obs'],
+        slot_map={'X': layer},
+    )
     exit(0)
 
 if input_scrublet:
