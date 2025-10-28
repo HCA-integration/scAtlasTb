@@ -6,7 +6,7 @@ use rule normalize from preprocessing as preprocessing_normalize with:
     input:
         lambda wildcards: mcfg.get_input_file(wildcards.dataset, wildcards.file_id)
     output:
-        zarr=directory(mcfg.out_dir / paramspace.wildcard_pattern / 'normalized.zarr'),
+        zarr=directory(mcfg.out_dir / 'preprocessed' / paramspace.wildcard_pattern / 'normalized.zarr'),
     params:
         raw_counts=lambda wildcards: mcfg.get_from_parameters(wildcards, 'raw_counts'),
         gene_id_column=lambda wildcards: mcfg.get_from_parameters(wildcards, 'gene_id_column'),
@@ -27,7 +27,7 @@ use rule filter_genes from preprocessing as preprocessing_filter_genes with:
     input:
         zarr=rules.preprocessing_normalize.output.zarr,
     output:
-        zarr=directory(mcfg.out_dir / paramspace.wildcard_pattern / 'filtered_genes.zarr'),
+        zarr=directory(mcfg.out_dir / 'preprocessed' / paramspace.wildcard_pattern / 'filtered_genes.zarr'),
     params:
         dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=True),
     threads:
@@ -43,7 +43,7 @@ use rule highly_variable_genes from preprocessing as preprocessing_highly_variab
     input:
         zarr=rules.filter_genes.output.zarr,
     output:
-        zarr=directory(mcfg.out_dir / paramspace.wildcard_pattern / 'highly_variable_genes.zarr'),
+        zarr=directory(mcfg.out_dir / 'preprocessed' / paramspace.wildcard_pattern / 'highly_variable_genes.zarr'),
     params:
         args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'highly_variable_genes', default={}),
         dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=True),
@@ -62,7 +62,7 @@ use rule extra_hvgs from preprocessing as preprocessing_extra_hvgs with:
     input:
         zarr=rules.filter_genes.output.zarr,
     output:
-        zarr=directory(mcfg.out_dir / paramspace.wildcard_pattern / 'extra_hvgs--{overwrite_args}.zarr'),
+        zarr=directory(mcfg.out_dir / 'preprocessed' / paramspace.wildcard_pattern / 'extra_hvgs--{overwrite_args}.zarr'),
     params:
         args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'highly_variable_genes', default={}),
         extra_hvgs=lambda wildcards: mcfg.get_from_parameters(wildcards, 'extra_hvgs', default={}),
@@ -83,7 +83,7 @@ use rule pca from preprocessing as preprocessing_pca with:
     input:
         zarr=rules.preprocessing_highly_variable_genes.output.zarr,
     output:
-        zarr=directory(mcfg.out_dir / paramspace.wildcard_pattern / 'pca.zarr'),
+        zarr=directory(mcfg.out_dir / 'preprocessed' / paramspace.wildcard_pattern / 'pca.zarr'),
     params:
         args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'pca', default={}),
         scale=lambda wildcards: mcfg.get_from_parameters(wildcards, 'scale', default=False),
@@ -103,7 +103,7 @@ use rule neighbors from preprocessing as preprocessing_neighbors with:
     input:
         zarr=rules.preprocessing_pca.output.zarr,
     output:
-        zarr=directory(mcfg.out_dir / paramspace.wildcard_pattern / 'neighbors.zarr'),
+        zarr=directory(mcfg.out_dir / 'preprocessed' / paramspace.wildcard_pattern / 'neighbors.zarr'),
     params:
         args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'neighbors', default={}),
     threads:
@@ -122,8 +122,7 @@ use rule umap from preprocessing as preprocessing_umap with:
         zarr=rules.preprocessing_neighbors.output.zarr,
         rep=rules.preprocessing_pca.output.zarr,
     output:
-        zarr=directory(mcfg.out_dir / paramspace.wildcard_pattern / 'umap.zarr'),
-        done=touch(mcfg.out_dir / paramspace.wildcard_pattern / 'umap.done'),
+        zarr=directory(mcfg.out_dir / 'preprocessed' / paramspace.wildcard_pattern / 'umap.zarr'),
     params:
         args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'umap', default={}),
     conda:
@@ -165,7 +164,6 @@ use rule assemble from preprocessing as preprocessing_assemble with:
         unpack(collect_files)
     output:
         zarr=directory(mcfg.out_dir / f'{paramspace.wildcard_pattern}.zarr'),
-        zarr_old=directory(mcfg.out_dir / paramspace.wildcard_pattern / 'preprocessed.zarr')
     resources:
         mem_mb=mcfg.get_resource(profile='cpu',resource_key='mem_mb'),
     retries: 0
