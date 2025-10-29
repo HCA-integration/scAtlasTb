@@ -132,7 +132,6 @@ def assemble_zarr(file, file_type, slot_map, in_dir_map):
 
 
 output_file = Path(snakemake.output.zarr)
-output_legacy = Path(snakemake.output.zarr_old)
 
 adata = None
 slot_map = {}
@@ -188,12 +187,4 @@ write_zarr_linked(
     files_to_keep=['uns/wildcards'],
     slot_map=slot_map,
     in_dir_map=in_dir_map,
-)
-
-# for backward compatibility
-logging.info(f'Creating symbolic link at legacy path {output_legacy} for backward compatibility...')
-write_zarr_linked(
-    adata=adata,
-    in_dir=output_file,
-    out_dir=output_legacy,
 )
