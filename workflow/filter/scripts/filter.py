@@ -40,7 +40,8 @@ for query in params.get('keep_by_query', []):
 
 for query in params.get('remove_by_query', []):
     logging.info(f'remove by query="{query}"...')
-    mask &= adata.obs.eval(query)
+    mask &= ~adata.obs.eval(query)
+    logging.info(f'{mask.sum()} cells remaining')
 
 logging.info('Add filtered column...')
 adata.obs['filtered'] = mask
