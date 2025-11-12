@@ -31,6 +31,12 @@ for column, values in ex_filters.items():
     logging.info(f'remove cells matching {len(values)} value(s) from column="{column}"...')
     values = [str(v) for v in values]
     mask &= ~adata.obs[column].astype(str).isin(values)
+    logging.info(f'{mask.sum()} cells remaining')
+
+for query in params.get('keep_by_query', []):
+    logging.info(f'keep by query="{query}"...')
+    mask &= adata.obs.eval(query)
+    logging.info(f'{mask.sum()} cells remaining')
 
 for query in params.get('remove_by_query', []):
     logging.info(f'remove by query="{query}"...')
