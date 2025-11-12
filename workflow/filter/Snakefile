@@ -11,6 +11,7 @@ mcfg = ModuleConfig(
     config_params=[
         'dask',
         'subset',
+        'write_copy',
         'remove_by_column',
         # 'keep_by_column',
         'remove_by_query',
@@ -45,6 +46,7 @@ use rule filter from filtering as filter with:
         keep_by_query=lambda wildcards: mcfg.get_from_parameters(wildcards, 'keep_by_query', default={}),
         dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=True),
         subset=lambda wildcards: mcfg.get_from_parameters(wildcards, 'subset', default=True),
+        write_copy=lambda wildcards: mcfg.get_from_parameters(wildcards, 'write_copy', default=False),
     resources:
         mem_mb=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='mem_mb',attempt=attempt, factor=2),
 
