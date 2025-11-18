@@ -7,28 +7,34 @@ DATASETS:
     input:
       filter: test/input/load_data/harmonize_metadata/Lee2020.zarr
     filter:
-      subset: false
+      subset: true
       remove_by_column:
-        sample:
-          - Schulte-Schrepping_C2P01H_d0
-          - Schulte-Schrepping_C2P05F_d0
-          - Schulte-Schrepping_C2P07H_d0
-          - Schulte-Schrepping_C2P10H_d0
-          - Schulte-Schrepping_C2P13F_d0
-          - Schulte-Schrepping_C2P15H_d0
-          - Schulte-Schrepping_C2P16H_d0
-          - Schulte-Schrepping_C2P19H_d0
         donor:
-          - C19-CB-0008
-        disease:
-          - influenza
+          - C19-CB-0008 # value not in data
+          - Normal 1
+          - nCoV 1
+          - Flu 1
       remove_by_query:
          - 'random < 3'
+      keep_by_query:
+         - 'disease == "influenza"'
+
   test:
     input:
       filter: test/input/pbmc68k.h5ad
     filter:
       subset: true
+      remove_by_column:
+        phase:
+          - G1
+        is_cd14_mono:
+          - true
+
+  test_subset:
+    input:
+      filter: test/input/pbmc68k.h5ad
+    filter:
+      subset: false
       remove_by_column:
         phase:
           - G1
