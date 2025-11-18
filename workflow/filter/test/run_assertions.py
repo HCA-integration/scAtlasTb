@@ -36,7 +36,7 @@ for file in single_outputs:
         subset = filter_config.get('subset', True)
         if subset:
             # Data should be subsetted to only non-filtered cells
-            assert adata_out.obs['filtered'].all(), "subset=True but filtered cells remain"
+            assert adata_out.obs['filtered'].all(), "All cells in subsetted output should have filtered=True"
             assert adata_out.n_obs <= adata_in.n_obs, "Output has more cells than input"
         else:
             # Data should retain all cells but have filtered column
