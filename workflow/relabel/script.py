@@ -240,11 +240,11 @@ if selective_update:
         # log mapping results
         columns = list(dict.fromkeys([col, base_column]))
         value_counts = adata.obs.query(combined_query)[columns].value_counts(dropna=False, sort=False)
-        logging.info(f'Before mapping "{col}", query={query}, n={value_counts.sum()}:\n{pformat(value_counts)}')
+        logging.info(f'Before mapping "{col}", query={combined_query}, n={value_counts.sum()}:\n{pformat(value_counts)}')
     
         columns = list(dict.fromkeys([col, new_column]))
         value_counts = adata.obs.query(combined_query)[columns].value_counts(dropna=False, sort=False)
-        logging.info(f'After mapping "{col}", query={query}, n={value_counts.sum()}:\n{pformat(value_counts)}')
+        logging.info(f'After mapping "{col}", query={combined_query}, n={value_counts.sum()}:\n{pformat(value_counts)}')
 
 logging.info(f'Write to {output_file}...')
 dask_compute(adata)
