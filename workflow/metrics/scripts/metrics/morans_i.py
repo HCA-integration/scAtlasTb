@@ -183,7 +183,6 @@ def morans_i_genescore(adata, output_type, gene_set, use_random_gene_score=False
         scores.append(score)
         metric_names.append(f'{metric}:{set_name}')
         
-    scores = [max(s, 0) for s in scores]  # ensure score is positive
     for name, score in zip(metric_names, scores):
         print(name, score, flush=True)
     
