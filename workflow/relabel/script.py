@@ -18,9 +18,9 @@ from utils.misc import dask_compute
 
 def convert_dtypes(col):
     # check if can be cast to boolean
-    if set(col.dropna().str.lower()) <= {"true", "false"}:
+    if set(col.dropna().astype(str).str.lower()) <= {"true", "false"}:
         bool_map = {"true": True, "false": False}
-        return col.str.lower().map(bool_map).astype('boolean')
+        return col.astype(str).str.lower().map(bool_map).astype('boolean')
     try:
         return pd.to_numeric(col)
     except Exception:
