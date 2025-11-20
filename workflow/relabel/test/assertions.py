@@ -22,7 +22,7 @@ for file in files:
     rename_cfg = config['DATASETS'][dataset]['relabel'].get('rename_columns')
     if rename_cfg is not None:
         for col in rename_cfg.values():
-            assert col in obs.columns, f'"{col}" not found in obs for {file}'
+            assert col == obs.index.name or col in obs.columns, f'"{col}" not found in obs for {file}'
     
     # new column mapping
     new_label_cfg = config['DATASETS'][dataset]['relabel'].get('new_columns')
@@ -31,8 +31,8 @@ for file in files:
         mapping_df = read_func(new_label_cfg['file'])
 
         for label in new_label_cfg['order']:
-            assert label in obs.columns, f'"{label}" not found in obs for {file}'
-            assert label in mapping_df.columns, f'"{label}" not found in mapping: {mapping_df.colums}\nfile: {file}'
+            assert label == obs.index.name or label in obs.columns, f'"{label}" not found in obs for {file}'
+            assert label in mapping_df.columns, f'"{label}" not found in mapping: {mapping_df.columns}\nfile: {file}'
             # print(obs[label].dtype)
             # print(obs[label].value_counts())
     

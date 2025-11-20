@@ -204,7 +204,10 @@ if selective_update:
     base_column = selective_update.get('base_column')
     new_column = selective_update.get('new_column', base_column)
     update_map = selective_update.get('update_map', {})
+    query = selective_update.get('query', 'True')
+
     assert isinstance(update_map, dict)
+    logging.info(f'query: {query}')
         
     adata.obs[new_column] = adata.obs[base_column].astype(str)
     
@@ -212,25 +215,39 @@ if selective_update:
         assert col in adata.obs.columns, f'"{col}" not found in adata.obs'
         
         # parse to dictionary if not already
-        if not isinstance(_dict, dict):
+        if isinstance(_dict, str) and Path(_dict).exists():
+            logging.info(f'Read mapping from file: {_dict}')
             df = pd.read_table(_dict, comment='#')
             _dict = df[[col, base_column]].drop_duplicates().set_index(col)[base_column].to_dict()
         
+        # build query mask
         labels = list(_dict.keys())
-        query = f'{col}.isin(@labels)'
+        col_query = f'{col}.isin(@labels)'
         
-        # map selective values
-        s = adata.obs[col].astype(str).map(_dict)
-        adata.obs.loc[~s.isna(), new_column] = s.dropna()
+        # combine with user query if provided
+        combined_query = f'({query}) & ({col_query})'
         
-        # check values before and after mapping
-        before = adata.obs.query(query)[[col, base_column]].value_counts(dropna=False, sort=False)
-        after = adata.obs.query(query)[[col, new_column]].value_counts(dropna=False, sort=False)
-        # fix this
-        if before.to_dict() != after.to_dict():
-            logging.info(f'Before mapping:\n{pformat(before)}')
-            logging.info(f'After mapping:\n{pformat(after)}')
+        # determine new values
+        dtype = adata.obs[new_column].dtype
+        if isinstance(_dict, dict):
+            s = adata.obs[col].map(_dict).astype(dtype)
+        else:
+            s = pd.Series(_dict, index=adata.obs.index, dtype=dtype)
 
+        # evaluate query
+        mask = adata.obs.eval(combined_query) # & ~s.isna()
+        
+        # map values selectively
+        adata.obs.loc[mask, new_column] = s.loc[mask]
+
+        # log mapping results
+        columns = list(dict.fromkeys([col, base_column]))
+        value_counts = adata.obs.query(combined_query)[columns].value_counts(dropna=False, sort=False)
+        logging.info(f'Before mapping "{col}", query={query}, n={value_counts.sum()}:\n{pformat(value_counts)}')
+    
+        columns = list(dict.fromkeys([col, new_column]))
+        value_counts = adata.obs.query(combined_query)[columns].value_counts(dropna=False, sort=False)
+        logging.info(f'After mapping "{col}", query={query}, n={value_counts.sum()}:\n{pformat(value_counts)}')
 
 logging.info(f'Write to {output_file}...')
 dask_compute(adata)
