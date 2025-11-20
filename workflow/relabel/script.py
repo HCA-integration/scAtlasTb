@@ -229,11 +229,8 @@ if selective_update:
         
         # determine new values
         dtype = adata.obs[new_column].dtype
-        if isinstance(_dict, dict):
-            s = adata.obs[col].map(_dict).astype(dtype)
-        else:
-            s = pd.Series(_dict, index=adata.obs.index, dtype=dtype)
-
+        s = adata.obs[col].map(_dict).astype(dtype)
+        
         # evaluate query
         mask = adata.obs.eval(combined_query) # & ~s.isna()
         
