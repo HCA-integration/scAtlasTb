@@ -175,25 +175,30 @@ if input_merge_cols:
     merge_config_df = pd.read_table(input_merge_cols, comment='#')
     file_id = file_id.split(':')[-1]  # in case file_id contains ':'
     merge_config_df = merge_config_df[merge_config_df['file_id'] == file_id]
-    logging.info(f'Merge columns:\n{pformat(merge_config_df)}')
     
-    # check if required columns are present
-    for col in ['file_id', 'column_name', 'columns']:
-        assert col in merge_config_df.columns, \
-            f'"{col}" not found in {input_merge_cols}\n{merge_config_df}'    
-    assert not merge_config_df.duplicated().any(), \
-        f'Duplicated rows in {input_merge_cols} for {file_id}\n{merge_config_df[merge_config_df.duplicated()]}'
+    if merge_config_df.shape[0] == 0:
+        logging.warn(f'No entries found in {input_merge_cols} for {file_id}')
     
-    for _, row in tqdm(
-        merge_config_df.iterrows(),
-        total=merge_config_df.shape[0],
-        desc=f'Merge values with sep="{sep}"',
-    ):
-        col_name = row['column_name']
-        cols = row['columns'].split(',')
-        adata.obs[col_name] = adata.obs[cols].apply(
-            lambda x: sep.join(x.values.astype(str)), axis=1
-        )
+    else:
+        logging.info(f'Merge columns:\n{pformat(merge_config_df)}')
+        
+        # check if required columns are present
+        for col in ['file_id', 'column_name', 'columns']:
+            assert col in merge_config_df.columns, \
+                f'"{col}" not found in {input_merge_cols}\n{merge_config_df}'    
+        assert not merge_config_df.duplicated().any(), \
+            f'Duplicated rows in {input_merge_cols} for {file_id}\n{merge_config_df[merge_config_df.duplicated()]}'
+        
+        for _, row in tqdm(
+            merge_config_df.iterrows(),
+            total=merge_config_df.shape[0],
+            desc=f'Merge values with sep="{sep}"',
+        ):
+            col_name = row['column_name']
+            cols = row['columns'].split(',')
+            adata.obs[col_name] = adata.obs[cols].apply(
+                lambda x: sep.join(x.values.astype(str)), axis=1
+            )
 
 if selective_update:
     base_column = selective_update.get('base_column')
