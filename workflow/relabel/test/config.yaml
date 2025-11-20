@@ -8,6 +8,7 @@ defaults:
     - test_relabel_index
     - test_rename_columns
     - test_selective_update
+    - test_selective_update_query
     # - test_fail
 
 DATASETS:
@@ -74,9 +75,28 @@ DATASETS:
         base_column: bulk_labels
         new_column: bulk_labels_new # new column to be created
         update_map:
+          bulk_labels:
+            'Dendritic': 
+            'CD19+ B': 'nan'
           louvain:
             '6': Dendritic
             '8': 'CD19+ B'
+
+  test_selective_update_query:
+    input:
+      relabel: test/input/pbmc68k.h5ad
+    relabel:
+      selective_update:
+        base_column: bulk_labels
+        new_column: bulk_labels_filtered
+        update_map:
+          bulk_labels:
+            'Dendritic': 
+            'CD19+ B': 'nan'
+          louvain:
+            '6': Dendritic
+            '8': 'CD19+ B'
+        query: 'n_counts > 3000'  # only update cells with high counts
 
   test_fail:
     input:

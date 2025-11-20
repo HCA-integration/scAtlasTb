@@ -156,17 +156,29 @@ The selective update allows you to create a new column based on an existing colu
       selective_update:
         base_column: bulk_labels # column for which values should be updated
         new_column: bulk_labels_new # new column to be created
+        query: 'n_counts > 1000' # optional pandas query to restrict update to specific cells
         update_map: # mapping of values to be updated based on column
-          louvain: # column to take values from 
-            '6': Dendritic # selected values for determing cells that should be remapped
+          bulk_labels: # column to condition which cells get remapped
+            'Dendritic':  # empty value means np.nan
+            'CD19+ B': 'nan' # can map to specific values including 'nan'
+          louvain:
+            '6': Dendritic # reannotate cells where 'louvain == "6"' to "Dendritic"
             '8': 'CD19+ B'
+          
 ```
 
 * `base_column`: the starting column of which the values should be modified
 * `new_column`: the name of the new column to be created. If it is not defined, it will be the same as `base_column`.
-* `update_map`: a mapping of values that should be updated. The keys are the columns in the AnnData object, and the values are dictionaries with the values to be updated. Alternatively, the values can be a file path to a TSV file with the mapping.
+* `query`: optional pandas query string to restrict the update to specific cells. The query is combined with column-specific queries using AND logic: `(user_query) & (column.isin(mapped_values))`. Defaults to `'True'` if not specified.
+* `update_map`: a mapping of values that should be updated. The keys are the columns in the AnnData object, and the values are dictionaries with the values to be updated. Alternatively, the values can be a file path to a TSV file with the mapping. An empty value (no value after `:`) means the mapped cells will be set to `np.nan`.
 
-Below is an example where one update enrty is defined by a TSV file instead of a dictionary:
+The selective update works by:
+1. Starting with a copy of `base_column` as `new_column`
+2. For each column in `update_map`, creating a query that combines the user `query` with `column.isin(mapped_keys)`
+3. Only updating cells that match both the user query AND have values that are keys in the mapping dictionary
+4. Applying the mapped values to matching cells
+
+Below is an example where one update entry is defined by a TSV file instead of a dictionary:
 
 ```yaml
 ...
