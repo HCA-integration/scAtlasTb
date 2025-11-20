@@ -164,7 +164,6 @@ def morans_i_genescore(adata, output_type, gene_set, use_random_gene_score=False
     
         score = _morans_i(adata, covariate=gene_score_name)
 
-        random_gene_score_name = f'random_gene_scores:{len(gene_list)}'
 
         if use_random_gene_score:
             random_gene_score_name = f'random_gene_scores:{len(gene_list)}'
