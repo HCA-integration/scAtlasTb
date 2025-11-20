@@ -54,8 +54,8 @@ use rule merge_per_file as merge_per_dataset with:
         metrics=lambda wildcards: mcfg.get_output_files(rules.run.output, subset_dict=dict(wildcards), all_params=True),
         benchmark=lambda wildcards: mcfg.get_output_files(rules.run.benchmark, subset_dict=dict(wildcards), all_params=True),
     output:
-        tsv=mcfg.out_dir / 'results' / 'per_dataset' / '{dataset}_metrics.tsv',
-        extra_columns=mcfg.out_dir / 'results' / 'per_dataset' / '{dataset}_extra_columns.txt',
+        tsv=mcfg.out_dir / 'results' / 'dataset~{dataset}' / 'metrics.tsv',
+        extra_columns=mcfg.out_dir / 'results' / 'dataset~{dataset}' / 'extra_columns.txt',
     params:
         wildcards=lambda wildcards: mcfg.get_wildcards(subset_dict=wildcards, exclude='dataset', as_df=True, wildcard_names=metric_wildcards),
         wildcards_string=lambda wildcards: mcfg.get_wildcards(subset_dict=wildcards, exclude='dataset', as_df=True, wildcard_names=metric_wildcards).to_string(index=False),
@@ -73,8 +73,8 @@ use rule merge_per_file as merge_per_batch with:
         metrics=lambda wildcards: mcfg.get_output_files(rules.run.output, subset_dict=dict(wildcards), all_params=True),
         benchmark=lambda wildcards: mcfg.get_output_files(rules.run.benchmark, subset_dict=dict(wildcards), all_params=True),
     output:
-        tsv=mcfg.out_dir / 'results' / 'per_batch' / '{batch}_metrics.tsv',
-        extra_columns=mcfg.out_dir / 'results' / 'per_batch' / '{batch}_extra_columns.txt',
+        tsv=mcfg.out_dir / 'results' / 'dataset~{dataset}' / 'batch~{batch}' / 'metrics.tsv',
+        extra_columns=mcfg.out_dir / 'results' / 'dataset~{dataset}' / 'batch~{batch}' / 'extra_columns.txt',
     params:
         wildcards=lambda wildcards: mcfg.get_wildcards(subset_dict=wildcards, exclude='batch', as_df=True, wildcard_names=metric_wildcards),
         wildcards_string=lambda wildcards: mcfg.get_wildcards(subset_dict=wildcards, exclude='batch', as_df=True, wildcard_names=metric_wildcards).to_string(index=False),
@@ -92,8 +92,8 @@ use rule merge_per_file as merge_per_label with:
         metrics=lambda wildcards: mcfg.get_output_files(rules.run.output, subset_dict=dict(wildcards), all_params=True),
         benchmark=lambda wildcards: mcfg.get_output_files(rules.run.benchmark, subset_dict=dict(wildcards), all_params=True),
     output:
-        tsv=mcfg.out_dir / 'results' / 'per_label' / '{label}_metrics.tsv',
-        extra_columns=mcfg.out_dir / 'results' / 'per_label' / '{label}_extra_columns.txt',
+        tsv=mcfg.out_dir / 'results' / 'dataset~{dataset}' / 'label~{label}' / 'metrics.tsv',
+        extra_columns=mcfg.out_dir / 'results' / 'dataset~{dataset}' / 'label~{label}' / 'extra_columns.txt',
     params:
         wildcards=lambda wildcards: mcfg.get_wildcards(subset_dict=wildcards, exclude='label', as_df=True, wildcard_names=metric_wildcards),
         wildcards_string=lambda wildcards: mcfg.get_wildcards(subset_dict=wildcards, exclude='label', as_df=True, wildcard_names=metric_wildcards).to_string(index=False),
@@ -127,7 +127,7 @@ rule merge_all:
     input:
         rules.merge.output,
         mcfg.get_output_files(rules.merge_per_dataset.output, wildcard_names=['dataset']),
-        mcfg.get_output_files(rules.merge_per_batch.output, wildcard_names=['batch']),
-        mcfg.get_output_files(rules.merge_per_label.output, wildcard_names=['label']),
+        mcfg.get_output_files(rules.merge_per_batch.output, wildcard_names=['dataset', 'batch']),
+        mcfg.get_output_files(rules.merge_per_label.output, wildcard_names=['dataset', 'label']),
         # mcfg.get_output_files(rules.merge_per_file.output, wildcard_names=['file_id']),
     localrule: True
