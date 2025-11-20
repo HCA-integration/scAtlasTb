@@ -177,7 +177,7 @@ if input_merge_cols:
     merge_config_df = merge_config_df[merge_config_df['file_id'] == file_id]
     
     if merge_config_df.shape[0] == 0:
-        logging.warn(f'No entries found in {input_merge_cols} for {file_id}')
+        logging.warning(f'No entries found in {input_merge_cols} for {file_id}')
     
     else:
         logging.info(f'Merge columns:\n{pformat(merge_config_df)}')
