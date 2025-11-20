@@ -170,7 +170,7 @@ The selective update allows you to create a new column based on an existing colu
 * `base_column`: the starting column of which the values should be modified
 * `new_column`: the name of the new column to be created. If it is not defined, it will be the same as `base_column`.
 * `query`: optional pandas query string to restrict the update to specific cells. The query is combined with column-specific queries using AND logic: `(user_query) & (column.isin(mapped_values))`. Defaults to `'True'` if not specified.
-* `update_map`: a mapping of values that should be updated. The keys are the columns in the AnnData object, and the values are dictionaries with the values to be updated. Alternatively, the values can be a file path to a TSV file with the mapping. Empty values (no value after `:`) mean no change will be applied.
+* `update_map`: a mapping of values that should be updated. The keys are the columns in the AnnData object, and the values are dictionaries with the values to be updated. Alternatively, the values can be a file path to a TSV file with the mapping. Empty values (no value after `:`) mean the mapped value will be set to `np.nan`.
 
 The selective update works by:
 1. Starting with a copy of `base_column` as `new_column`
