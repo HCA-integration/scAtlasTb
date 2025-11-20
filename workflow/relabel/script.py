@@ -155,6 +155,7 @@ if input_new_cols:
         n_na = adata.obs[mapping_label].isna().sum()
         if n_na > 0:
             logging.info(f'Number of unmapped entries: {n_na}')
+            logging.info(f'Unmapped entries:\n{adata.obs.loc[adata.obs[mapping_label].isna(), label_key].value_counts()}')
 
     value_counts = adata.obs[
         [x for x in mapping_order if x != index_col]
@@ -170,7 +171,9 @@ if input_new_cols:
 # merge existing columns
 if input_merge_cols:
     sep = snakemake.params.get('merge_sep', '-')
+    
     merge_config_df = pd.read_table(input_merge_cols, comment='#')
+    file_id = file_id.split(':')[-1]  # in case file_id contains ':'
     merge_config_df = merge_config_df[merge_config_df['file_id'] == file_id]
     logging.info(f'Merge columns:\n{pformat(merge_config_df)}')
     
