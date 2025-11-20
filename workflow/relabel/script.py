@@ -208,10 +208,11 @@ if selective_update:
 
     assert isinstance(update_map, dict)
     logging.info(f'query: {query}')
-        
+    
     adata.obs[new_column] = adata.obs[base_column].astype(str)
     
-    for col, _dict in tqdm(update_map.items(), desc='Selective update'):
+    logging.info(f'Selective update of column "{base_column}" to "{new_column}" using update_map:\n{pformat(update_map)}')
+    for col, _dict in update_map.items():
         assert col in adata.obs.columns, f'"{col}" not found in adata.obs'
         
         # parse to dictionary if not already
@@ -226,6 +227,11 @@ if selective_update:
         
         # combine with user query if provided
         combined_query = f'({query}) & ({col_query})'
+
+        # log mapping before update
+        columns = list(dict.fromkeys([col, base_column]))
+        value_counts = adata.obs.query(combined_query)[columns].value_counts(dropna=False, sort=False)
+        logging.info(f'Before mapping "{col}", query={combined_query}, n={value_counts.sum()}:\n{pformat(value_counts)}')
         
         # determine new values
         dtype = adata.obs[new_column].dtype
@@ -238,10 +244,6 @@ if selective_update:
         adata.obs.loc[mask, new_column] = s.loc[mask]
 
         # log mapping results
-        columns = list(dict.fromkeys([col, base_column]))
-        value_counts = adata.obs.query(combined_query)[columns].value_counts(dropna=False, sort=False)
-        logging.info(f'Before mapping "{col}", query={combined_query}, n={value_counts.sum()}:\n{pformat(value_counts)}')
-    
         columns = list(dict.fromkeys([col, new_column]))
         value_counts = adata.obs.query(combined_query)[columns].value_counts(dropna=False, sort=False)
         logging.info(f'After mapping "{col}", query={combined_query}, n={value_counts.sum()}:\n{pformat(value_counts)}')
