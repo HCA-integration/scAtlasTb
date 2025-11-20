@@ -111,7 +111,6 @@ def morans_i_genes(adata, output_type, gene_set, **kwargs):
         gene_list = parse_gene_names(adata, gene_list)
         
         gene_score_name = f'gene_score:{set_name}'
-        random_gene_score_name = f'random_gene_scores:{len(gene_list)}'
         
         if gene_score_name not in adata.obs.keys():
             continue
