@@ -12,9 +12,9 @@ isolated_label_f1	bio_conservation	full,embed,knn	knn	False	True	False	False	sci
 nmi	bio_conservation	full,embed,knn	knn	False	True	False	False	scib	cpu	1
 kbet	batch_correction	full,embed,knn	knn	False	False	False	False	scib	cpu	1
 morans_i	bio_conservation	full,embed,knn	knn	False	False	True	False	scanpy	cpu	1
-morans_i_genes	bio_conservation	full,embed,knn	full,embed,knn	False	False	False	True	scanpy	cpu	1
+morans_i_genes	bio_conservation	full,embed,knn	knn	False	False	False	True	scanpy	cpu	1
 morans_i_random	batch_correction	full,embed,knn	knn	False	False	False	False	scib	cpu	1
-morans_i_random_genes	batch_correction	full,embed,knn	knn	True	False	False	False	scib	cpu	1
+morans_i_genescore	bio_conservation	full,embed,knn	knn	False	False	False	True	scanpy	cpu	1
 ari_leiden_y	bio_conservation	full,embed,knn	knn	False	False	False	False	scib_metrics	gpu	1
 ari_kmeans_y	bio_conservation	full,embed,knn	knn	False	False	False	False	scib_metrics	gpu	1
 nmi_leiden_y	bio_conservation	full,embed,knn	knn	False	False	False	False	scib_metrics	gpu	1

@@ -111,7 +111,6 @@ def morans_i_genes(adata, output_type, gene_set, **kwargs):
         gene_list = parse_gene_names(adata, gene_list)
         
         gene_score_name = f'gene_score:{set_name}'
-        random_gene_score_name = f'random_gene_scores:{len(gene_list)}'
         
         if gene_score_name not in adata.obs.keys():
             continue
@@ -144,3 +143,47 @@ def morans_i_genes(adata, output_type, gene_set, **kwargs):
         print(name, score, flush=True)
     
     return scores, metric_names
+
+
+def morans_i_genescore(adata, output_type, gene_set, use_random_gene_score=False, **kwargs):
+    adata = dask_compute(adata, layers='X')
+    
+    metric = "M's I gene score"
+    metric_names = []
+    scores = []
+    
+    for set_name, gene_list in tqdm(gene_set.items(), desc='Compute Moran\'s I for gene sets'):
+        gene_list = parse_gene_names(adata, gene_list)
+        
+        gene_score_name = f'gene_score:{set_name}'
+        
+        if gene_score_name not in adata.obs.keys():
+            raise ValueError(f'Gene score {gene_score_name} not found in adata.obs')
+        
+    
+        score = _morans_i(adata, covariate=gene_score_name)
+
+
+        if use_random_gene_score:
+            random_gene_score_name = f'random_gene_scores:{len(gene_list)}'
+            raise NotImplementedError("The 'use_random_gene_score' option is not yet implemented.")
+            #     raise ValueError(f'Gene score {random_gene_score_name} not found in adata.obsm')
+            
+
+            # random_gene_score = _morans_i(adata, covariate=adata.obsm[random_gene_score_name])
+
+            # if random_gene_score == 0 or np.isnan(random_gene_score):
+            #     score = score
+            # else:
+            #     score = score / random_gene_score
+            
+        
+        scores.append(score)
+        metric_names.append(f'{metric}:{set_name}')
+        
+    for name, score in zip(metric_names, scores):
+        print(name, score, flush=True)
+    
+    return scores, metric_names
+
+

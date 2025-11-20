@@ -104,6 +104,7 @@ DATASETS:
         - cell_cycle
         - morans_i
         - morans_i_genes
+        - morans_i_genescore
         - pcr
         - pcr_genes
   
@@ -164,6 +165,7 @@ DATASETS:
         - pcr_comparison
         - morans_i
         - morans_i_genes
+        - morans_i_genescore
         - pcr
         - pcr_genes
 
