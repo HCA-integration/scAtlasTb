@@ -175,8 +175,8 @@ use rule funkyheatmap as funkyheatmap_per_batch with:
         extra_columns=rules.merge_per_batch.output.extra_columns,
         r_utils=workflow.source_path('../scripts/plots/r_utils.R'),
     output:
-        pdf=mcfg.image_dir /  'dataset~{dataset}' / 'batch~{batch}' / 'funky_heatmap.pdf',
-        tsv=mcfg.image_dir /  'dataset~{dataset}' / 'batch~{batch}' / 'funky_heatmap.tsv',
+        pdf=mcfg.image_dir / 'dataset~{dataset}' / 'batch~{batch}' / 'funky_heatmap.pdf',
+        tsv=mcfg.image_dir / 'dataset~{dataset}' / 'batch~{batch}' / 'funky_heatmap.tsv',
     params:
         id_vars=['dataset', 'output_type', 'batch', 'label'],
         variable_var='metric',
