@@ -62,7 +62,7 @@ rule relabel:
     resources:
         partition=lambda w: mcfg.get_resource(profile='cpu',resource_key='partition'),
         qos=lambda w: mcfg.get_resource(profile='cpu',resource_key='qos'),
-        mem_mb=lambda w: mcfg.get_resource(profile='cpu',resource_key='mem_mb'),
+        mem_mb=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='mem_mb', attempt=attempt),
     script:
         'script.py'
 
