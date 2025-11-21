@@ -112,7 +112,7 @@ def morans_i_genes(adata, output_type, gene_set, **kwargs):
 
         mask = adata.var_names.isin(gene_list)
         if mask.sum() == 0:
-            logging.warning(f'No genes found for gene set {set_name}, skip')
+            print(f'WARNING: No genes found for gene set {set_name}, skip', flush=True)
             continue
         
         masked_expression = adata[:, mask].X
@@ -141,7 +141,7 @@ def morans_i_genescore(adata, output_type, gene_set, use_random_gene_score=False
         gene_list = parse_gene_names(adata, gene_list)
         gene_score_name = f'gene_score:{set_name}'
         if gene_score_name not in adata.obs.keys():
-            logging.warning(f'Gene score {gene_score_name} not found in adata.obs, skip')
+            print(f'WARNING: Gene score {gene_score_name} not found in adata.obs, skip', flush=True)
             continue    
     
         score = _morans_i(adata, covariate=gene_score_name)
