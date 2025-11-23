@@ -54,7 +54,7 @@ use rule cluster from clustering as metrics_cluster with:
         clustering_args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'clustering', default={}).get('kwargs', {}),
         overwrite=lambda wildcards: mcfg.get_from_parameters(wildcards, 'clustering', default={}).get('overwrite', True),
     conda:
-        get_env(config, 'scanpy', gpu_env='rapids_singlecell')
+        get_env(config, 'scanpy', gpu_env='rapids_singlecell', no_gpu=True),
     resources:
         partition=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='partition',attempt=attempt),
         qos=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='qos',attempt=attempt),
