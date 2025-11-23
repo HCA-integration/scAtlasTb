@@ -78,6 +78,10 @@ if len(genes) == 0:
         adata,
         in_dir=input_file,
         out_dir=output_file,
+        subset_mask=(
+            all_obs_names.isin(adata.obs_names),
+            all_var_names.isin(genes),
+        ),
     )
     exit(0)
 

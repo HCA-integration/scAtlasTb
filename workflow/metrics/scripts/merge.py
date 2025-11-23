@@ -10,6 +10,7 @@ out_tsv = snakemake.output.tsv
 extra_columns = snakemake.output.extra_columns
 expanded_wildcards = snakemake.params['wildcards']
 # expanded_wildcards = pd.DataFrame(expanded_wildcards)
+max_len = int(snakemake.params.get('max_file_name_len', 100))
 
 metrics_df = pd.concat(
     [pd.read_table(file) for file in input_metrics],
@@ -78,7 +79,6 @@ for row, _dict in expanded_file_ids.to_dict('index').items():
 
 if 'file_name' in metrics_df.columns:
     # truncate file_name if too long
-    max_len = 40
     metrics_df['file_name'] = metrics_df['file_name'].apply(
         lambda x: x[:max_len] + '...' if isinstance(x, str) and len(x) > max_len else x
     )

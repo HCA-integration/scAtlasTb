@@ -54,7 +54,7 @@ gene_sets = params.get('gene_sets', {})
 
 metric_function = metric_map[metric]
 
-uns = read_anndata(input_file, uns='uns').uns
+uns = read_anndata(input_file, uns='uns', verbose=False).uns
 output_type = uns.get('output_type', 'full') # Same as in prepare.py
 
 if output_type not in allowed_output_types:
@@ -93,13 +93,15 @@ print(adata, flush=True)
 
 adata_raw = None
 if comparison:
+    logging.info(f'Read raw data for comparison from {input_file} ...')
     adata_raw = read_anndata(
-        f'{input_file}/raw',
-        X='X',
-        obs='obs',
-        obsm='obsm',
-        var='var',
-        uns='uns',
+        input_file,
+        X='raw/X',
+        obs='raw/obs',
+        obsm='raw/obsm',
+        var='raw/var',
+        varm='raw/varm',
+        uns='raw/uns',
         dask=True,
         backed=True,
     )

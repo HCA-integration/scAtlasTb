@@ -158,7 +158,7 @@ DATASETS:
         ifn_signature, plasma_cells, t_cd4_ctl, monocytes_cd14
       metrics:
         # - nmi
-        # - cell_cycle
+        - cell_cycle
         - graph_connectivity
         # - isolated_label_asw
         # - isolated_label_f1

@@ -100,43 +100,28 @@ def morans_i(adata, output_type, covariate, n_bootstraps=5, bootstrap_size=None,
     return scores, metrics_names
 
 
-def morans_i_genes(adata, output_type, gene_set, **kwargs):
-    adata = dask_compute(adata, layers='X')
+def morans_i_genes(adata, output_type, gene_set, adata_raw, **kwargs):
+    adata_raw = dask_compute(adata_raw, layers='X')
     
     metric = "M's I genes"
     metric_names = []
     scores = []
     
     for set_name, gene_list in tqdm(gene_set.items(), desc='Compute Moran\'s I for gene sets'):
-        gene_list = parse_gene_names(adata, gene_list)
-        
-        gene_score_name = f'gene_score:{set_name}'
-        
-        if gene_score_name not in adata.obs.keys():
+        gene_list = parse_gene_names(adata_raw, gene_list)
+
+        mask = adata_raw.var_names.isin(gene_list)
+        if mask.sum() == 0:
+            print(f'WARNING: No genes found for gene set {set_name}, skip', flush=True)
             continue
-    
-        # score = _morans_i(adata, covariate=gene_score_name)
         
-        # random_gene_score = np.nanmean(
-        #     _morans_i(adata, covariate=adata.obsm[random_gene_score_name])
-        # )
-        
-        binned_expression = adata[:, adata.var_names.isin(gene_list)].X
-        binned_gene_score = np.nanmean(
-            _morans_i(adata, covariate=binned_expression)
+        masked_expression = adata_raw[:, mask].X
+        score = np.nanmean(
+            _morans_i(adata, covariate=masked_expression)
         )
         
-        scores.extend([
-            # score,
-            # score - random_gene_score,
-            binned_gene_score
-        ])
-        
-        metric_names.extend([
-            # f'{metric}:{set_name}',
-            # f'{metric}_c:{set_name}',
-            f'{metric}_m:{set_name}',
-        ])
+        scores.append(score)
+        metric_names.append(f'{metric}_m:{set_name}')
         
     scores = [max(s, 0) for s in scores]  # ensure score is positive
     for name, score in zip(metric_names, scores):
@@ -146,7 +131,6 @@ def morans_i_genes(adata, output_type, gene_set, **kwargs):
 
 
 def morans_i_genescore(adata, output_type, gene_set, use_random_gene_score=False, **kwargs):
-    adata = dask_compute(adata, layers='X')
     
     metric = "M's I gene score"
     metric_names = []
@@ -154,21 +138,17 @@ def morans_i_genescore(adata, output_type, gene_set, use_random_gene_score=False
     
     for set_name, gene_list in tqdm(gene_set.items(), desc='Compute Moran\'s I for gene sets'):
         gene_list = parse_gene_names(adata, gene_list)
-        
         gene_score_name = f'gene_score:{set_name}'
-        
         if gene_score_name not in adata.obs.keys():
-            raise ValueError(f'Gene score {gene_score_name} not found in adata.obs')
-        
+            print(f'WARNING: Gene score {gene_score_name} not found in adata.obs, skip', flush=True)
+            continue    
     
         score = _morans_i(adata, covariate=gene_score_name)
-
 
         if use_random_gene_score:
             random_gene_score_name = f'random_gene_scores:{len(gene_list)}'
             raise NotImplementedError("The 'use_random_gene_score' option is not yet implemented.")
             #     raise ValueError(f'Gene score {random_gene_score_name} not found in adata.obsm')
-            
 
             # random_gene_score = _morans_i(adata, covariate=adata.obsm[random_gene_score_name])
 
@@ -176,7 +156,6 @@ def morans_i_genescore(adata, output_type, gene_set, use_random_gene_score=False
             #     score = score
             # else:
             #     score = score / random_gene_score
-            
         
         scores.append(score)
         metric_names.append(f'{metric}:{set_name}')

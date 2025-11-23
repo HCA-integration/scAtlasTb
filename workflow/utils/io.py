@@ -21,7 +21,7 @@ from .subset_slots import subset_slot, set_mask_per_slot
 from .misc import dask_compute
 
 
-ALL_SLOTS = ['X', 'obs', 'var', 'obsm', 'varm', 'obsp', 'varp', 'layers', 'uns']
+ALL_SLOTS = ['X', 'obs', 'var', 'obsm', 'varm', 'obsp', 'varp', 'layers', 'uns', 'raw']
 
 
 def print_flushed(*args, **kwargs):
@@ -87,12 +87,12 @@ def read_anndata(
     :param file: path to anndata file in zarr or h5ad format
     :param kwargs: AnnData parameter to zarr group mapping
     """
-    # assert Path(file).exists(), f'File not found: {file}'
     if exclude_slots is None:
         exclude_slots = []
     elif exclude_slots == 'all':
         exclude_slots = ['X', 'layers', 'raw']
 
+    assert Path(file).exists(), f'File not found: {file}'
     store, file_type = get_store(file, return_file_type=True)
     # set default kwargs
     kwargs = {x: x for x in store} if not kwargs else kwargs
@@ -171,7 +171,7 @@ def read_partial(
         print_flushed(f'Read slot "{from_slot}", store as "{to_slot}"...', verbose=verbose)
         force_slot_sparse = any(from_slot.startswith((x, f'/{x}')) for x in force_sparse_slots)
         
-        if from_slot in ['layers', 'raw', 'obsm', 'obsp']:
+        if from_slot in ['layers', 'raw', 'obsm', 'varm', 'obsp', 'varp']:
             keys = group[from_slot].keys()
             if from_slot == 'raw':
                 keys = [key for key in keys if key in ['X', 'var', 'varm']]
@@ -210,7 +210,18 @@ def read_partial(
     try:
         adata = ad.AnnData(**slots)
     except Exception as e:
-        shapes = {slot: x.shape for slot, x in slots.items() if hasattr(x, 'shape')}
+
+        def _shape(value):
+            if hasattr(value,'shape'):
+                return value.shape
+            if isinstance(value, dict):
+                return {k: _shape(v) for k, v in value.items()}
+            return None
+
+        shapes = {
+            k: _shape(v)
+            for k, v in slots.items() if hasattr(v,'shape') or isinstance(v,dict)
+        }
         message = f'Error reading {file}\nshapes: {pformat(shapes)}'
         raise ValueError(message) from e
     
@@ -567,10 +578,9 @@ def link_zarr(
         )
     
     for slot in ALL_SLOTS:
-        if slot in slots_to_link or any(f'{slot}/' in x for x in slots_to_link):
-            set_mask_per_slot(slot=slot, mask=subset_mask, out_dir=out_dir)
-        else:
-            set_mask_per_slot(slot=slot, mask=None, out_dir=out_dir)
+        if slot in slots_to_link or any(x.startswith(f"{slot}/") for x in slots_to_link):
+            continue
+        set_mask_per_slot(slot=slot, mask=None, out_dir=out_dir)
     
     for out_slot, in_slot in slot_map:
         if out_slot in ['subset_mask', '.zattrs', '.zgroup'] or \
@@ -607,14 +617,27 @@ def write_zarr_linked(
     :param relative_path: use relative path for link
     :param slot_map: custom mapping of output slot to input slot, for slots that are not in files_to_keep
     """
-    if in_dir is None:
-        in_dirs = []
-    else:
+    if subset_mask is not None:
+        assert adata.shape[0] == subset_mask[0].sum(), (
+            "Number of observations in adata does not match the provided subset mask."
+        )
+        assert adata.shape[1] == subset_mask[1].sum(), (
+            "Number of variables in adata does not match the provided subset mask."
+    )
+
+    if in_dir:
         in_dir = Path(in_dir)
-        if not in_dir.name.endswith(('.zarr', '.zarr/', '.zarr/raw')):
+
+        if in_dir.is_dir():
+            in_dirs = [f.name for f in in_dir.iterdir()]
+        else:  # cannot symlink to non-directory (e.g. h5ad)
+            print_flushed(
+                f"Warning: `{in_dir=!r}` is not a top-level zarr directory, not linking any files", verbose=True
+            )
             write_zarr(adata, out_dir, compute=compute)
-            return
-        in_dirs = [f.name for f in in_dir.iterdir()]
+            return  # exit since no linking can be done
+    else:
+        in_dirs = []
     
     if files_to_keep is None:
         files_to_keep = []

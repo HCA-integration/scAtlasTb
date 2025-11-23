@@ -2,6 +2,7 @@ import traceback
 import warnings
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 from scipy.sparse import issparse
 
 from utils.assertions import assert_pca
@@ -167,10 +168,8 @@ def pcr(adata, output_type, covariate, **kwargs):
     return scores, metric_names
 
 
-def pcr_genes(adata, output_type, gene_set, **kwargs):
+def pcr_genes(adata, output_type, gene_set, use_random_gene_score=False, **kwargs):
     import scib
-    
-    adata = dask_compute(adata)
     
     metric = "pcr_genes"
     metric_names = []
@@ -181,14 +180,11 @@ def pcr_genes(adata, output_type, gene_set, **kwargs):
     
     assert_pca(adata, check_varm=False)
     
-    for set_name, gene_list in gene_set.items():
-        # filter for existing genes
-        gene_list = [g for g in gene_list if g in adata.var_names]
-        
+    for set_name, gene_list in tqdm(gene_set.items(), desc='Compute PCR for gene sets'):
         gene_score_name = f'gene_score:{set_name}'
-        random_gene_score_name = f'random_gene_scores:{len(gene_list)}'
         
         if gene_score_name not in adata.obs.keys():
+            print(f'WARNING: Gene score {gene_score_name} not found in adata.obs, skip', flush=True)
             continue
     
         # direct pcr score
@@ -198,7 +194,10 @@ def pcr_genes(adata, output_type, gene_set, **kwargs):
             recompute_pca=False,
             linreg_method='numpy',
         )
-    
+
+        if use_random_gene_score:
+            raise NotImplementedError("The 'use_random_gene_score' option is not yet implemented.")
+
         # # random gene score
         # _random_gene_scores = []
         # for gene in adata.obsm[random_gene_score_name].T:
@@ -224,19 +223,13 @@ def pcr_genes(adata, output_type, gene_set, **kwargs):
         #     )
         #     _binned_gene_scores.append(s)
         # binned_gene_score = np.mean(_binned_gene_scores)
-    
-        scores.extend([
-            score,
-            # score - random_gene_score,
-            # binned_gene_score
-        ])
         
-        metric_names.extend([
-            f'{metric}:{set_name}',
-            # f'{metric}_c:{set_name}',
-            # f'{metric}_b:{set_name}',
-        ])
+        scores.append(score)
+        metric_names.append(f'{metric}:{set_name}')
     
     scores = [max(s, 0) for s in scores]  # ensure score is positive
+    
+    for name, score in zip(metric_names, scores):
+        print(name, score, flush=True)
     
     return scores, metric_names
