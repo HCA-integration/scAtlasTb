@@ -19,9 +19,18 @@ def check_obs_same_index(adatas):
 
 def check_columns_equal(adatas, col):
     def _check_columns_equal(s1, s2):
-        # return np.array_equal(s1.unique(), s2.unique())
-        # return s1.sort_values().equals(s2.sort_values())
-        return s1.equals(s2.loc[s1.index])
+        assert s1.index.equals(s2.index), \
+            'Indices do not match for column comparison'
+        # Fast path: check if both Series are the same object or have the same underlying data
+        if s1 is s2:
+            return True
+        if s1._values is s2._values:
+            return True
+        # Use numpy for fast comparison if dtypes are compatible
+        if s1.dtype == s2.dtype and pd.api.types.is_numeric_dtype(s1.dtype):
+            return np.array_equal(s1.values, s2.values, equal_nan=True)
+        # Fallback to pandas equals
+        return s1.equals(s2)
 
     iterator = iter(adatas.values())
     _ad1 = next(iterator)
