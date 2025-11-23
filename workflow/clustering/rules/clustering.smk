@@ -50,7 +50,7 @@ use rule cluster from clustering as clustering_cluster with:
     threads:
         lambda wildcards: 4 * int(wildcards.level) - 3
     conda:
-        get_env(config, 'scanpy', gpu_env='rapids_singlecell')
+        lambda w: get_env(config, 'scanpy', gpu_env='rapids_singlecell', no_gpu=get_profile(w) != 'gpu')
     resources:
         partition=lambda w, attempt: mcfg.get_resource(profile=get_profile(w), resource_key='partition', attempt=attempt, attempt_to_cpu=2),
         qos=lambda w, attempt: mcfg.get_resource(profile=get_profile(w), resource_key='qos', attempt=attempt, attempt_to_cpu=2),
