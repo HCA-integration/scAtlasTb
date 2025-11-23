@@ -32,28 +32,28 @@ def set_mask_per_slot(slot, mask, out_dir, in_slot=None, in_dir=None):
     mask_dir = init_mask_dir(mask_dir, slot, in_slot, in_dir)
     
     if mask is not None:
-        if slot.startswith('obs'):
+        if slot.startswith(('obs', 'raw/obs')):
             mask = mask[0]
-        elif slot.startswith('var'):
+        elif slot.startswith(('var', 'raw/var')):
             mask = mask[1]
     
     match slot:
         
-        case _ if slot == 'X' or slot.startswith('layers/'):
+        case _ if slot in ['X', 'raw/X'] or slot.startswith(('layers/', 'raw/layers/')):
             save_feature_matrix_mask(
                 mask_dir=mask_dir,
                 mask=mask,
                 link_slot=link_slot
             )
 
-        case 'obs' | 'var':
+        case 'obs' | 'var' | 'raw/obs' | 'raw/var':
             save_slot_mask(
                 mask_dir=mask_dir,
                 mask=mask,
                 link_slot=link_slot
             )
         
-        case 'layers':
+        case 'layers' | 'raw/layers':
             for path in slot_dir.iterdir():
                 _call_function_per_slot(
                     func=save_feature_matrix_mask,
@@ -63,7 +63,10 @@ def set_mask_per_slot(slot, mask, out_dir, in_slot=None, in_dir=None):
                     link_slot=link_slot,
                 )
         
-        case 'obsp' | 'obsm' | 'varp' | 'varm':
+        case _ if slot in {
+            'obsp', 'obsm', 'varp', 'varm',
+            'raw/obsp', 'raw/obsm', 'raw/varp', 'raw/varm'
+        }:
             for path in slot_dir.iterdir():
                 _call_function_per_slot(
                     save_slot_mask,
@@ -207,7 +210,10 @@ def remove_mask_file(mask_file, link_slot):
 def subset_slot(slot_name, slot, mask_dir, chunks=('auto', -1)):
     if slot is None or not mask_dir.exists():
         return slot
-    
+
+    if slot_name in ('uns', 'raw/uns'):
+        return slot
+
     if isinstance(slot, dict):
         slot = {
             key: subset_slot(
@@ -219,32 +225,13 @@ def subset_slot(slot_name, slot, mask_dir, chunks=('auto', -1)):
         }
         return slot
     
-    elif slot_name == 'raw':
-        # dead code
-        mask_dir = mask_dir / 'raw'
-        for slot_name in ALL_SLOTS.items():
-            slot.X = _subset_matrix(slot.X, mask_dir)
-            slot.var = _subset_slot(slot_name, slot.var, mask_dir)
-            slot.varm = _subset_slot(slot_name, slot.varm, mask_dir)
-    
-    elif slot_name.startswith('raw/'):
-        slot_name = slot_name.split('/', 1)[-1]
-        mask_dir = mask_dir.parent / 'raw' / mask_dir.name
-        slot = subset_slot(
-            slot_name=slot_name,
-            slot=slot,
-            mask_dir=mask_dir
-        )
-    
-    elif slot_name == 'X':
-        slot = _subset_matrix(slot, mask_dir / slot_name)
-
-    elif slot_name.startswith('layers/'):
+    elif slot_name in ['X', 'raw/X'] or slot_name.startswith(('layers/', 'raw/layers/')):
         slot = _subset_matrix(slot, mask_dir / slot_name)
     
-    elif slot_name != 'uns':
+    elif slot_name.startswith(('obs', 'var', 'raw/obs', 'raw/var')):
         slot = _subset_slot(slot_name, slot, mask_dir / slot_name)
 
+    # optimise data after subsetting
     if isinstance(slot, da.Array):
         slot = slot.rechunk(chunks=chunks)
     
