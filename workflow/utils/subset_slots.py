@@ -115,13 +115,18 @@ def init_mask_dir(mask_dir, slot, in_slot, in_dir):
     
     mask_dir_slot = mask_dir / slot
     
-    if in_slot is not None:
-        remove_path(mask_dir_slot)
+    # If this slot should link (copy) an existing subset mask from another slot
+    if in_slot and in_dir:
         in_dir = (in_dir / 'subset_mask' / in_slot).resolve()
         if in_dir.exists():
-            # Copy the folder from the original location
+            # Remove existing path (dir, symlink, file) so we can create a fresh copy
+            remove_path(mask_dir_slot)
+            # Copy the entire mask directory from source to current slot-specific mask dir
             shutil.copytree(in_dir, mask_dir_slot)
-    
+
+    if not mask_dir_slot.exists():
+        mask_dir_slot.mkdir(parents=True)
+
     return mask_dir_slot
 
 
