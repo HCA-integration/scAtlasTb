@@ -5,6 +5,7 @@ import pandas as pd
 logging.basicConfig(level=logging.INFO)
 
 from utils.io import read_anndata
+from pandas.testing import assert_frame_equal
 
 
 def load_config():
@@ -50,37 +51,39 @@ def check_obs_merging(adata, input_files, sep):
         file_cols = [col for col in obs_columns if col.endswith(f'{sep}{file_id}')]
         logging.info(f"File {file_id} contributed {len(file_cols)} columns")
 
-        for suffixed in file_cols:
-            if sep not in suffixed:
-                continue
+        # Build suffixed -> base mapping and reconstructed dataframe for this file
+        stripped_map = {col: col.rsplit(sep, 1)[0] for col in file_cols if sep in col}
+        if not stripped_map:
+            continue
 
-            base = suffixed.rsplit(sep, 1)[0]
-            assert base in orig_obs.columns, f"Base column '{base}' not found in original obs for file_id={file_id}"
+        df_suffixed = obs[list(stripped_map.keys())].rename(columns=stripped_map)
+        missing_in_orig = set(df_suffixed.columns) - set(orig_obs.columns)
+        if missing_in_orig:
+            problems.append(f"Missing base columns in original obs for file_id={file_id}: {sorted(missing_in_orig)}")
+            continue
 
-            s_base = orig_obs[base]
-            s_file = obs[suffixed]
-            
-            assert s_base.index.equals(s_file.index), f"Index mismatch between base '{base}' and suffixed '{suffixed}' for file_id={file_id}"
+        df_orig = orig_obs[df_suffixed.columns]
 
-            mask = (~s_base.isna()) & (~s_file.isna())
-            if mask.sum() == 0:
-                continue
-            
-            v_base = s_base[mask]
-            v_file = s_file[mask]
-            
-            if pd.api.types.is_numeric_dtype(v_base) and pd.api.types.is_numeric_dtype(v_file):
-                unequal = ~((v_base.astype(float) - v_file.astype(float)).abs() <= 1e-9)
-            else:
-                unequal = v_base.astype(str) != v_file.astype(str)
-            
-            if unequal.any():
-                example = list(unequal[unequal].index[:10])
-                problems.append(
-                    f"Mismatch base '{base}' vs '{suffixed}' (file_id={file_id}, {unequal.sum()} differing barcodes, examples: {example})"
-                )
-            
-            checks += 1
+        # Align indices (allow different order; require same set)
+        assert set(df_orig.index) == set(df_suffixed.index), f"Index sets differ for file_id={file_id}"
+
+        df_orig_sorted = df_orig.sort_index()
+        df_suffixed_sorted = df_suffixed.sort_index()
+
+        # Compare with tolerance for numeric columns, ignore column order
+        try:
+            assert_frame_equal(
+                df_orig_sorted,
+                df_suffixed_sorted,
+                check_like=True,
+                atol=1e-9,
+                rtol=1e-9,
+                check_dtype=False,
+            )
+        except AssertionError as e:
+            problems.append(f"DataFrame mismatch for file_id={file_id}: {e}")
+        else:
+            checks += len(df_suffixed.columns)
 
     assert not problems, "Inconsistencies between base and suffixed columns:\n" + "\n".join(problems)
     logging.info(f"Checked {checks} base↔suffixed column pairs for value consistency")
