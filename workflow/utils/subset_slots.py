@@ -7,7 +7,7 @@ from dask import array as da
 
 
 ## Writing subset masks
-def set_mask_per_slot(slot, mask, out_dir, in_slot=None, in_dir=None):
+def set_mask_per_slot(slot, mask, out_dir, mask_dir=None, in_slot=None, in_dir=None):
     
     def _call_function_per_slot(func, path, *args, **kwargs):
         if path.is_dir() and (path / '.zattrs').exists():
@@ -85,10 +85,12 @@ def set_mask_per_slot(slot, mask, out_dir, in_slot=None, in_dir=None):
                 _call_function_per_slot(
                     set_mask_per_slot,
                     path=path,
-                    slot=slot,
+                    slot=f'{slot}/{path.name}',
+                    out_dir=out_dir,
                     mask=mask,
-                    out_dir=out_dir / slot,
+                    mask_dir=mask_dir.parent,
                     in_slot=in_slot,
+                    in_dir=in_dir,
                 )
 
         case _:
