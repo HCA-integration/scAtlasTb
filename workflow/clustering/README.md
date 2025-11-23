@@ -104,10 +104,7 @@ DATASETS:
   - `true`: Use GPU for clustering when available
   - `false` (default): Use CPU only
 
-- **`n_cell_cpu`**: Number of cells threshold for forcing CPU computation
-  - Example: `100000` - forces CPU when dataset has fewer cells
-
-
+- **`n_cell_cpu`**: Threshold for forcing CPU computation - CPU is used when dataset has fewer than this many cells (default: 100000)
 ## Calling the clustering script from the command line
 
 The clustering script is located at `workflow/clustering/scripts/clustering.py` and performs single-level clustering operations. For hierarchical clustering, you need to run the script multiple times in sequence.
