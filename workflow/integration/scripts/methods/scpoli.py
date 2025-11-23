@@ -62,9 +62,9 @@ model_params = dict(
 ) | model_params
 
 # set default training parameters
-n_epochs = train_params.get('n_epochs', 100)
+n_epochs = train_params.get('n_epochs')
 if n_epochs is None:
-    n_epochs = 100
+    n_epochs = train_params.get('n_epoch', 100)
 train_params = train_params | {
     'early_stopping_kwargs': SCPOLI_EARLY_STOPPING,
     # set default pretrain epochs if not configured
