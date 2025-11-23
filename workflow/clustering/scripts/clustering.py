@@ -155,7 +155,7 @@ else:
     parser.add_argument('--clustering_args', type=json.loads, default={}, help='Additional clustering arguments')
     parser.add_argument('--neighbors_key', type=str, default='neighbors', help='Key for neighbors in adata.uns')
     parser.add_argument('--neighbors_args', type=json.loads, default={}, help='Additional arguments for neighbors computation')
-    parser.add_argument('--n_cell_cpu', type=int, default=100_000, help='Number of cells for which to force CPU computation')
+    parser.add_argument('--n_cell_cpu', type=int, default=100_000, help='Threshold number of cells below which to force CPU computation')
     args = parser.parse_args()
     
     input_file = args.input_file
