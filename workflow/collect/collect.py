@@ -10,7 +10,7 @@ import re
 
 from utils.io import read_anndata, get_file_reader, write_zarr_linked, link_file
 from utils.misc import dask_compute
-from collect_utils import get_same_columns, merge_df
+from collect_utils import get_same_columns, merge_df, align_file_indices, LARGE_SLOTS
 
 
 dataset = snakemake.wildcards.dataset
@@ -22,8 +22,6 @@ same_slots = snakemake.params.get('same_slots', [])
 merge_slots = snakemake.params.get('merge_slots', [])
 skip_slots = snakemake.params.get('skip_slots', [])
 kwargs = {k: k for k in same_slots+merge_slots if k not in skip_slots}
-
-LARGE_SLOTS = ['layers', 'obsm', 'obsp']
 
 # parse obs index
 if isinstance(obs_index_col_map, str):
@@ -86,66 +84,7 @@ adatas = {
 logging.info(f'File ids: \n{pformat(list(adatas.keys()))}')
 
 # Ensure all adatas have the same obs_names and var_names, and match their order to the first adata
-adata_iter = iter(adatas.items())
-first_key, first_adata = next(adata_iter)
-first_obs_names = first_adata.obs_names
-first_var_names = first_adata.var_names
-missing_slots = {slot: slot for slot in LARGE_SLOTS if slot in merge_slots}
-write_copy_for = {slot: [] for slot in missing_slots}
-
-for file_id, _ad in adata_iter:
-    # get file path
-    file_name = files[file_id]
-    
-    # Check obs_names
-    if not _ad.obs_names.equals(first_obs_names):
-        # read slots that need to be reordered
-        _ad_tmp = read_anndata(
-            file_name,
-            **missing_slots,
-            dask=True,
-            backed=True,
-            dask_slots=['layers', 'obsm', 'obsp'],
-            verbose=False,
-        )
-        for slot_name in missing_slots:
-            setattr(_ad, f'_{slot_name}', getattr(_ad_tmp, f'_{slot_name}'))
-        
-        # set write status for affected slots
-        write_copy_for |= {slot: write_copy_for[slot] + [file_id] for slot in missing_slots}
-        
-        # reorder obs_names
-        if set(_ad.obs_names) == set(first_obs_names):
-            logging.info(f"Reordering obs_names for file_id={file_id} to match the first adata.")
-            adatas[file_id] = _ad[first_obs_names, :]
-        else:
-            logging.error(f'file_id{first_key}:\n{adatas[file_id].obs_names}')
-            logging.error(f'file_id={file_id}:\n{first_obs_names}')
-            raise ValueError(f"obs_names do not match between first adata '{first_key}' and file_id='{file_id}'")
-    
-    # Check var_names
-    if not _ad.var_names.equals(first_var_names):
-        # read slots that need to be reordered
-        if 'layers' in merge_slots:
-            _ad.layers = read_anndata(
-                file_name,
-                layers='layers',
-                dask=True,
-                backed=True,
-            ).layers
-
-        # set write status for affected slots
-        write_copy_for['layers'] = write_copy_for['layers'] + [file_id]
-
-        # reorder var_names
-        if set(_ad.var_names) == set(first_var_names):
-            logging.info(f"Reordering var_names for file_id={file_id} to match the first adata.")
-            adatas[file_id] = adatas[file_id][:, first_var_names]
-        else:
-            raise ValueError(f"var_names do not match between first adata and file_id={file_id}")
-    
-    if adatas[file_id].is_view:
-        adatas[file_id] = adatas[file_id].copy()
+write_copy_for = align_file_indices(adatas, files, merge_slots)
 
 if 'obs' in merge_slots:
     for file_id, _ad in adatas.items():
