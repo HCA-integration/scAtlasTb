@@ -213,8 +213,8 @@ def subset_slot(slot_name, slot, mask_dir, chunks=('auto', -1)):
             key: subset_slot(
                 slot_name=f'{slot_name}/{key}',
                 slot=value,
-                mask_dir=mask_dir / key,
-                chunks=chunks
+                mask_dir=mask_dir,
+                chunks=chunks,
             ) for key, value in slot.items()
         }
         return slot
