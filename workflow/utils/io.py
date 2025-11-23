@@ -578,10 +578,9 @@ def link_zarr(
         )
     
     for slot in ALL_SLOTS:
-        if slot in slots_to_link or any(f'{slot}/' in x for x in slots_to_link):
-            set_mask_per_slot(slot=slot, mask=subset_mask, out_dir=out_dir)
-        else:
-            set_mask_per_slot(slot=slot, mask=None, out_dir=out_dir)
+        if slot in slots_to_link or any(x.startswith(f"{slot}/") for x in slots_to_link):
+            continue
+        set_mask_per_slot(slot=slot, mask=None, out_dir=out_dir)
     
     for out_slot, in_slot in slot_map:
         if out_slot in ['subset_mask', '.zattrs', '.zgroup'] or \
@@ -625,15 +624,20 @@ def write_zarr_linked(
         assert adata.shape[1] == subset_mask[1].sum(), (
             "Number of variables in adata does not match the provided subset mask."
     )
-    
-    if in_dir is None:
-        in_dirs = []
-    else:
+
+    if in_dir:
         in_dir = Path(in_dir)
-        if not in_dir.name.endswith(('.zarr', '.zarr/', '.zarr/raw')):
+
+        if in_dir.is_dir():
+            in_dirs = [f.name for f in in_dir.iterdir()]
+        else:  # cannot symlink to non-directory (e.g. h5ad)
+            print_flushed(
+                f"Warning: `{in_dir=!r}` is not a top-level zarr directory, not linking any files", verbose=True
+            )
             write_zarr(adata, out_dir, compute=compute)
-            return
-        in_dirs = [f.name for f in in_dir.iterdir()]
+            return  # exit since no linking can be done
+    else:
+        in_dirs = []
     
     if files_to_keep is None:
         files_to_keep = []
