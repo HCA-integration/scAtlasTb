@@ -21,7 +21,7 @@ from .subset_slots import subset_slot, set_mask_per_slot
 from .misc import dask_compute
 
 
-ALL_SLOTS = ['X', 'obs', 'var', 'obsm', 'varm', 'obsp', 'varp', 'layers', 'uns']
+ALL_SLOTS = ['X', 'obs', 'var', 'obsm', 'varm', 'obsp', 'varp', 'layers', 'uns', 'raw']
 
 
 def print_flushed(*args, **kwargs):
@@ -87,12 +87,12 @@ def read_anndata(
     :param file: path to anndata file in zarr or h5ad format
     :param kwargs: AnnData parameter to zarr group mapping
     """
-    # assert Path(file).exists(), f'File not found: {file}'
     if exclude_slots is None:
         exclude_slots = []
     elif exclude_slots == 'all':
         exclude_slots = ['X', 'layers', 'raw']
 
+    assert Path(file).exists(), f'File not found: {file}'
     store, file_type = get_store(file, return_file_type=True)
     # set default kwargs
     kwargs = {x: x for x in store} if not kwargs else kwargs
@@ -171,7 +171,7 @@ def read_partial(
         print_flushed(f'Read slot "{from_slot}", store as "{to_slot}"...', verbose=verbose)
         force_slot_sparse = any(from_slot.startswith((x, f'/{x}')) for x in force_sparse_slots)
         
-        if from_slot in ['layers', 'raw', 'obsm', 'obsp']:
+        if from_slot in ['layers', 'raw', 'obsm', 'varm', 'obsp', 'varp']:
             keys = group[from_slot].keys()
             if from_slot == 'raw':
                 keys = [key for key in keys if key in ['X', 'var', 'varm']]
