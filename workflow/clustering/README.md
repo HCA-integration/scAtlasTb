@@ -105,7 +105,7 @@ DATASETS:
   - `false` (default): Use CPU only
 
 - **`n_cell_cpu`**: Number of cells threshold for forcing CPU computation
-  - Example: `50000` - forces CPU when dataset has fewer cells
+  - Example: `100000` - forces CPU when dataset has fewer cells
 
 
 ## Calling the clustering script from the command line
