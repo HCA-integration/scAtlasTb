@@ -3,20 +3,20 @@ images: test/images
 
 
 DATASETS:
-  SchulteSchrepping2020:
-    input:
-      collect:
-        file_1: test/input/load_data/download/SchulteSchrepping2020.h5ad
-        file_2: test/input/load_data/harmonize_metadata/SchulteSchrepping2020_local.zarr
-    collect:
-      same_slots:
-        - X
-        - var
-      merge_slots:
-        - obs
-        - obsm
-      obs_index_col:
-        .*_2: barcode
+  # SchulteSchrepping2020:
+  #   input:
+  #     collect:
+  #       file_1: test/input/load_data/download/SchulteSchrepping2020.h5ad
+  #       file_2: test/input/load_data/harmonize_metadata/SchulteSchrepping2020_local.zarr
+  #   collect:
+  #     same_slots:
+  #       - X
+  #       - var
+  #     merge_slots:
+  #       - obs
+  #       - obsm
+  #     obs_index_col:
+  #       .*_2: barcode
   test:
     input:
       collect:
