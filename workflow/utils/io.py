@@ -210,7 +210,18 @@ def read_partial(
     try:
         adata = ad.AnnData(**slots)
     except Exception as e:
-        shapes = {slot: x.shape for slot, x in slots.items() if hasattr(x, 'shape')}
+
+        def _shape(value):
+            if hasattr(value,'shape'):
+                return value.shape
+            if isinstance(value, dict):
+                return {k: _shape(v) for k, v in value.items()}
+            return None
+
+        shapes = {
+            k: _shape(v)
+            for k, v in slots.items() if hasattr(v,'shape') or isinstance(v,dict)
+        }
         message = f'Error reading {file}\nshapes: {pformat(shapes)}'
         raise ValueError(message) from e
     
