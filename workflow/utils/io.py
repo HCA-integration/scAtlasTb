@@ -618,6 +618,14 @@ def write_zarr_linked(
     :param relative_path: use relative path for link
     :param slot_map: custom mapping of output slot to input slot, for slots that are not in files_to_keep
     """
+    if subset_mask is not None:
+        assert adata.shape[0] == subset_mask[0].sum(), (
+            "Number of observations in adata does not match the provided subset mask."
+        )
+        assert adata.shape[1] == subset_mask[1].sum(), (
+            "Number of variables in adata does not match the provided subset mask."
+    )
+    
     if in_dir is None:
         in_dirs = []
     else:
