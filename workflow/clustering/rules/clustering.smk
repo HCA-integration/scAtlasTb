@@ -47,6 +47,7 @@ use rule cluster from clustering as clustering_cluster with:
         neighbors_args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'neighbors', default={}),
         clustering_args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'kwargs', default={}), # also handles different resolutions at different levels
         overwrite=lambda wildcards: mcfg.get_from_parameters(wildcards, 'overwrite', default=True),
+        n_cell_cpu=lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_cell_cpu', default=100_000),
     threads:
         lambda wildcards: 4 * int(wildcards.level) - 3
     conda:

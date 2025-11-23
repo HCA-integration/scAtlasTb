@@ -119,6 +119,7 @@ def cluster_subset(
         neighbors_args=neighbors_args,
         recompute_neighbors=True,
         use_gpu=use_gpu,
+        n_cell_cpu=n_cell_cpu,
     )
     
     return adata.obs[[prev_cluster_key, key_added]].agg('_'.join, axis=1)
@@ -136,6 +137,7 @@ if 'snakemake' in globals():
     clustering_args = snakemake.params.get('clustering_args', {})
     neighbors_key = snakemake.params.get('neighbors_key', 'neighbors')
     neighbors_args = snakemake.params.get('neighbors_args', {})
+    n_cell_cpu = snakemake.params.get('n_cell_cpu', 100_000)
     
 else:
     import argparse
@@ -153,6 +155,7 @@ else:
     parser.add_argument('--clustering_args', type=json.loads, default={}, help='Additional clustering arguments')
     parser.add_argument('--neighbors_key', type=str, default='neighbors', help='Key for neighbors in adata.uns')
     parser.add_argument('--neighbors_args', type=json.loads, default={}, help='Additional arguments for neighbors computation')
+    parser.add_argument('--n_cell_cpu', type=int, default=100_000, help='number of cells for witch to force CPU computation')
     args = parser.parse_args()
     
     input_file = args.input_file
@@ -166,6 +169,7 @@ else:
     clustering_args = args.clustering_args
     neighbors_key = args.neighbors_key
     neighbors_args = args.neighbors_args
+    n_cell_cpu = args.n_cell_cpu
 
 # set parameters for clustering
 cluster_key = f'{algorithm}_{resolution}_{level}'
@@ -215,6 +219,7 @@ else:
             recompute_neighbors=False,
             use_gpu=USE_GPU,
             max_cluster_factor=max_cluster_factor,
+            n_cell_cpu=n_cell_cpu,
             **kwargs,
         )
     else:
