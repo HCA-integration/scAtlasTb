@@ -97,6 +97,9 @@ def cluster_subset(
     prev_cluster_value,
     neighbors_args, # TODO: custom parameters
     use_gpu,
+    n_cell_cpu,
+    cpu_kwargs,
+    max_cluster_factor,
 ):
     """
     Wrapper for calling apply_clustering function in parallel
@@ -258,6 +261,9 @@ else:
                         prev_cluster_value=prev_cluster,
                         neighbors_args=neighbors_args,
                         use_gpu=USE_GPU,
+                        max_cluster_factor=max_cluster_factor,
+                        n_cell_cpu=n_cell_cpu,
+                        cpu_kwargs=cpu_kwargs,
                         **kwargs
                     ) for prev_cluster in cluster_labels
                 ),
