@@ -100,22 +100,22 @@ def morans_i(adata, output_type, covariate, n_bootstraps=5, bootstrap_size=None,
     return scores, metrics_names
 
 
-def morans_i_genes(adata, output_type, gene_set, **kwargs):
-    adata = dask_compute(adata, layers='X')
+def morans_i_genes(adata, output_type, gene_set, adata_raw, **kwargs):
+    adata_raw = dask_compute(adata_raw, layers='X')
     
     metric = "M's I genes"
     metric_names = []
     scores = []
     
     for set_name, gene_list in tqdm(gene_set.items(), desc='Compute Moran\'s I for gene sets'):
-        gene_list = parse_gene_names(adata, gene_list)
+        gene_list = parse_gene_names(adata_raw, gene_list)
 
-        mask = adata.var_names.isin(gene_list)
+        mask = adata_raw.var_names.isin(gene_list)
         if mask.sum() == 0:
             print(f'WARNING: No genes found for gene set {set_name}, skip', flush=True)
             continue
         
-        masked_expression = adata[:, mask].X
+        masked_expression = adata_raw[:, mask].X
         score = np.nanmean(
             _morans_i(adata, covariate=masked_expression)
         )
@@ -131,7 +131,6 @@ def morans_i_genes(adata, output_type, gene_set, **kwargs):
 
 
 def morans_i_genescore(adata, output_type, gene_set, use_random_gene_score=False, **kwargs):
-    adata = dask_compute(adata, layers='X')
     
     metric = "M's I gene score"
     metric_names = []
