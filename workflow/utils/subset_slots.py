@@ -20,7 +20,15 @@ def set_mask_per_slot(slot, mask, out_dir, in_slot=None, in_dir=None):
         return
     
     out_dir = Path(out_dir)
-    mask_dir = out_dir / 'subset_mask'
+    slot_dir = out_dir / slot
+    if not slot_dir.exists():
+        print(f'Slot directory {slot_dir} does not exist, skipping mask for slot {slot}', flush=True)
+        return
+
+    if mask_dir is None:
+        mask_dir = out_dir / 'subset_mask'
+
+    # set to the slot-specific mask directory
     mask_dir = init_mask_dir(mask_dir, slot, in_slot, in_dir)
     
     if mask is not None:
@@ -46,7 +54,7 @@ def set_mask_per_slot(slot, mask, out_dir, in_slot=None, in_dir=None):
             )
         
         case 'layers':
-            for path in (out_dir / slot).iterdir():
+            for path in slot_dir.iterdir():
                 _call_function_per_slot(
                     func=save_feature_matrix_mask,
                     path=path,
@@ -56,7 +64,7 @@ def set_mask_per_slot(slot, mask, out_dir, in_slot=None, in_dir=None):
                 )
         
         case 'obsp' | 'obsm' | 'varp' | 'varm':
-            for path in (out_dir / slot).iterdir():
+            for path in slot_dir.iterdir():
                 _call_function_per_slot(
                     save_slot_mask,
                     path=path,
@@ -66,9 +74,10 @@ def set_mask_per_slot(slot, mask, out_dir, in_slot=None, in_dir=None):
                 )
         
         case 'raw':
-            if not mask_dir.exists():
-                return
-            for path in mask_dir.iterdir():
+            for path in slot_dir.iterdir():
+                if path.name == 'raw':
+                    # skip nested raw directory
+                    continue
                 # recursive call for subdirectories
                 _call_function_per_slot(
                     set_mask_per_slot,
@@ -80,7 +89,7 @@ def set_mask_per_slot(slot, mask, out_dir, in_slot=None, in_dir=None):
                 )
 
         case _:
-            print(f'Unknown slot: {slot}', flush=True)
+            print(f'Unknown slot, cannot subset: {slot}', flush=True)
 
 
 def remove_path(path, remove_file=False):
