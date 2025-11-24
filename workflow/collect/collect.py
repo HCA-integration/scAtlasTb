@@ -4,12 +4,13 @@ import scanpy as sc
 import anndata as ad
 import pandas as pd
 from pprint import pformat
+from tqdm import tqdm
 from scipy.sparse import csr_matrix
 import re
 
 from utils.io import read_anndata, get_file_reader, write_zarr_linked, link_file
 from utils.misc import dask_compute
-from collect_utils import get_same_columns, merge_df
+from collect_utils import get_same_columns, merge_df, align_file_indices, LARGE_SLOTS
 
 
 dataset = snakemake.wildcards.dataset
@@ -48,37 +49,42 @@ if len(files) == 1:
 
 
 def read_file(file, **kwargs):
-    logging.info(f'Read {file}...')
     if file.endswith('.zarr'):
-        large_slots = ['layers', 'obsm', 'obsp', 'uns']
-        kwargs = {k: v for k, v in kwargs.items() if k not in large_slots+['X']}
+        kwargs = {k: v for k, v in kwargs.items() if k not in LARGE_SLOTS+['X', 'raw']}
         
-        adata = read_anndata(file, **kwargs)
+        adata = read_anndata(file, verbose=False, **kwargs)
         func, _ = get_file_reader(file)
         
         default_values = [
-            csr_matrix(adata.shape),
-            csr_matrix((adata.n_obs, 0)),
-            csr_matrix((adata.n_obs, adata.n_obs)),
-            None
+            csr_matrix(adata.shape), # for layers
+            csr_matrix((adata.n_obs, 0)), # for obsm
+            csr_matrix((adata.n_obs, adata.n_obs)), # for obsp
         ]
-        for slot_name, value in zip(large_slots, default_values):
+        for slot_name, default_value in zip(LARGE_SLOTS, default_values):
             slot_keys = func(file, 'r').get(slot_name, {}).keys()
             setattr(
                 adata,
                 f'_{slot_name}',
-                {key: value for key in slot_keys}
+                {key: default_value for key in slot_keys}
             )
         
         return adata
-    return read_anndata(file, **kwargs)
+    return read_anndata(file, verbose=False, **kwargs)
 
 
 adatas = {
     file_id: read_file(file, **kwargs, dask=True, backed=True)
-    for file_id, file in files.items()
+    for file_id, file in tqdm(
+        files.items(),
+        desc='Read files',
+        miniters=1,
+        total=len(files),
+    )
 }
-print(adatas.keys(), flush=True)
+logging.info(f'File ids: \n{pformat(list(adatas.keys()))}')
+
+# Ensure all adatas have the same obs_names and var_names, and match their order to the first adata
+write_copy_for = align_file_indices(adatas, files, merge_slots)
 
 if 'obs' in merge_slots:
     for file_id, _ad in adatas.items():
@@ -112,7 +118,8 @@ for file_id, _ad in adatas.items():
         logging.info(f'Merge slot "{slot_name}" for file_id={file_id}...')
         slot = _ad.__dict__.get(f'_{slot_name}')
         update_slot_link_map = dict()
-
+        to_link = file_name.endswith('.zarr') and file_id not in write_copy_for.get(slot_name, [])
+        
         if isinstance(slot, pd.DataFrame):
             slots[slot_name] = merge_df(
                 df_current=slot,
@@ -122,13 +129,13 @@ for file_id, _ad in adatas.items():
                 sep=sep,
             )
         elif slot_name == 'X':
-            if file_name.endswith('.zarr'):
+            if to_link:
                 update_slot_link_map[f'layers/{slot_name}{sep}{file_id}'] = f'{slot_name}'
             else:
                 new_slot = {f'{slot_name}{sep}{file_id}': slot}
                 slots['layers'] = slots.get('layers', {}) | new_slot
         elif hasattr(slot, 'items'):
-            if file_name.endswith('.zarr'):
+            if to_link:
                 update_slot_link_map = {
                     f'{slot_name}/{key}{sep}{file_id}': f'{slot_name}/{key}'
                     for key in slot.keys()
@@ -148,7 +155,9 @@ for file_id, _ad in adatas.items():
         }
 
 # deal with same slots
-if not file_to_link:
+if file_to_link:
+    slot_link_map |= {slot: slot for slot in same_slots}
+else:
     for slot_name in same_slots:
         slots[slot_name] = _ad.__dict__.get(f'_{slot_name}')
 
@@ -157,7 +166,9 @@ adata = ad.AnnData(**slots)
 print(adata, flush=True)
 
 logging.info('Compute matrix...')
-adata = dask_compute(adata)
+compute_layers = [v for slot in LARGE_SLOTS for v in getattr(adata, f'_{slot}').keys()]
+print(f'Compute layers: {compute_layers}', flush=True)
+adata = dask_compute(adata, layers=compute_layers)
 
 logging.info(f'Write to {output_file}...')
 write_zarr_linked(
@@ -172,5 +183,4 @@ write_zarr_linked(
 # workaround hack - need to fix bug in write_zarr_linked
 print('in_dir_map\n', pformat(in_dir_map), flush=True)
 for slot, file in in_dir_map.items():
-    # logging.info(f'Link {slot} to {file}/{slot_link_map[slot]}...')
     link_file(in_file=f'{file}/{slot_link_map[slot]}', out_file=f'{output_file}/{slot}')
