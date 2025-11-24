@@ -166,7 +166,7 @@ adata = ad.AnnData(**slots)
 print(adata, flush=True)
 
 logging.info('Compute matrix...')
-compute_layers = [v for slot in LARGE_SLOTS for v in getattr(adata, f'_{slot}').keys() if slot ]
+compute_layers = [v for slot in LARGE_SLOTS for v in getattr(adata, f'_{slot}').keys()]
 print(f'Compute layers: {compute_layers}', flush=True)
 adata = dask_compute(adata, layers=compute_layers)
 
