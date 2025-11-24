@@ -73,6 +73,7 @@ merge_strategy = snakemake.params.get('merge_strategy', 'inner')
 keep_all_columns = snakemake.params.get('keep_all_columns', False)
 allow_duplicate_obs = snakemake.params.get('allow_duplicate_obs', False)
 allow_duplicate_vars = snakemake.params.get('allow_duplicate_vars', False)
+new_indices = snakemake.params.get('new_indices', False)
 backed = snakemake.params.get('backed', False)
 dask = snakemake.params.get('dask', False)
 stride = snakemake.params.get('stride', 500_000)
@@ -216,8 +217,9 @@ if keep_all_columns:
     adata.obs = adata.obs.combine_first(merged_obs)
 
 # set new indices
-adata.obs[f'obs_names_before_{dataset}'] = adata.obs_names
-adata.obs_names = dataset + '-' + adata.obs.reset_index(drop=True).index.astype(str)
+if new_indices:
+    adata.obs[f'obs_names_before_{dataset}'] = adata.obs_names
+    adata.obs_names = dataset + '-' + adata.obs.reset_index(drop=True).index.astype(str)
 
 # add uns data
 adata.uns['dataset'] = dataset
