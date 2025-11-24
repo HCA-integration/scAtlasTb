@@ -88,10 +88,12 @@ DATASETS:
 4. **Metadata Merging**: Combines observation metadata according to `keep_all_columns`
 
 ### Index and Metadata Handling
-- **Cell Identifiers**: Generates new cell IDs in format `{file_id}-{original_index}`
-- **Original Names**: Preserves original cell names in `obs_names_before_{file_id}` columns
+- **Cell Identifiers**: When `new_indices: true`, generates new cell IDs in format `{dataset}-{sequential_index}` (where `dataset` is from the wildcard and `sequential_index` is a running index). When `new_indices: false`, preserves original cell IDs.
+- **Original Names**: Preserves original cell names in `obs_names_before_{dataset}` columns (only when `new_indices: true`)
 - **Dataset Tracking**: Adds `file_id` column to obs and stores dataset info in `uns['dataset']`
-- **Duplicate Checking**: Validates uniqueness based on `allow_duplicate_obs` and `allow_duplicate_var`
+- **Duplicate Checking**: 
+  - If `allow_duplicate_obs=False`, duplicate observations are automatically removed.
+  - If `allow_duplicate_var=False`, duplicate variables cause an error and merging is halted.
 
 ### Memory Optimization
 - Automatic garbage collection between files
