@@ -22,7 +22,7 @@ def check_obs_same_index(adatas):
 def check_columns_equal(adatas, col):
     def _check_columns_equal(s1, s2):
         assert s1.index.equals(s2.index), \
-            'Indices do not match for column comparison'
+            f'Indices do not match for column comparison: {col}'
         # Fast path: check if both Series are the same object or have the same underlying data
         if s1 is s2:
             return True
