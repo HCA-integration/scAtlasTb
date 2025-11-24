@@ -73,7 +73,7 @@ for i, value in enumerate(values):
     logging.info(adata_sub.__str__())
 
     # add wildcards
-    add_wildcards(adata_sub, {'key': split_key, 'value': split} , 'split_data')
+    add_wildcards(adata_sub, {'key': split_key, 'value': split}, 'split_data')
         
     if write_copy:
         logging.info(f'Write to {out_file}...')
