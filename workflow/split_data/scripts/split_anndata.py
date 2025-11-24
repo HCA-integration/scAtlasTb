@@ -26,7 +26,7 @@ values = snakemake.params.get('values', [])
 dask = snakemake.params.get('dask', False)
 write_copy = snakemake.params.get('write_copy', False)
 write_copy = write_copy or input_file.endswith('.h5ad')
-slots = snakemake.params.get('slots')
+slots = snakemake.params.get('slots', {})
 
 if not slots:
     slots = {s: s for s in ALL_SLOTS}
