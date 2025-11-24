@@ -13,7 +13,6 @@ mcfg = ModuleConfig(
     config_params=[
         'key',
         'values',
-        'backed',
         'dask',
         'slots',
         'write_copy',
@@ -23,7 +22,6 @@ mcfg = ModuleConfig(
     rename_config_params={'values': 'value'},
     explode_by=['value'],
     dtypes={
-        'backed': bool,
         'dask': bool,
         'write_copy': bool,
         'threads': int,
@@ -53,8 +51,7 @@ rule split:
         done=mcfg.out_dir / 'splits' / f'{split_pattern}.done',
     params:
         values=lambda wildcards: mcfg.get_from_parameters(wildcards, 'value', single_value=False),
-        backed=lambda wildcards: mcfg.get_from_parameters(wildcards, 'backed'),
-        dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask'),
+        dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=False),
         slots=lambda wildcards: mcfg.get_from_parameters(wildcards, 'slots', default={}),
         write_copy=lambda wildcards: mcfg.get_from_parameters(wildcards, 'write_copy', default=False),
     resources:

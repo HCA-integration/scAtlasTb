@@ -23,8 +23,7 @@ input_file = snakemake.input[0]
 output_dir = snakemake.output[0]
 split_key = snakemake.wildcards.key
 values = snakemake.params.get('values', [])
-backed = snakemake.params.get('backed', True)
-dask = snakemake.params.get('dask', True)
+dask = snakemake.params.get('dask', False)
 write_copy = snakemake.params.get('write_copy', False)
 write_copy = write_copy or input_file.endswith('.h5ad')
 slots = snakemake.params.get('slots')
@@ -51,8 +50,8 @@ logging.info(f'Read anndata file {input_file}...')
 adata = read_anndata(
     input_file,
     **slots,
-    backed=backed,
-    dask=dask,
+    backed=True,
+    dask=True,
 )
 logging.info(adata.__str__())
 
@@ -84,7 +83,7 @@ for i, value in enumerate(values):
     if write_copy:
         logging.info(f'Write to {out_file}...')
         start_time = time.time()
-        write_zarr(adata_sub.copy(), out_file, compute=True)
+        write_zarr(adata_sub.copy(), out_file, compute=not dask)
         logging.info(f'Took {time.time() - start_time:.2f} seconds.')
     else:
         logging.info(f'Write to {out_file} with subset mask...')
