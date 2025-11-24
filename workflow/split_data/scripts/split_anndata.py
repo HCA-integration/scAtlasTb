@@ -1,23 +1,17 @@
 import faulthandler
 faulthandler.enable()
 from pathlib import Path
-import numpy as np
 import warnings
 warnings.filterwarnings("ignore")
 import logging
 logging.basicConfig(level=logging.INFO)
-import anndata as ad
 from pprint import pformat
-from scipy.sparse import csr_matrix, coo_matrix
-import sparse
-from dask import array as da
 from dask import config as da_config
+import time
 da_config.set(num_workers=snakemake.threads)
 
-from utils.accessors import adata_to_memory
 from utils.annotate import add_wildcards
 from utils.io import read_anndata, write_zarr, write_zarr_linked, ALL_SLOTS
-import time
 
 input_file = snakemake.input[0]
 output_dir = snakemake.output[0]
