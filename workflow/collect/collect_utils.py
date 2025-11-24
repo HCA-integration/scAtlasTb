@@ -159,8 +159,6 @@ def align_file_indices(adatas, files, merge_slots):
     file_copy_map = {slot: [] for slot in large_merge_slots}
     
     # Use iterator to skip first adata
-    adata_iter = iter(adatas.items())
-    next(adata_iter)  # Skip first adata
     
     for file_id, _ad in adata_iter:
         file_name = files[file_id]
