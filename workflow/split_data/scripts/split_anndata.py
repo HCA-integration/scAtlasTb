@@ -64,7 +64,6 @@ file_value_map = {
 }
 logging.info(f'file_value_map: {pformat(file_value_map)}')
 logging.info(f'splits: {pformat(values)}')
-var_mask = adata.var_names.isin(adata.var_names)
 
 for i, value in enumerate(values):
     split = file_value_map.get(value, value)
@@ -90,7 +89,7 @@ for i, value in enumerate(values):
             adata_sub,
             in_dir=input_file,
             out_dir=out_file,
-            subset_mask=(obs_mask, var_mask),
+            subset_mask=(obs_mask, None),
             files_to_keep=['uns']+exclude_slots
         )
     del adata_sub

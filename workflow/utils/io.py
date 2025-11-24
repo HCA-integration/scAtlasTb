@@ -618,12 +618,16 @@ def write_zarr_linked(
     :param slot_map: custom mapping of output slot to input slot, for slots that are not in files_to_keep
     """
     if subset_mask is not None:
-        assert adata.shape[0] == subset_mask[0].sum(), (
-            "Number of observations in adata does not match the provided subset mask."
-        )
-        assert adata.shape[1] == subset_mask[1].sum(), (
-            "Number of variables in adata does not match the provided subset mask."
-    )
+        # parse subset_mask
+        obs_mask, var_mask = subset_mask
+        obs_mask = obs_mask if obs_mask is not None else pd.Series(True, index=adata.obs_names)
+        var_mask = var_mask if var_mask is not None else pd.Series(True, index=adata.var_names)
+        if (adata.n_obs, adata.n_vars) != (int(obs_mask.sum()), int(var_mask.sum())):
+            raise ValueError(
+                f"adata shape ({adata.n_obs}, {adata.n_vars}) does not match "
+                f"subset mask sums (obs: {int(obs_mask.sum())}, var: {int(var_mask.sum())})"
+            )
+        subset_mask = (obs_mask, var_mask)
 
     if in_dir:
         in_dir = Path(in_dir)
