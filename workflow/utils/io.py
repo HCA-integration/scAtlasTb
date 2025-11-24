@@ -620,8 +620,8 @@ def write_zarr_linked(
     if subset_mask is not None:
         # parse subset_mask
         obs_mask, var_mask = subset_mask
-        obs_mask = obs_mask if obs_mask is not None else pd.Series(True, index=adata.obs_names)
-        var_mask = var_mask if var_mask is not None else pd.Series(True, index=adata.var_names)
+        obs_mask = obs_mask if obs_mask is not None else np.ones(len(adata.obs_names), dtype=bool)
+        var_mask = var_mask if var_mask is not None else np.ones(len(adata.var_names), dtype=bool)
         if (adata.n_obs, adata.n_vars) != (int(obs_mask.sum()), int(var_mask.sum())):
             raise ValueError(
                 f"adata shape ({adata.n_obs}, {adata.n_vars}) does not match "
