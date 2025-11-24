@@ -168,7 +168,13 @@ def align_file_indices(adatas, files, merge_slots):
         # Handle obs_names alignment
         if not _ad.obs_names.equals(first_obs_names):
             if set(_ad.obs_names) != set(first_obs_names):
-                raise ValueError(f"obs_names mismatch between '{first_key}' and '{file_id}'")
+                missing_in_ad = set(first_obs_names) - set(_ad.obs_names)
+                extra_in_ad = set(_ad.obs_names) - set(first_obs_names)
+                raise ValueError(
+                    f"obs_names mismatch between '{first_key}' and '{file_id}'.\n"
+                    f"Missing in '{file_id}': {len(missing_in_ad)} (e.g., {list(missing_in_ad)[:5]})\n"
+                    f"Extra in '{file_id}': {len(extra_in_ad)} (e.g., {list(extra_in_ad)[:5]})"
+                )
             
             # Reload large slots before reordering
             _ad_tmp = read_anndata(
