@@ -13,18 +13,18 @@ mcfg = ModuleConfig(
     config_params=[
         'key',
         'values',
-        'backed',
         'dask',
         'slots',
         'write_copy',
+        'threads',
     ],
     wildcard_names=['key', 'value'],
     rename_config_params={'values': 'value'},
     explode_by=['value'],
     dtypes={
-        'backed': 'bool',
-        'dask': 'bool',
-        'write_copy': 'bool',
+        'dask': bool,
+        'write_copy': bool,
+        'threads': int,
     }
 )
 paramspace = mcfg.get_paramspace()
@@ -51,13 +51,13 @@ rule split:
         done=mcfg.out_dir / 'splits' / f'{split_pattern}.done',
     params:
         values=lambda wildcards: mcfg.get_from_parameters(wildcards, 'value', single_value=False),
-        backed=lambda wildcards: mcfg.get_from_parameters(wildcards, 'backed'),
-        dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask'),
+        dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=False),
         slots=lambda wildcards: mcfg.get_from_parameters(wildcards, 'slots', default={}),
         write_copy=lambda wildcards: mcfg.get_from_parameters(wildcards, 'write_copy', default=False),
     resources:
         mem_mb=lambda wildcards, attempt: mcfg.get_resource(profile='cpu',resource_key='mem_mb', attempt=attempt, factor=1),
-    threads: 5
+    threads:
+        lambda wildcards: max(1, mcfg.get_from_parameters(wildcards, 'threads', default=1))
     priority: 1
     conda:
         get_env(config, 'scanpy', env_dir='envs')

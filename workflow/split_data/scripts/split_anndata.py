@@ -1,52 +1,54 @@
 import faulthandler
 faulthandler.enable()
 from pathlib import Path
-import numpy as np
 import warnings
 warnings.filterwarnings("ignore")
 import logging
 logging.basicConfig(level=logging.INFO)
-import anndata as ad
 from pprint import pformat
-from scipy.sparse import csr_matrix, coo_matrix
-import sparse
-from dask import array as da
 from dask import config as da_config
+import time
 da_config.set(num_workers=snakemake.threads)
 
-from utils.accessors import adata_to_memory
 from utils.annotate import add_wildcards
 from utils.io import read_anndata, write_zarr, write_zarr_linked, ALL_SLOTS
-from utils.misc import dask_compute
 
 input_file = snakemake.input[0]
 output_dir = snakemake.output[0]
 split_key = snakemake.wildcards.key
 values = snakemake.params.get('values', [])
-backed = snakemake.params.get('backed', True)
-dask = snakemake.params.get('dask', True)
-write_copy = snakemake.params.get('write_copy', False)
+dask = snakemake.params.get('dask', False)
+write_copy = snakemake.params.get('write_copy', False) or input_file.endswith('.h5ad')
 slots = snakemake.params.get('slots', {})
 
-out_dir = Path(output_dir)
-if not out_dir.exists():
-    out_dir.mkdir()
-
-write_copy = write_copy or input_file.endswith('.h5ad')
-# kwargs = dict(obs='obs', var='var', uns='uns')
-kwargs = dict(
-    **slots,
-    backed=backed,
-    dask=dask,
-)
+if not slots:
+    slots = {s: s for s in ALL_SLOTS}
 
 exclude_slots = [
     slot for slot in ALL_SLOTS
     if slot not in slots
 ]
 
+assert 'obs' in slots, "obs slot must be read to split anndata"
+assert 'obs' not in exclude_slots, "obs slot cannot be excluded when splitting anndata"
+
+out_dir = Path(output_dir)
+if not out_dir.exists():
+    out_dir.mkdir()
+
+# minimal slots to be read
+if not write_copy and all(k == v for k, v in slots.items()):
+    # only obs needed if everything else gets linked directly
+    slots = dict(obs='obs')
+    # TODO: also optimise case where slot key and value does not match fully
+
 logging.info(f'Read anndata file {input_file}...')
-adata = read_anndata(input_file, **kwargs)
+adata = read_anndata(
+    input_file,
+    **slots,
+    backed=True,
+    dask=True,
+)
 logging.info(adata.__str__())
 
 # convert split_key column to string
@@ -58,57 +60,37 @@ file_value_map = {
     for s in adata.obs[split_key].astype(str).unique()
 }
 logging.info(f'file_value_map: {pformat(file_value_map)}')
-# split_files = list(file_value_map.keys())
-# split_files = set(split_files + values)
-split_files = values
-logging.info(f'splits: {split_files}')
+logging.info(f'splits: {pformat(values)}')
 
-for i, split_file in enumerate(split_files):
-    split = file_value_map.get(split_file, split_file)
-    out_file = out_dir / f"value~{split_file}.zarr"
+for i, value in enumerate(values):
+    split = file_value_map.get(value, value)
+    out_file = out_dir / f"value~{value}.zarr"
     
     # split anndata
     logging.info(f'Split by {split_key}={split}')
-    adata_sub = adata[adata.obs[split_key] == split]
+    obs_mask = adata.obs[split_key] == split
+    adata_sub = adata[obs_mask]
     logging.info(adata_sub.__str__())
 
     # add wildcards
-    add_wildcards(adata_sub, {'key': split_key, 'value': split} , 'split_data')
-    
-    if adata_sub.n_obs == 0:
-        write_copy = True
-        adata_sub = ad.AnnData(
-            X=np.zeros(adata_sub.shape),
-            obs=adata_sub.obs,
-            obsm=adata_sub.obsm,
-            obsp=adata_sub.obsp,
-            var=adata_sub.var,
-            varm=adata_sub.varm,
-            varp=adata_sub.varp,
-            layers={
-                layer: np.zeros(adata_sub.shape)
-                for layer in adata_sub.layers
-            },
-            uns=adata_sub.uns,
-        )
-    
+    add_wildcards(adata_sub, {'key': split_key, 'value': split}, 'split_data')
+        
     if write_copy:
-        adata_sub = dask_compute(adata_sub.copy())
         logging.info(f'Write to {out_file}...')
-        write_zarr(adata_sub, out_file)
+        start_time = time.time()
+        write_zarr(adata_sub.copy(), out_file, compute=not dask)
+        logging.info(f'Took {time.time() - start_time:.2f} seconds.')
     else:
         logging.info(f'Write to {out_file} with subset mask...')
-        obs_mask = adata.obs_names.isin(adata_sub.obs_names)
-        var_mask = adata.var_names.isin(adata_sub.var_names)
         write_zarr_linked(
             adata_sub,
             in_dir=input_file,
             out_dir=out_file,
-            subset_mask=(obs_mask, var_mask),
+            subset_mask=(obs_mask, None),
             files_to_keep=['uns']+exclude_slots
         )
     del adata_sub
-    logging.info(f'Finished {i+1} out of {len(split_files)}.')
+    logging.info(f'Finished {i+1} out of {len(values)}.')
 
 logging.info(f'Finished splitting data by {split_key}.')
 # touch done file
