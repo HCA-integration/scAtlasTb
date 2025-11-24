@@ -178,10 +178,14 @@ else:
         adatas.append(_ad)
         gc.collect()
 
-# Assert no duplicates in the merged object
 if not allow_duplicate_obs:
-    assert not adata.obs_names.duplicated().any(), "Duplicate obs_names found in merged AnnData object"
+    # Remove duplicate obs_names, keeping the first occurrence
+    duplicates = adata.obs_names.duplicated(keep='first')
+    if duplicates.any():
+        logging.info(f'Removing {duplicates.sum()} duplicate obs_names...')
+        adata = adata[~duplicates].copy()
 
+# Assert no duplicates in the merged object
 if not allow_duplicate_vars:
     assert not adata.var_names.duplicated().any(), "Duplicate var_names found in merged AnnData object"
 
