@@ -35,6 +35,9 @@ exclude_slots = [
     if slot not in slots
 ]
 
+assert 'obs' in slots, "obs slot must be read to split anndata"
+assert 'obs' not in exclude_slots, "obs slot cannot be excluded when splitting anndata"
+
 out_dir = Path(output_dir)
 if not out_dir.exists():
     out_dir.mkdir()
@@ -42,7 +45,7 @@ if not out_dir.exists():
 # minimal slots to be read
 if not write_copy and all(k == v for k, v in slots.items()):
     # only obs needed if everything else gets linked directly
-    slots = dict(obs='obs', var='var')
+    slots = dict(obs='obs')
     # TODO: also optimise case where slot key and value does not match fully
 
 logging.info(f'Read anndata file {input_file}...')
