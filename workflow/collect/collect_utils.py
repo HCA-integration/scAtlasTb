@@ -20,7 +20,7 @@ def check_obs_same_index(adatas):
 
 
 def check_columns_equal(adatas, col):
-    def _check_columns_equal(s1, s2):
+    def _check_columns_equal(s1, s2, col):
         assert s1.index.equals(s2.index), \
             f'Indices do not match for column comparison: {col}'
         # Fast path: check if both Series are the same object or have the same underlying data
@@ -36,7 +36,7 @@ def check_columns_equal(adatas, col):
 
     iterator = iter(adatas.values())
     _ad1 = next(iterator)
-    if all(_check_columns_equal(_ad.obs[col], _ad1.obs[col]) for _ad in iterator):
+    if all(_check_columns_equal(_ad.obs[col], _ad1.obs[col], col) for _ad in iterator):
         return []
     return [col]
 
