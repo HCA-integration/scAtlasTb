@@ -185,7 +185,8 @@ if not allow_duplicate_obs:
         logging.info(f'Removing {duplicates.sum()} duplicate obs_names...')
         adata = adata[~duplicates].copy()
 
-# Assert no duplicates in the merged object
+
+# Assert no duplicate var_names in the merged object
 if not allow_duplicate_vars:
     assert not adata.var_names.duplicated().any(), "Duplicate var_names found in merged AnnData object"
 
