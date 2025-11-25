@@ -16,6 +16,7 @@ rule scarches:
         get_env(config, 'scarches', env_dir='envs')
     resources:
         partition=lambda wildcards: mcfg.get_resource(profile='gpu',resource_key='partition'),
+        gpu=lambda wildcards: mcfg.get_resource(profile='gpu',resource_key='gpu'),
         qos=lambda wildcards: mcfg.get_resource(profile='gpu',resource_key='qos'),
         mem_mb=lambda wildcards: mcfg.get_resource(profile='gpu',resource_key='mem_mb'),
     script:
