@@ -17,6 +17,7 @@ DATASETS:
       keep_all_columns: true
       allow_duplicate_obs: true
       allow_duplicate_var: false
+      new_indices: false
       threads: 5
       stride: 500_000
       dask: true
@@ -45,6 +46,10 @@ DATASETS:
 * **`allow_duplicate_var`**: Whether duplicate variable names are allowed in the final merged dataset  
   - `true`: Allow duplicate gene names
   - `false`: Raise error if duplicate gene names are found
+
+* **`new_indices`**: Whether to generate new sequential cell identifiers
+  - `true`: Create new cell IDs in format `{dataset}-{index}` where dataset comes from wildcard and index is sequential (0, 1, 2, ...)
+  - `false`: Preserve original cell names from input files (default)
 
 * **`threads`**: Number of threads for parallel processing (used with Dask)
 
@@ -88,12 +93,13 @@ DATASETS:
 4. **Metadata Merging**: Combines observation metadata according to `keep_all_columns`
 
 ### Index and Metadata Handling
-- **Cell Identifiers**: When `new_indices: true`, generates new cell IDs in format `{dataset}-{sequential_index}` (where `dataset` is from the wildcard and `sequential_index` is a running index). When `new_indices: false`, preserves original cell IDs.
-- **Original Names**: Preserves original cell names in `obs_names_before_{dataset}` columns (only when `new_indices: true`)
-- **Dataset Tracking**: Adds `file_id` column to obs and stores dataset info in `uns['dataset']`
+- **Cell Identifiers**: 
+  - When `new_indices: true`, generates new cell IDs in format `{dataset}-{sequential_index}` where `dataset` is from the wildcard and `sequential_index` is a running index (0, 1, 2, ...). Original cell names are preserved in `obs_names_before_{dataset}` column
+  - When `new_indices: false`, preserves original cell IDs from input files
+- **Dataset Tracking**: Adds `file_id` column to obs and stores dataset info in `uns['merge']`
 - **Duplicate Checking**: 
-  - If `allow_duplicate_obs=False`, duplicate observations are automatically removed.
-  - If `allow_duplicate_var=False`, duplicate variables cause an error and merging is halted.
+  - If `allow_duplicate_obs=False`, duplicate observations are automatically removed (keeping first occurrence)
+  - If `allow_duplicate_var=False`, duplicate variables cause an error and merging is halted
 
 ### Memory Optimization
 - Automatic garbage collection between files
