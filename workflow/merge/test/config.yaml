@@ -21,7 +21,7 @@ DATASETS:
       merge_strategy: inner
       keep_all_columns: true
       allow_duplicate_obs: true
-      allow_duplicate_var: false
+      allow_duplicate_vars: false
       threads: 5
       stride: 500_000
       dask: true

@@ -73,6 +73,7 @@ merge_strategy = snakemake.params.get('merge_strategy', 'inner')
 keep_all_columns = snakemake.params.get('keep_all_columns', False)
 allow_duplicate_obs = snakemake.params.get('allow_duplicate_obs', False)
 allow_duplicate_vars = snakemake.params.get('allow_duplicate_vars', False)
+new_indices = snakemake.params.get('new_indices', False)
 backed = snakemake.params.get('backed', False)
 dask = snakemake.params.get('dask', False)
 stride = snakemake.params.get('stride', 500_000)
@@ -87,19 +88,31 @@ if len(files) == 1:
     exit(0)
 
 # subset to non-empty datasets
-def check_cells(file):
+def get_shape(file):
     if file.endswith('.zarr'):
         zattr_path = Path(file) / slots.get('X', 'X') / '.zattrs'
         with open(zattr_path, 'r') as f:
             zattrs = yaml.safe_load(f)
-        return 'shape' in zattrs
-        # return zattrs['shape'][0] > 0
-    return read_anndata(file, obs='obs', verbose=False).n_obs > 0
+        if 'shape' in zattrs:
+            shape = zattrs['shape']
+        else:
+            # Fall back to reading the file if 'shape' is missing
+            shape = read_anndata(file, obs='obs', var='var', verbose=False).shape
+    else:
+        shape = read_anndata(file, obs='obs', var='var', verbose=False).shape
+    return list(shape)
+
+original_shapes = {
+    file_id: get_shape(file)
+    for file_id, file
+    in zip(files.keys(), files)
+}
+
 files = {
     file_id: file
     for file_id, file
     in zip(files.keys(), files)
-    if check_cells(file)
+    if original_shapes[file_id][0] > 0  # check that n_obs > 0
 }
 
 if len(files) == 0:
@@ -177,10 +190,15 @@ else:
         adatas.append(_ad)
         gc.collect()
 
-# Assert no duplicates in the merged object
 if not allow_duplicate_obs:
-    assert not adata.obs_names.duplicated().any(), "Duplicate obs_names found in merged AnnData object"
+    # Remove duplicate obs_names, keeping the first occurrence
+    duplicates = adata.obs_names.duplicated(keep='first')
+    if duplicates.any():
+        logging.info(f'Removing {duplicates.sum()} duplicate obs_names...')
+        adata = adata[~duplicates].copy()
 
+
+# Assert no duplicate var_names in the merged object
 if not allow_duplicate_vars:
     assert not adata.var_names.duplicated().any(), "Duplicate var_names found in merged AnnData object"
 
@@ -206,21 +224,51 @@ adata.var = adata.var.infer_objects()
 logging.info(adata.var)
 
 if keep_all_columns:
-    logging.info('Merging obs columns...')
+    logging.info('Merging observation columns from all datasets, all columns will be kept...')
     obs_dfs = (
         read_anndata(file, obs='obs', verbose=False).obs
         for file in files.values()
     )
     merged_obs = pd.concat(obs_dfs, axis=0, join='outer', ignore_index=False)
-    merged_obs = merged_obs.loc[~merged_obs.index.duplicated(keep='first')]
+    
+    if not allow_duplicate_obs:
+        # remove duplicates the same way as above
+        merged_obs = merged_obs[~merged_obs.index.duplicated(keep='first')]
+        
+        if not merged_obs.index.equals(adata.obs_names):
+            # Ensure indices match
+            extra = merged_obs.index.difference(adata.obs_names)
+            if len(extra):
+                logging.info(f'Dropping {len(extra)} extra observation indices not in adata.obs')
+                merged_obs = merged_obs.drop(extra)
+            
+            missing = adata.obs_names.difference(merged_obs.index)
+            if len(missing):
+                raise ValueError(f'Merged observation table is missing {len(missing)} indices from adata.obs')
+            
+            # Reorder to match adata.obs_names
+            merged_obs = merged_obs.loc[adata.obs_names]
+    
     adata.obs = adata.obs.combine_first(merged_obs)
 
+# Store information about the files that went into the merge
+adata.uns['merge'] = {
+    'files': list(files.values()),
+    'file_ids': list(files.keys()),
+    'n_files': len(files),
+    'merge_strategy': merge_strategy,
+    'allow_duplicate_obs': allow_duplicate_obs,
+    'allow_duplicate_vars': allow_duplicate_vars,
+    'reindexed': new_indices,
+    'original_shapes': original_shapes,
+}
+
 # set new indices
-adata.obs[f'obs_names_before_{dataset}'] = adata.obs_names
-adata.obs_names = dataset + '-' + adata.obs.reset_index(drop=True).index.astype(str)
+if new_indices:
+    adata.obs[f'obs_names_before_{dataset}'] = adata.obs_names
+    adata.obs_names = dataset + '-' + adata.obs.reset_index(drop=True).index.astype(str)
 
 # add uns data
-adata.uns['dataset'] = dataset
 logging.info(adata.__str__())
 
 logging.info(f'Write to {out_file}...')
