@@ -41,7 +41,7 @@ DATASETS:
 
 * **`allow_duplicate_obs`**: How to handle duplicate observation names during merging
   - `true`: Allow duplicate cell barcodes/names in the final dataset
-  - `false`: Remove duplicate observations, keeping the first occurrence of each duplicate name
+  - `false`: After merging, remove duplicate observations by keeping only the first occurrence of each duplicate name. **Note:** Duplicates between different input files will be silently dropped, which can result in data loss if files have overlapping cell names.
 
 * **`allow_duplicate_var`**: Whether duplicate variable names are allowed in the final merged dataset  
   - `true`: Allow duplicate gene names
