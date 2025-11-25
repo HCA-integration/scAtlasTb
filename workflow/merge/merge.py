@@ -88,19 +88,28 @@ if len(files) == 1:
     exit(0)
 
 # subset to non-empty datasets
-def check_cells(file):
+def get_shape(file):
     if file.endswith('.zarr'):
         zattr_path = Path(file) / slots.get('X', 'X') / '.zattrs'
         with open(zattr_path, 'r') as f:
             zattrs = yaml.safe_load(f)
-        return 'shape' in zattrs
-        # return zattrs['shape'][0] > 0
-    return read_anndata(file, obs='obs', verbose=False).n_obs > 0
+        if 'shape' in zattrs:
+            shape = zattrs['shape']
+    else:
+        shape = read_anndata(file, obs='obs', var='var', verbose=False).shape
+    return list(shape)
+
+original_shapes = {
+    file_id: get_shape(file)
+    for file_id, file
+    in zip(files.keys(), files)
+}
+
 files = {
     file_id: file
     for file_id, file
     in zip(files.keys(), files)
-    if check_cells(file)
+    if original_shapes[file_id][0] > 0  # check that n_obs > 0
 }
 
 if len(files) == 0:
@@ -238,13 +247,24 @@ if keep_all_columns:
     
     adata.obs = adata.obs.combine_first(merged_obs)
 
+# Store information about the files that went into the merge
+adata.uns['merge'] = {
+    'files': list(files.values()),
+    'file_ids': list(files.keys()),
+    'n_files': len(files),
+    'merge_strategy': merge_strategy,
+    'allow_duplicate_obs': allow_duplicate_obs,
+    'allow_duplicate_vars': allow_duplicate_vars,
+    'reindexed': new_indices,
+    'original_shapes': original_shapes,
+}
+
 # set new indices
 if new_indices:
     adata.obs[f'obs_names_before_{dataset}'] = adata.obs_names
     adata.obs_names = dataset + '-' + adata.obs.reset_index(drop=True).index.astype(str)
 
 # add uns data
-adata.uns['dataset'] = dataset
 logging.info(adata.__str__())
 
 logging.info(f'Write to {out_file}...')
