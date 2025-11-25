@@ -212,13 +212,30 @@ adata.var = adata.var.infer_objects()
 logging.info(adata.var)
 
 if keep_all_columns:
-    logging.info('Merging obs columns...')
+    logging.info('Merging observation columns from all datasets, all columns will be kept...')
     obs_dfs = (
         read_anndata(file, obs='obs', verbose=False).obs
         for file in files.values()
     )
     merged_obs = pd.concat(obs_dfs, axis=0, join='outer', ignore_index=False)
-    merged_obs = merged_obs.loc[~merged_obs.index.duplicated(keep='first')]
+    
+    if not allow_duplicate_obs:
+        # remove duplicates the same way as above
+        merged_obs = merged_obs[~merged_obs.index.duplicated(keep='first')]
+        
+        if not merged_obs.index.equals(adata.obs_names):
+            extra = merged_obs.index.difference(adata.obs_names)
+            if len(extra):
+                logging.info(f'Dropping {len(extra)} extra observation indices not in adata.obs')
+                merged_obs = merged_obs.drop(extra)
+            
+            missing = set(adata.obs_names) - set(merged_obs.index)
+            if missing:
+                raise ValueError(f'Merged observation table is missing {len(missing)} indices from adata.obs')
+            
+            # Reorder
+            merged_obs = merged_obs.loc[adata.obs_names]
+    
     adata.obs = adata.obs.combine_first(merged_obs)
 
 # set new indices
