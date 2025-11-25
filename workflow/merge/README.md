@@ -99,7 +99,7 @@ DATASETS:
 - **Dataset Tracking**: Adds `file_id` column to obs and stores dataset info in `uns['merge']`
 - **Duplicate Checking**: 
   - If `allow_duplicate_obs=False`, duplicate observations are automatically removed (keeping first occurrence)
-  - If `allow_duplicate_var=False`, duplicate variables cause an error and merging is halted
+  - If `allow_duplicate_vars=False`, duplicate variables cause an error and merging is halted
 
 ### Memory Optimization
 - Automatic garbage collection between files
