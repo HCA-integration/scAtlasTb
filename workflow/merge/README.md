@@ -16,7 +16,7 @@ DATASETS:
       merge_strategy: inner
       keep_all_columns: true
       allow_duplicate_obs: true
-      allow_duplicate_var: false
+      allow_duplicate_vars: false
       new_indices: false
       threads: 5
       stride: 500_000
@@ -43,7 +43,7 @@ DATASETS:
   - `true`: Allow duplicate cell barcodes/names in the final dataset
   - `false`: After merging, remove duplicate observations by keeping only the first occurrence of each duplicate name. **Note:** Duplicates between different input files will be silently dropped, which can result in data loss if files have overlapping cell names.
 
-* **`allow_duplicate_var`**: Whether duplicate variable names are allowed in the final merged dataset  
+* **`allow_duplicate_vars`**: Whether duplicate variable names are allowed in the final merged dataset  
   - `true`: Allow duplicate gene names
   - `false`: Raise error if duplicate gene names are found
 
