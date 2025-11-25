@@ -95,6 +95,9 @@ def get_shape(file):
             zattrs = yaml.safe_load(f)
         if 'shape' in zattrs:
             shape = zattrs['shape']
+        else:
+            # Fall back to reading the file if 'shape' is missing
+            shape = read_anndata(file, obs='obs', var='var', verbose=False).shape
     else:
         shape = read_anndata(file, obs='obs', var='var', verbose=False).shape
     return list(shape)
