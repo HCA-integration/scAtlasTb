@@ -236,16 +236,17 @@ if keep_all_columns:
         merged_obs = merged_obs[~merged_obs.index.duplicated(keep='first')]
         
         if not merged_obs.index.equals(adata.obs_names):
+            # Ensure indices match
             extra = merged_obs.index.difference(adata.obs_names)
             if len(extra):
                 logging.info(f'Dropping {len(extra)} extra observation indices not in adata.obs')
                 merged_obs = merged_obs.drop(extra)
             
-            missing = set(adata.obs_names) - set(merged_obs.index)
-            if missing:
+            missing = adata.obs_names.difference(merged_obs.index)
+            if len(missing):
                 raise ValueError(f'Merged observation table is missing {len(missing)} indices from adata.obs')
             
-            # Reorder
+            # Reorder to match adata.obs_names
             merged_obs = merged_obs.loc[adata.obs_names]
     
     adata.obs = adata.obs.combine_first(merged_obs)
