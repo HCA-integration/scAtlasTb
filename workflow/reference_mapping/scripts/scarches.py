@@ -97,7 +97,6 @@ adata = _align_query_with_registry(
 logging.info(adata.__str__())
 
 # prepare SCVI model
-adata.varm.clear()
 try:
     model.prepare_query_anndata(
         adata,
@@ -146,13 +145,22 @@ except KeyError:
 vae_query.train(**train_params)
 
 # get latent representation
-adata.obsm['X_emb'] = vae_query.get_latent_representation(adata=adata)
+X_emb = vae_query.get_latent_representation(adata=adata)
+
+# get original adata to preserve layers etc.
+if input_file.endswith('.h5ad'):
+    obs_names = adata.obs_names.copy()
+    adata = read_anndata(input_file, dask=True, backed=True)
+    assert adata.obs_names.equals(obs_names), 'Cell names do not match after re-loading original data.'
+
+adata.obsm['X_emb'] = X_emb
 logging.info(adata.__str__())
 
 # save
 vae_query.save(model_output, overwrite=True)
 
 logging.info(f'Write to {output_file}...')
+logging.info(adata.__str__())
 write_zarr_linked(
     adata=adata,
     in_dir=input_file,

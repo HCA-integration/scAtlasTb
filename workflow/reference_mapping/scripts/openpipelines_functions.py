@@ -49,7 +49,7 @@ def _validate_obs_metadata_params(model_registry, model_name, **kwargs):
         query_value = kwargs.get(registry_key)
 
         if model_value and not query_value:
-            if registry_key == "labels_key" and model_value.get("unlabeled_category"):
+            if registry_key == "labels_key" and model_registry.get("unlabeled_category"):
                 # skip optional labels_key
                 continue
             raise ValueError(
