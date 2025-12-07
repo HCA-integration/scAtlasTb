@@ -27,7 +27,7 @@ def assemble_adata(file, file_type, adata, backed=True):
 
     if file_type == 'normalize':
         logging.info('add normalised counts')
-        adata_pp = read_anndata(file, X='X', backed=backed)
+        adata_pp = read_anndata(file, X='X', dask=True, backed=True)
         adata.layers['normcounts'] = adata_pp[:, adata.var_names].X
         adata.X = adata.layers['normcounts']
     elif file_type == 'highly_variable_genes':
@@ -178,7 +178,7 @@ for file_type, file in file_map:
 
 
 logging.info(f'Write to {output_file}...')
-adata.uns = read_anndata(file, uns='uns').uns
+adata.uns = read_anndata(file, uns='uns', verbose=False).uns
 add_wildcards(adata, snakemake.wildcards, 'preprocessing')
 write_zarr_linked(
     adata=adata,

@@ -19,12 +19,10 @@ dask = snakemake.params.get('dask', True)
 logging.info(f'Read {input_file}...')
 kwargs = dict(
     X='X',
-    obs='obs',
     var='var',
-    uns='uns',
     backed=dask,
     dask=dask,
-    stride=10_000,
+    stride=100_000,
 )
 # TODO: read with chunks (None, 'auto') for optimal gene-wise operations
 
