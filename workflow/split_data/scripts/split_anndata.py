@@ -39,7 +39,7 @@ if not out_dir.exists():
 # minimal slots to be read
 if not write_copy and all(k == v for k, v in slots.items()):
     # only obs needed if everything else gets linked directly
-    slots = dict(obs='obs')
+    slots = dict(obs='obs', var='var')
     # TODO: also optimise case where slot key and value does not match fully
 
 logging.info(f'Read anndata file {input_file}...')
