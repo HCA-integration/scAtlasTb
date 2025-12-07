@@ -30,6 +30,8 @@ dask = snakemake.params.get('dask', True) # get global dask flag
 if isinstance(args, dict):
     dask = args.pop('dask', dask) # overwrite with hvg-specific dask flag
 
+logging.info(f'args: {args}')
+logging.info(f'dask: {dask}')
 
 logging.info(f'Read {input_file}...')
 kwargs = dict(
@@ -67,6 +69,7 @@ else:
     if USE_GPU:
         sc.get.anndata_to_GPU(adata)
     
+    logging.info(f'Select features with arguments: {args}...')
     with TqdmCallback(
         desc=f'Select features with arguments: {args}...',
         miniters=1,
