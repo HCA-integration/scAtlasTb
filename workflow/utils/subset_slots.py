@@ -12,9 +12,7 @@ def set_mask_per_slot(slot, mask, out_dir, mask_dir=None, in_slot=None, in_dir=N
     def _call_function_per_slot(func, path, *args, **kwargs):
         if path.is_dir() and (path / '.zattrs').exists():
             func(*args, **kwargs)
-    
-    link_slot = in_slot is not None
-    
+        
     if slot == 'uns':
         # do not set mask for uns slots
         return
@@ -24,6 +22,8 @@ def set_mask_per_slot(slot, mask, out_dir, mask_dir=None, in_slot=None, in_dir=N
     if not slot_dir.exists():
         print(f'Slot directory {slot_dir} does not exist, skipping mask for slot {slot}', flush=True)
         return
+
+    link_slot = slot_dir.is_symlink() and in_slot is not None
 
     if mask_dir is None:
         mask_dir = out_dir / 'subset_mask'
