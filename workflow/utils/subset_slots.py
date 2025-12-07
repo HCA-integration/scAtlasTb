@@ -31,11 +31,18 @@ def set_mask_per_slot(slot, mask, out_dir, mask_dir=None, in_slot=None, in_dir=N
     # set to the slot-specific mask directory
     mask_dir = init_mask_dir(mask_dir, slot, in_slot, in_dir)
     
-    if mask is not None:
-        if slot.startswith(('obs', 'raw/obs')):
-            mask = mask[0]
-        elif slot.startswith(('var', 'raw/var')):
-            mask = mask[1]
+    if mask is None:
+        if not link_slot:
+            # remove any old mask, since a new slot will be written in the correct shape
+            remove_path(mask_dir)
+        # if linked, keep copy of the previous mask provided by init_mask_dir
+        return
+
+    # Pick the appropriate dimension-specific mask for obs/var slots
+    if slot.startswith(('obs', 'raw/obs')):
+        mask = mask[0]
+    elif slot.startswith(('var', 'raw/var')):
+        mask = mask[1]
     
     match slot:
         
@@ -97,12 +104,12 @@ def set_mask_per_slot(slot, mask, out_dir, mask_dir=None, in_slot=None, in_dir=N
             print(f'Unknown slot, cannot subset: {slot}', flush=True)
 
 
-def remove_path(path, remove_file=False):
+def remove_path(path):
     if path.is_symlink():
         path.unlink()
     elif path.is_dir():
         shutil.rmtree(path)
-    elif path.is_file() and remove_file:
+    elif path.is_file():
         path.unlink()
     
 
@@ -139,20 +146,11 @@ def save_feature_matrix_mask(mask_dir, mask, link_slot):
     """
     Save the subset mask for the feature matrices e.g. from X, raw/X or layers/*
     """
-    obs_mask_file = mask_dir  / 'obs.npy'
-    var_mask_file = mask_dir  / 'var.npy'
-    
-    if mask is None:
-        # remove any pre-existing mask files, since slot is being overwritten with correct shape
-        # -> no subset mask required
-        remove_mask_file(mask_dir, link_slot)
-        return
-    
-    if not mask_dir.exists():
-        mask_dir.mkdir(parents=True)
-    
+    mask_dir.mkdir(parents=True, exist_ok=True)
+    obs_mask_file = mask_dir / 'obs.npy'
+    var_mask_file = mask_dir / 'var.npy'
+        
     if link_slot:
-        # update subset masks
         mask = (
             update_mask(obs_mask_file, mask[0]),
             update_mask(var_mask_file, mask[1])
@@ -163,17 +161,10 @@ def save_feature_matrix_mask(mask_dir, mask, link_slot):
 
 
 def save_slot_mask(mask_dir, mask, link_slot):
-     
-    if mask is None:
-        # # remove any pre-existing mask file, since slot is being overwritten with correct shape
-        # # -> no subset mask required
-        remove_mask_file(mask_dir, link_slot)
-        return
-
-    mask_file = mask_dir / 'mask.npy'
     mask_dir.mkdir(parents=True, exist_ok=True)
-    if mask_file.exists() and link_slot:
-        # update mask for linked mask_file slot
+    mask_file = mask_dir / 'mask.npy'
+    
+    if link_slot:
         mask = update_mask(mask_file, mask)
     
     np.save(mask_file, mask)
@@ -199,12 +190,6 @@ def update_mask(mask_file, mask):
     
     mask_old[mask_old] &= mask
     return mask_old
-
-
-def remove_mask_file(mask_file, link_slot):
-    if link_slot:
-        return
-    remove_path(mask_file, remove_file=True)
     
 
 ## Functions for subsetting slots when reading them
