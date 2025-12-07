@@ -11,8 +11,7 @@ def set_mask_per_slot(slot, mask, out_dir, mask_dir=None, in_slot=None, in_dir=N
     
     def _call_function_per_slot(func, path, *args, **kwargs):
         if path.is_dir() and (path / '.zattrs').exists():
-            func(*args, **kwargs)
-        
+            func(*args, **kwargs)        
     if slot == 'uns':
         # do not set mask for uns slots
         return
@@ -231,16 +230,36 @@ def subset_slot(slot_name, slot, mask_dir, chunks=('auto', -1)):
     return slot
 
 
+def _ensure_mask_shape(mask, expected, mask_file=None):
+    if mask.shape[0] != expected:
+        mask = mask[mask]
+    assert mask.shape[0] == expected, \
+        f'Mask shape {mask.shape} does not match expected {expected} for mask file {mask_file}'
+    return mask
+
+
 def _subset_matrix(slot, mask_dir):
     obs_mask_file = mask_dir / 'obs.npy'
     var_mask_file = mask_dir / 'var.npy'
+    
     if not obs_mask_file.exists() or not var_mask_file.exists():
         return slot
     
     obs_mask = np.load(obs_mask_file)
     var_mask = np.load(var_mask_file)
+
+    obs_mask = _ensure_mask_shape(obs_mask, slot.shape[0], mask_file=obs_mask_file)
+    var_mask = _ensure_mask_shape(var_mask, slot.shape[1], mask_file=var_mask_file)
     
-    return slot[obs_mask, :][:, var_mask].copy()
+    try:
+        return slot[obs_mask, :][:, var_mask].copy()
+    except Exception as e:
+        raise ValueError(
+            f"Error subsetting matrix slot with masks from {mask_dir}\n"
+            f"slot shape: {slot.shape}\n"
+            f"obs_mask: shape={obs_mask.shape}, sum={obs_mask.sum()}\n"
+            f"var_mask: shape={var_mask.shape}, sum={var_mask.sum()}"
+        ) from e
 
 
 def _subset_slot(slot_name, slot, mask_dir):
@@ -250,8 +269,7 @@ def _subset_slot(slot_name, slot, mask_dir):
         return slot
     
     mask = np.load(mask_file)
-    assert mask.shape[0] == slot.shape[0], \
-        f'Mask shape {mask.shape} does not match slot shape {slot.shape} for slot {slot_name}'
+    mask = _ensure_mask_shape(mask, slot.shape[0], mask_file=mask_file)
 
     if slot_name.startswith('obsp/') or slot_name.startswith('varp/'):
         # subset in both dimensions
