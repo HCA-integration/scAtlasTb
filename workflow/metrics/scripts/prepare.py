@@ -149,12 +149,12 @@ else:
 # if output_type != 'knn':  # assuming that there aren't any knn-based metrics that require PCA
 logging.info(f'Prepare unintegrated data from layer={unintegrated_layer}...')
 adata_raw = read_anndata(
-    output_file,
-    X='X',
-    var='var',
+    input_file,
+    X=unintegrated_layer,
     dask=True,
     backed=True,
 )
+adata_raw.var = adata.var
 logging.info(f'Unintegrated data shape: {adata_raw.shape}') 
 
 if adata.n_obs > PERSIST_MATRIX_THRESHOLD:
@@ -164,14 +164,17 @@ else:
     dask_compute(adata_raw, layers='X')
 
 logging.info('Run PCA on unintegrated data...')
-sc.pp.pca(adata_raw, mask_var=new_var_column)
+sc.pp.pca(
+    adata_raw,
+    mask_var=new_var_column,
+    svd_solver='covariance_eigh',
+)
 adata_raw = dask_compute(adata_raw, layers='X_pca')
 
 raw_file = Path(output_file) / 'raw'
 logging.info(f'Write to {raw_file}...')
 slot_map = None if is_h5ad else dict(X=unintegrated_layer)
 in_dir_map = None if is_h5ad else dict(X=input_file)
-adata.uns['output_type'] = output_type # ensure that output type is set for run.py
 write_zarr_linked(
     adata_raw,
     in_dir=output_file,
