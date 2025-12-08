@@ -232,6 +232,11 @@ def subset_slot(slot_name, slot, mask_dir, chunks=('auto', -1)):
 
 def _ensure_mask_shape(mask, expected, mask_file=None):
     if mask.shape[0] != expected:
+        # Subset the mask by itself to get only the True values.
+        if not np.issubdtype(mask.dtype, np.bool_):
+            raise TypeError(
+                f"Mask must be a boolean array to subset by itself, got dtype {mask.dtype} for mask file {mask_file}"
+            )
         mask = mask[mask]
     assert mask.shape[0] == expected, \
         f'Mask shape {mask.shape} does not match expected {expected} for mask file {mask_file}'
