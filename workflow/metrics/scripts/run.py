@@ -44,7 +44,7 @@ metric = wildcards.metric
 
 metric_type = params.get('metric_type')
 assert metric_type in ['batch_correction', 'bio_conservation'], f'Unknown metric_type: {metric_type}'
-allowed_output_types = params.get('output_types')
+allowed_output_types = params.get('allowed_output_types')
 input_type = params.get('input_type')
 comparison = params.get('comparison', False)
 cluster_key = params.get('cluster_key', 'leiden')
