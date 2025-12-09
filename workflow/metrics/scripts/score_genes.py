@@ -98,7 +98,7 @@ if adata.n_obs > MAX_OBS:
 
 # subset to HVGs (used for control genes) + genes of interest
 logging.info(f'Subset to {adata.n_vars} genes for scoring')
-logging.info(adata.__str__())
+logging.debug(adata.__str__())
 adata.var.loc[adata.var_names.isin(genes), var_key] = True
 adata = adata[:, adata.var[var_key]].copy()
 
