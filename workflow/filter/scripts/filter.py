@@ -19,7 +19,7 @@ output_file = snakemake.output[0]
 params = dict(snakemake.params)
 
 subset = params.get('subset', True)
-write_copy = params.get('write_copy', False)
+write_copy = params.get('write_copy', False) or input_file.endswith('.h5ad')
 
 adata = read_anndata(input_file, dask=True, backed=True)
 logging.info(adata.__str__())
@@ -65,8 +65,6 @@ else:
     logging.info('Subset data by filters...')
     adata = adata[adata.obs['filtered']].copy()
     logging.info(adata.__str__())
-    
-    var_mask = np.full(adata.n_vars, True, dtype=bool)
 
     logging.info(f'Write to {output_file}...')
     if write_copy:
@@ -81,6 +79,5 @@ else:
             input_file,
             output_file,
             files_to_keep=['obs'],
-            compute=True, # for h5ad files, for zarr all slots other than obs will be dropped before writing
-            subset_mask=(mask.values, var_mask),
+            subset_mask=(mask.values, None),
         )
