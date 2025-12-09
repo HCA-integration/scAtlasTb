@@ -65,9 +65,9 @@ if 'feature_name' in adata.var.columns:
 all_obs_names = adata.obs_names.copy()
 all_var_names = adata.var_names.copy()
 
-logging.info('Parse gene sets...')
-logging.info(f'Initial gene sets: {gene_sets}')
-logging.info(f'adata.var_names: {adata.var_names}')
+logging.debug('Parse gene sets...')
+logging.debug(f'Initial gene sets: {gene_sets}')
+logging.debug(f'adata.var_names: {adata.var_names}')
 
 # filter all gene sets to genes in adata
 for set_name, gene_list in gene_sets.items():
