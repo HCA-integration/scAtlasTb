@@ -93,7 +93,7 @@ if overwrite_args:
         hvg_column_name += f'--{key}={overwrite_args[key]}'
 
 logging.info(f'args: {args}')
-logging.info(f'dask: {dask}')
+logging.debug(f'dask: {dask}')
 
 logging.info(f'Read {input_file}...')
 adata = read_anndata(
