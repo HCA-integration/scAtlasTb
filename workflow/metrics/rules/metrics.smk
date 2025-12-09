@@ -47,7 +47,7 @@ rule run:
         mcfg.out_dir / paramspace.wildcard_pattern / '.benchmark' / 'label={label}--batch={batch}' / 'metric={metric}.tsv'
     params:
         metric_type=lambda wildcards: mcfg.get_from_parameters(wildcards, 'metric_type', default=MetricNotDefinedError(wildcards)),
-        output_types=lambda wildcards: mcfg.get_from_parameters(wildcards, 'output_types', default=MetricNotDefinedError(wildcards)),
+        allowed_output_types=lambda wildcards: mcfg.get_from_parameters(wildcards, 'allowed_output_types', default=MetricNotDefinedError(wildcards)),
         input_type=lambda wildcards: mcfg.get_from_parameters(wildcards, 'input_type', default=MetricNotDefinedError(wildcards)),
         comparison=lambda wildcards: mcfg.get_from_parameters(wildcards, 'comparison', default=False),
         cluster_key=lambda wildcards: mcfg.get_from_parameters(wildcards, 'cluster_algorithm', default='leiden'),

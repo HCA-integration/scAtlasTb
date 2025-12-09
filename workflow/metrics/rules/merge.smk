@@ -105,6 +105,8 @@ rule collect:
     message:
         """
         Collect all metrics for {wildcards}
+        input.zarr: {input.zarr}
+        input.metrics: {input.metrics}
         """
     input:
         zarr=lambda wildcards: mcfg.get_input_file(**wildcards),
