@@ -34,11 +34,11 @@ output_type = params.get('output_type', 'embed')
 PERSIST_MATRIX_THRESHOLD = params.get('PERSIST_MATRIX_THRESHOLD', 5e5)
 
 files_to_keep = ['raw', 'uns', 'var']
+slot_map = {'raw/X': unintegrated_layer}
 
 # determine output types
 # default output type is 'full'
 output_type = read_anndata(input_file, uns='uns').uns.get('output_type', output_type)
-slot_map = {'layers/unintegrated': unintegrated_layer}
 
 logging.info(f'Output type: {output_type}')
 kwargs = dict(
@@ -129,22 +129,6 @@ compute_neighbors(
     **neighbor_args
 )
 
-logging.info(f'Write to {output_file}...')
-logging.info(adata.__str__())
-obs_mask = all_obs_names.isin(adata.obs_names)
-var_mask = all_var_names.isin(adata.var_names)
-if is_h5ad:
-    write_zarr(adata, output_file)
-else:
-    write_zarr_linked(
-        adata,
-        in_dir=input_file,
-        out_dir=output_file,
-        subset_mask=(obs_mask, var_mask),
-        files_to_keep=files_to_keep,
-        slot_map=slot_map,
-    )
-
 # unintegrated for comparison metrics
 # if output_type != 'knn':  # assuming that there aren't any knn-based metrics that require PCA
 logging.info(f'Prepare unintegrated data from layer={unintegrated_layer}...')
@@ -157,7 +141,7 @@ adata_raw = read_anndata(
 adata_raw.var = adata.var
 logging.info(f'Unintegrated data shape: {adata_raw.shape}') 
 
-if adata.n_obs > PERSIST_MATRIX_THRESHOLD:
+if adata_raw.n_obs > PERSIST_MATRIX_THRESHOLD:
     logging.info('Persist matrix...')
     adata_raw = apply_layers(adata_raw, lambda x: x.persist(), layers='X')
 else:
@@ -169,18 +153,26 @@ sc.pp.pca(
     mask_var=new_var_column,
     svd_solver='covariance_eigh',
 )
-adata_raw = dask_compute(adata_raw, layers='X_pca')
 
-raw_file = Path(output_file) / 'raw'
-logging.info(f'Write to {raw_file}...')
-slot_map = None if is_h5ad else dict(X=unintegrated_layer)
-in_dir_map = None if is_h5ad else dict(X=input_file)
-write_zarr_linked(
-    adata_raw,
-    in_dir=output_file,
-    out_dir=raw_file,
-    subset_mask=(obs_mask, var_mask),
-    files_to_keep=['raw', 'layers', 'obsm', 'obsp', 'uns', 'varm', 'varp'],
-    slot_map=slot_map,
-    in_dir_map=in_dir_map,
-)
+# add raw PCA adata
+adata.obsm['X_pca_unintegrated'] = adata_raw.obsm['X_pca']
+del adata_raw.obsm['X_pca']
+adata = dask_compute(adata, layers='X_pca_unintegrated')
+adata.uns['pca_unintegrated'] = adata_raw.uns['pca']
+files_to_keep.append('obsm/X_pca_unintegrated')
+
+# add raw data for comparison
+adata.raw = adata_raw
+
+logging.info(f'Write to {output_file}...')
+logging.info(adata.__str__())
+if is_h5ad:
+    write_zarr(adata, output_file)
+else:
+    write_zarr_linked(
+        adata,
+        in_dir=input_file,
+        out_dir=output_file,
+        files_to_keep=files_to_keep,
+        slot_map=slot_map,
+    )
