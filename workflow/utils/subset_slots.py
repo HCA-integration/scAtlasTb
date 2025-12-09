@@ -95,7 +95,7 @@ def set_mask_per_slot(slot, mask, out_dir, mask_dir=None, in_slot=None, in_dir=N
                     out_dir=out_dir,
                     mask=mask,
                     mask_dir=mask_dir.parent,
-                    in_slot=in_slot,
+                    in_slot=f'{in_slot}/{path.name}' if in_slot else None,
                     in_dir=in_dir,
                 )
 
