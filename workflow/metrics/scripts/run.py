@@ -56,7 +56,7 @@ gene_sets = params.get('gene_sets', {})
 metric_function = metric_map[metric]
 
 uns = read_anndata(input_file, uns='uns', verbose=False).uns
-output_type = uns.get('output_type', 'full') # Same as in prepare.py
+output_type = uns['output_type'] # Same as in prepare.py
 
 if output_type not in allowed_output_types:
     logging.info(
