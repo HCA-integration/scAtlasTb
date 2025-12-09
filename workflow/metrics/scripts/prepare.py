@@ -36,8 +36,11 @@ files_to_keep = ['raw', 'uns', 'var']
 slot_map = {'raw/X': unintegrated_layer}
 
 # determine output types
-# default output type is 'full'
-output_type = read_anndata(input_file, uns='uns').uns.get('output_type', output_type)
+output_type = read_anndata(
+    input_file,
+    uns='uns',
+    verbose=False
+).uns.get('output_type', output_type)
 
 logging.info(f'Output type: {output_type}')
 kwargs = dict(
@@ -64,6 +67,7 @@ if output_type == 'full':
 
 logging.info(f'Read {input_file}...')
 adata = read_anndata(input_file, **kwargs)
+adata.uns['output_type'] = output_type # ensure that output type is set for run.py
 
 if is_h5ad:
     adata.layers['unintegrated'] = read_anndata(
