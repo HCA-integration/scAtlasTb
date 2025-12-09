@@ -65,6 +65,10 @@ if 'feature_name' in adata.var.columns:
 all_obs_names = adata.obs_names.copy()
 all_var_names = adata.var_names.copy()
 
+logging.debug('Parse gene sets...')
+logging.debug(f'Initial gene sets: {gene_sets}')
+logging.debug(f'adata.var_names: {adata.var_names}')
+
 # filter all gene sets to genes in adata
 for set_name, gene_list in gene_sets.items():
     gene_sets[set_name] = parse_gene_names(adata, gene_list)
@@ -78,10 +82,6 @@ if len(genes) == 0:
         adata,
         in_dir=input_file,
         out_dir=output_file,
-        subset_mask=(
-            all_obs_names.isin(adata.obs_names),
-            all_var_names.isin(genes),
-        ),
     )
     exit(0)
 
@@ -97,6 +97,8 @@ if adata.n_obs > MAX_OBS:
     adata = get_bootstrap_adata(adata, size=MAX_OBS)
 
 # subset to HVGs (used for control genes) + genes of interest
+logging.info(f'Subset to {adata.n_vars} genes for scoring')
+logging.debug(adata.__str__())
 adata.var.loc[adata.var_names.isin(genes), var_key] = True
 adata = adata[:, adata.var[var_key]].copy()
 

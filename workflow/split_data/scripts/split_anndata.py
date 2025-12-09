@@ -87,7 +87,7 @@ for i, value in enumerate(values):
             in_dir=input_file,
             out_dir=out_file,
             subset_mask=(obs_mask, None),
-            files_to_keep=['uns']+exclude_slots
+            files_to_keep=['obs', 'uns']+exclude_slots
         )
     del adata_sub
     logging.info(f'Finished {i+1} out of {len(values)}.')

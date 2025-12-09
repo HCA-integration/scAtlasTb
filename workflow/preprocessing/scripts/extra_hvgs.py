@@ -4,6 +4,7 @@ Highly variable gene selection
 - allow including user-specified genes
 """
 from pathlib import Path
+from pprint import pformat
 import logging
 logging.basicConfig(level=logging.INFO)
 from tqdm import tqdm
@@ -71,8 +72,13 @@ union_over = extra_hvg_args.get('union_over')
 extra_genes = extra_hvg_args.get('extra_genes', [])
 remove_genes = extra_hvg_args.get('remove_genes', [])
 min_cells = extra_hvg_args.pop('min_cells', 10)
+
+logging.info(f'Extra HVG args:\n{pformat(extra_hvg_args)}')
+logging.info(f'Overwrite args:\n{pformat(overwrite_args)}')
+
 dask = snakemake.params.get('dask', True) # get global dask flag
-dask = args.pop('dask', dask) # overwrite with extra_hvgs-specific dask flag
+dask = args.pop('dask', dask) # overwrite with highly_variable-specific dask flag
+dask = extra_hvg_args.pop('dask', dask) # overwrite with extra_hvgs-specific dask flag
 
 hvg_column_name = 'extra_hvgs'
 use_gpu = USE_GPU
@@ -87,6 +93,7 @@ if overwrite_args:
         hvg_column_name += f'--{key}={overwrite_args[key]}'
 
 logging.info(f'args: {args}')
+logging.debug(f'dask: {dask}')
 
 logging.info(f'Read {input_file}...')
 adata = read_anndata(
@@ -153,7 +160,8 @@ else:
         adata.obs['union_over'] = adata.obs['union_over'].astype('category')
         
         logging.info(adata.obs['union_over'].value_counts(dropna=False))
-        logging.info(f'Removed groups with fewer than {min_cells} cells:\n{remove_groups}')
+        if len(remove_groups) > 0:
+            logging.info(f'Removed groups with fewer than {min_cells} cells:\n{remove_groups}')
         
         for group in tqdm(
             adata.obs['union_over'].dropna().unique(),
@@ -162,12 +170,13 @@ else:
         ):
             _ad = adata[adata.obs['union_over'] == group].copy()
             
+            if not dask:
+                logging.info('Compute matrix...')
+                _ad = dask_compute(_ad)
+            
             # filter genes and cells that would break HVG function
             batch_mask = _filter_batch(_ad, batch_key=args.get('batch_key'))
             _ad = _ad[batch_mask, _ad.var['nonzero_genes']].copy()
-            
-            if not dask:
-                _ad = dask_compute(_ad)
             
             # if _ad.n_obs > 1e6:
             #     use_gpu = False
@@ -193,6 +202,10 @@ else:
         if use_gpu:
             sc.get.anndata_to_GPU(adata)
         
+        if not dask:
+            logging.info('Compute matrix...')
+            adata = dask_compute(adata)
+
         with TqdmCallback(desc=f'Select features with arguments: {args}...', miniters=1):
             sc.pp.highly_variable_genes(adata, **args)
         adata.var[hvg_column_name] = adata.var['highly_variable']
