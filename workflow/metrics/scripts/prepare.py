@@ -5,7 +5,6 @@ import numpy as np
 import anndata as ad
 import scanpy as sc
 
-from utils.assertions import assert_pca
 from utils.accessors import subset_hvg
 from utils.io import read_anndata, write_zarr_linked, write_zarr
 from utils.processing import compute_neighbors, _filter_genes

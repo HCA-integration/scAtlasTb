@@ -13,6 +13,7 @@ except ImportError:
 from metrics import metric_map
 from metrics.utils import write_metrics
 from utils.io import read_anndata
+from utils.assertions import assert_pca
 
 
 def replace_last(source_string, replace_what, replace_with, cluster_key='leiden'):
@@ -97,14 +98,18 @@ if comparison:
     adata_raw = read_anndata(
         input_file,
         X='raw/X',
-        obs='raw/obs',
-        obsm='raw/obsm',
         var='raw/var',
         varm='raw/varm',
-        uns='raw/uns',
         dask=True,
         backed=True,
     )
+
+    # assemble PCA for unintegrated
+    adata_raw.obsm['X_pca'] = read_anndata(input_file, X='obsm/X_pca_unintegrated').X
+    adata_raw.obs = adata.obs
+    adata_raw.uns['pca'] = adata.uns['pca_unintegrated']
+    assert_pca(adata_raw)
+    
     if 'feature_name' in adata_raw.var.columns:
         adata_raw.var_names = adata_raw.var['feature_name'].astype(str)
     adata_raw.obs[batch_key] = adata_raw.obs[batch_key].astype(str)
