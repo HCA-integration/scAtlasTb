@@ -11,7 +11,8 @@ def set_mask_per_slot(slot, mask, out_dir, mask_dir=None, in_slot=None, in_dir=N
     
     def _call_function_per_slot(func, path, *args, **kwargs):
         if path.is_dir() and (path / '.zattrs').exists():
-            func(*args, **kwargs)        
+            func(*args, **kwargs)
+
     if slot == 'uns':
         # do not set mask for uns slots
         return
@@ -119,20 +120,21 @@ def init_mask_dir(mask_dir, slot, in_slot, in_dir):
     if not mask_dir.exists():
         mask_dir.mkdir(parents=True)
     elif mask_dir.is_symlink():
+        # need to make a copy of the linked directory to avoid editing the original subset masks
         link_dir = mask_dir.resolve()
         mask_dir.unlink()
         # Copy the folder from the original location
         shutil.copytree(link_dir, mask_dir)
     
     mask_dir_slot = mask_dir / slot
+    # remove any previous copy of the slot mask
+    remove_path(mask_dir_slot)
     
     # If this slot should link (copy) an existing subset mask from another slot
     if in_slot and in_dir:
         in_dir = (in_dir / 'subset_mask' / in_slot).resolve()
         if in_dir.exists():
-            # Remove existing path (dir, symlink, file) so we can create a fresh copy
-            remove_path(mask_dir_slot)
-            # Copy the entire mask directory from source to current slot-specific mask dir
+            # copy the entire mask directory from source to current slot-specific mask dir
             shutil.copytree(in_dir, mask_dir_slot)
 
     if not mask_dir_slot.exists():
