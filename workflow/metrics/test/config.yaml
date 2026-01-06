@@ -59,6 +59,7 @@ DATASETS:
       label: bulk_labels
       batch: batch
       output_type: full
+      recompute_neighbors: true
       clustering:
         kwargs:
           random_state: 42
@@ -84,6 +85,7 @@ DATASETS:
       unintegrated: layers/normcounts
       raw_counts: layers/counts
       corrected: X
+      recompute_neighbors: false
       label:
         - bulk_labels
         - louvain
