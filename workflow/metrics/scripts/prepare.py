@@ -29,6 +29,7 @@ unintegrated_layer = params.get('unintegrated_layer', 'X')
 corrected_layer = params.get('corrected_layer', 'X')
 var_key = params.get('var_mask', 'highly_variable')
 output_type = params.get('output_type', 'embed')
+recompute_neighbors = params.get('recompute_neighbors', False)
 
 PERSIST_MATRIX_THRESHOLD = params.get('PERSIST_MATRIX_THRESHOLD', 5e5)
 
@@ -92,6 +93,7 @@ n_obs = adata.n_obs
 force_neighbors = (
     n_obs > adata.n_obs
     or not {'connectivities', 'distances'}.issubset(adata.obsp)
+    or recompute_neighbors
 )
 
 # set HVGs
