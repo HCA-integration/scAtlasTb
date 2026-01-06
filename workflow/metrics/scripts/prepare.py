@@ -89,7 +89,10 @@ n_obs = adata.n_obs
 # logging.info(f'After: {adata.n_obs} cells')
 # if adata.is_view:
 #     adata = adata.copy()
-force_neighbors = n_obs > adata.n_obs
+force_neighbors = (
+    n_obs > adata.n_obs
+    or not {'connectivities', 'distances'}.issubset(adata.obsp)
+)
 
 # set HVGs
 new_var_column = 'metrics_features'
