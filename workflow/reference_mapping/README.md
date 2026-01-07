@@ -27,19 +27,21 @@ DATASETS:
   test:
     input:
       reference_mapping:
-        file_1: test/input/pbmc68k.h5ad
+        query: test/input/pbmc68k.h5ad
+
     reference_mapping:
-      layer: X  # or layer name like 'counts'
-      model: test/input/model
-      model_params:
-        batch_key: sample_id
-        labels_key: cell_type
-        categorical_covariate: [donor, condition]
-        continuous_covariate: [age]
-      train_kwargs:
-        max_epochs: 10
-        early_stopping: true
-        check_val_every_n_epoch: 1
+      scarches:
+        layer: X  # or layer name like 'counts'
+        model: test/input/model
+        model_params:
+          batch_key: sample_id
+          labels_key: cell_type
+          categorical_covariate: [donor, condition]
+          continuous_covariate: [age]
+        train_kwargs:
+          max_epochs: 10
+          early_stopping: true
+          check_val_every_n_epoch: 1
 ```
 
 ### Input
