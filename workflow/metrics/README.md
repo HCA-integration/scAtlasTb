@@ -27,6 +27,7 @@ Configure the module under your dataset key using the `metrics` section. Common 
 - `corrected`: slot for corrected representation when evaluating a single file
 - `raw_counts`: slot for raw (unnormalised) counts, only needed by metrics that use gene sets
 - `var_mask`: `.var` mask name to subset features (default `highly_variable`)
+- `recompute_neighbors`: whether to recompute neighbors even if they exist in the AnnData object (default `false`). Will only be recomputed for non kNN outputs
 - `clustering`: optional args for cluster-based metrics; supports `kwargs` and `overwrite` (see `clustering` module for more details)
 - `gene_sets`: optional gene sets (dict of gene set name and gene list OR str with comma-separated keys of gene set mapping in `MARKER_GENES`) for gene-based metrics
 - `covariates`: optional covariates (str or list) used by Moran's I and PC_regression metric

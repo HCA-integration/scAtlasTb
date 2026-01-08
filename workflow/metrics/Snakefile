@@ -32,6 +32,7 @@ mcfg = MetricsConfig(
         'corrected',
         'raw_counts',
         'var_mask',
+        'recompute_neighbors',
         'overwrite_file_id',
         'clustering',
         'cluster_algorithm',

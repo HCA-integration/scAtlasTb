@@ -10,6 +10,7 @@ rule prepare:
         corrected_layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'corrected', default='X'),
         var_mask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'var_mask', default='highly_variable'),
         output_type=lambda wildcards: mcfg.get_from_parameters(wildcards, 'output_type', default='embed'),
+        recompute_neighbors=lambda wildcards: mcfg.get_from_parameters(wildcards, 'recompute_neighbors', default=False),
     conda:
         get_env(config, 'scanpy', gpu_env='rapids_singlecell')
     resources:
