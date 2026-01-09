@@ -3,7 +3,6 @@ Highly variable gene selection
 - HVG by group -> take union of HVGs from each group
 - allow including user-specified genes
 """
-from pathlib import Path
 from pprint import pformat
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -15,52 +14,12 @@ from dask import config as da_config
 da_config.set(num_workers=snakemake.threads)
 import numpy as np
 import anndata as ad
-import scanpy
 
 from utils.io import read_anndata, write_zarr_linked
-from utils.accessors import _filter_batch
+from utils.accessors import _filter_batch, match_genes
 from utils.misc import dask_compute
 from utils.processing import sc, USE_GPU
 rsc = sc
-
-def match_genes(var_df, gene_list, column=None):
-    import urllib
-
-    def is_url(url):
-        try:
-            result = urllib.parse.urlparse(url)
-            return all([result.scheme, result.netloc])
-        except ValueError:
-            return False
-
-    genes_from_path = dict()
-    for gene in gene_list:
-        if Path(gene).exists():
-            with open(gene, 'r') as f:
-                genes_from_path[gene] = f.read().splitlines()
-        elif is_url(gene):
-            try:
-                with urllib.request.urlopen(gene) as f:
-                    genes_from_path[gene] = f.read().decode('utf-8').splitlines()
-            except Exception as e:
-                logging.error(f'Error reading gene list from URL {gene}...')
-                raise e
-
-    for path, genes in genes_from_path.items():
-        logging.info(f'Gene list from {path}: {len(genes)} genes')
-        gene_list.extend(genes)
-        gene_list.remove(path)
-
-    try:
-        genes = var_df.index.to_series() if column is None else var_df[column]
-        pattern = '|'.join(gene_list)
-        return genes[genes.astype(str).str.contains(pattern, regex=True)].index
-    except Exception as e:
-        logging.error(f'Error: {e}')
-        logging.error(f'Gene list: {gene_list}')
-        logging.error(f'Pattern: {pattern}')
-        logging.error(f'Gene names: {var_df.index}')
-        raise e
 
 
 input_file = snakemake.input[0]

@@ -2,6 +2,8 @@ import warnings
 import numpy as np
 import anndata as ad
 from dask import array as da
+import logging
+logging.basicConfig(level=logging.INFO)
 
 from .io import to_memory
 from .misc import dask_compute
@@ -197,3 +199,52 @@ def parse_gene_names(adata, gene_list):
         gene_list += var_names[mask].tolist()
 
     return gene_list
+
+
+def match_genes(var_df, gene_list, column=None, return_index=True, as_list=False):
+    import urllib
+    from pathlib import Path
+
+    def is_url(url):
+        try:
+            result = urllib.parse.urlparse(url)
+            return all([result.scheme, result.netloc])
+        except ValueError:
+            return False
+
+    genes_from_path = dict()
+    for gene in gene_list:
+        if Path(gene).exists():
+            with open(gene, 'r') as f:
+                genes_from_path[gene] = f.read().splitlines()
+        elif is_url(gene):
+            try:
+                with urllib.request.urlopen(gene) as f:
+                    genes_from_path[gene] = f.read().decode('utf-8').splitlines()
+            except Exception as e:
+                logging.error(f'Error reading gene list from URL {gene}...')
+                raise e
+
+    for path, genes in genes_from_path.items():
+        logging.info(f'Gene list from {path}: {len(genes)} genes')
+        gene_list.extend(genes)
+        gene_list.remove(path)
+
+    try:
+        genes = var_df.index.to_series() if column is None else var_df[column]
+        pattern = '|'.join(gene_list)
+        genes = genes[genes.astype(str).str.contains(pattern, regex=True)].drop_duplicates()
+    except Exception as e:
+        logging.error(f'Error: {e}')
+        logging.error(f'Gene list: {gene_list}')
+        logging.error(f'Pattern: {pattern}')
+        logging.error(f'Gene names: {var_df.index}')
+        raise e
+
+    if return_index:
+        genes = genes.index
+
+    if as_list:
+        genes = genes.tolist()
+    
+    return genes
