@@ -15,10 +15,8 @@ input_model = snakemake.input.model
 output_file = snakemake.output[0]
 
 model_name = snakemake.wildcards.celltypist_model
-layer = snakemake.params.get('norm_layer')
-if layer is None:
-    layer = snakemake.params.get('raw_layer', 'X')
-is_normalized = snakemake.params.get('is_normalized', False)
+layer = snakemake.params.get('layer')
+is_normalized = snakemake.params.get('is_normalized', True)
 label_key = snakemake.params.label_key
 params = snakemake.params.celltypist_params
 if params is None:
