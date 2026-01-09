@@ -3,6 +3,7 @@ import numpy as np
 import anndata as ad
 from dask import array as da
 import logging
+import re
 logging.basicConfig(level=logging.INFO)
 
 from .io import to_memory
@@ -195,7 +196,7 @@ def parse_gene_names(adata, gene_list):
     gene_list = [g for g in gene_list if g in var_names]
 
     if genes_not_in_var:
-        mask = var_names.str.contains(pat='|'.join(genes_not_in_var))
+        mask = var_names.str.contains(pat='|'.join(re.escape(g) for g in genes_not_in_var))
         gene_list += var_names[mask].tolist()
 
     return gene_list
@@ -232,7 +233,7 @@ def match_genes(var_df, gene_list, column=None, return_index=True, as_list=False
 
     try:
         genes = var_df.index.to_series() if column is None else var_df[column]
-        pattern = '|'.join(gene_list)
+        pattern = '|'.join(re.escape(g) for g in gene_list)
         genes = genes[genes.astype(str).str.contains(pattern, regex=True)].drop_duplicates()
     except Exception as e:
         logging.error(f'Error: {e}')
