@@ -5,6 +5,7 @@ import celltypist
 from celltypist import models
 
 from utils.io import read_anndata, write_zarr_linked
+from utils.misc import dask_compute
 
 sc.settings.verbosity = 3
 sc.set_figure_params(frameon=False)
@@ -15,9 +16,7 @@ input_model = snakemake.input.model
 output_file = snakemake.output[0]
 
 model_name = snakemake.wildcards.celltypist_model
-layer = snakemake.params.get('norm_layer')
-if layer is None:
-    layer = snakemake.params.get('raw_layer', 'X')
+layer = snakemake.params.get('layer')
 is_normalized = snakemake.params.get('is_normalized', False)
 label_key = snakemake.params.label_key
 params = snakemake.params.celltypist_params
@@ -31,7 +30,12 @@ print(f'Read file: {input_file}...', flush=True)
 kwargs = {'X': layer, 'obs': 'obs', 'var': 'var'}
 if params.get('majority_voting') and not params.get('over_clustering'):
     kwargs |=  {'obsm': 'obsm', 'obsp': 'obsp', 'uns': 'uns'}
-adata = read_anndata(input_file, **kwargs)
+adata = read_anndata(
+    input_file,
+    dask=True,
+    backed=True,
+    **kwargs,
+)
 
 if label_key is not None:
     if label_key not in adata.obs.columns:
@@ -42,10 +46,16 @@ if 'feature_name' in adata.var.columns:
     adata.var_names = adata.var['feature_name']
 adata.var_names = adata.var_names.astype(str)
 
+# ensure unique observation names to avoid reindexing errors
+obs_names_old = adata.obs_names
+adata.obs_names_make_unique()
+
 if not is_normalized:
     print('Normalizing and log-transforming data...', flush=True)
     sc.pp.normalize_total(adata, target_sum=1e4)
     sc.pp.log1p(adata)
+
+adata = dask_compute(adata, layers='X')
 
 # run celltypist
 model = models.Model.load(model=input_model)
@@ -83,6 +93,7 @@ if label_key:
 prefix = f'celltypist_{model_name}:'
 obs = predictions.to_adata(insert_labels=True, insert_conf=True, prefix=prefix).obs
 adata.obs = obs[[x for x in obs.columns if x.startswith(prefix)]]
+adata.obs_names = obs_names_old
 
 print(f'Write file: {output_file}...', flush=True)
 write_zarr_linked(

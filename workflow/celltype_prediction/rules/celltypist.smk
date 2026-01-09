@@ -29,13 +29,12 @@ rule celltypist:
         CELLTYPIST_FOLDER=os.environ["CELLTYPIST_FOLDER"],
         label_key=lambda wildcards: mcfg.get_from_parameters(wildcards, 'reference_label'),
         celltypist_params=lambda wildcards: mcfg.get_from_parameters(wildcards, 'celltypist').get('params', {}),
-        raw_layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'raw_counts', default=None),
-        norm_layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'norm_counts', default=None),
-        is_normalized=lambda wildcards: mcfg.get_from_parameters(wildcards, 'norm_counts', default=None) is not None,
+        layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'counts', default=None),
+        is_normalized=lambda wildcards: mcfg.get_from_parameters(wildcards, 'is_normalized', default=False),
     resources:
         partition=lambda w, attempt: mcfg.get_resource(resource_key='partition', profile='cpu', attempt=attempt),
         qos=lambda w, attempt: mcfg.get_resource(resource_key='qos', profile='cpu', attempt=attempt),
         mem_mb=lambda w, attempt: mcfg.get_resource(resource_key='mem_mb', profile='cpu', attempt=attempt, factor=3),
-        gpu=lambda w, attempt: mcfg.get_resource(resource_key='gpu', profile='cpu', attempt=attempt ),
+        gpu=lambda w, attempt: mcfg.get_resource(resource_key='gpu', profile='cpu', attempt=attempt),
     script:
         '../scripts/celltypist.py'

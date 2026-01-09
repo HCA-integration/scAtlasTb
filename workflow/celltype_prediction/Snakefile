@@ -20,10 +20,14 @@ use rule * from common as common_ *
 mcfg = ModuleConfig(
     module_name='celltype_prediction',
     config=config,
-    config_params=['reference_label', 'celltypist', 'raw_counts', 'norm_counts'],
+    config_params=[
+        'reference_label',
+        'celltypist',
+        'counts',
+        'is_normalized'
+    ],
 )
 paramspace = mcfg.get_paramspace()
-
 wildcards_df = mcfg.get_wildcards(as_df=True, all_params=True)
 
 # parse CellTypist parameters
