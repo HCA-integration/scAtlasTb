@@ -5,6 +5,7 @@ import celltypist
 from celltypist import models
 
 from utils.io import read_anndata, write_zarr_linked
+from utils.misc import dask_compute
 
 sc.settings.verbosity = 3
 sc.set_figure_params(frameon=False)
