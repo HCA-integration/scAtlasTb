@@ -304,5 +304,4 @@ def match_genes(var_df, gene_list, column=None, return_index=True, as_list=False
 
     if as_list:
         genes = genes.tolist()
-    
     return genes
