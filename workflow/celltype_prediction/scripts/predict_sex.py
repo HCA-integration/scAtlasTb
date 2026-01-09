@@ -76,14 +76,26 @@ def predict_sex_by_donor(
     # Aggregate per donor
     donor_exp = df.groupby(donor_key, sort=False, observed=True).sum()
 
-    # Vectorized classification
-    y_x_frac = donor_exp[y_exp] / donor_exp[x_exp]
-    x_y_frac = donor_exp[x_exp] / donor_exp[y_exp]
+    # Vectorized classification with safe division
+    x_vals = donor_exp[x_exp].to_numpy(dtype=float)
+    y_vals = donor_exp[y_exp].to_numpy(dtype=float)
+    y_x_frac = np.divide(
+        y_vals,
+        x_vals,
+        out=np.full_like(y_vals, np.inf),
+        where=x_vals != 0,
+    )
+    x_y_frac = np.divide(
+        x_vals,
+        y_vals,
+        out=np.full_like(x_vals, np.inf),
+        where=y_vals != 0,
+    )
     donor_exp[predict_key] = np.select(
         [
-            (donor_exp[x_exp] > x_threshold) & (donor_exp[y_exp] <= y_threshold) | (y_x_frac <= frac),
-            (donor_exp[x_exp] <= x_threshold) & (donor_exp[y_exp] > y_threshold) | (x_y_frac < frac),
-            (donor_exp[x_exp] > x_threshold) & (donor_exp[y_exp] > y_threshold) | (y_x_frac > frac) & (x_y_frac > frac),
+            ((donor_exp[x_exp] > x_threshold) & (donor_exp[y_exp] <= y_threshold)) | (y_x_frac <= frac),
+            ((donor_exp[x_exp] <= x_threshold) & (donor_exp[y_exp] > y_threshold)) | (x_y_frac < frac),
+            ((donor_exp[x_exp] > x_threshold) & (donor_exp[y_exp] > y_threshold)) | ((y_x_frac > frac) & (x_y_frac > frac)),
         ],
         ["female", "male", "mix"],
         default=default,
