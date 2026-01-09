@@ -236,7 +236,7 @@ def match_genes(var_df, gene_list, column=None, return_index=True, as_list=False
     # Handle empty gene list - return empty result instead of matching all genes
     if not gene_list:
         logging.warning('Gene list is empty after processing, returning empty result')
-        genes = genes.iloc[:0]  # Empty series with same structure
+        genes = genes[genes.index.isin([])]  # Empty series preserving structure
     else:
         try:
             pattern = '|'.join(gene_list)
