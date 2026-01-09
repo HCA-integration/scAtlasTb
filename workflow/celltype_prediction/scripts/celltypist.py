@@ -17,7 +17,13 @@ output_file = snakemake.output[0]
 
 model_name = snakemake.wildcards.celltypist_model
 layer = snakemake.params.get('layer')
-is_normalized = snakemake.params.get('is_normalized', True)
+is_normalized = snakemake.params.get('is_normalized')
+if is_normalized is None:
+    raise ValueError(
+        "The 'is_normalized' parameter must be specified in snakemake.params. "
+        "Set it to True if the input data is already normalized/log-transformed, "
+        "or False if normalization/log1p should be applied in this script."
+    )
 label_key = snakemake.params.label_key
 params = snakemake.params.celltypist_params
 if params is None:
