@@ -23,8 +23,9 @@ mcfg = ModuleConfig(
     config_params=[
         'reference_label',
         'celltypist',
+        'predict_sex',
         'counts',
-        'is_normalized'
+        'is_normalized',
     ],
 )
 paramspace = mcfg.get_paramspace()
@@ -35,14 +36,17 @@ wildcards_df['celltypist_model'] = wildcards_df['celltypist'].apply(lambda x: x.
 wildcards_df = wildcards_df.explode('celltypist_model')
 mcfg.update_parameters(wildcards_df)
 
-
 include: 'rules/celltypist.smk'
+include: 'rules/predict_sex.smk'
 
 
 rule collect:
     input:
         zarr=lambda wildcards: mcfg.get_input_file(**wildcards),
         celltypist=lambda wildcards: mcfg.get_output_files(rules.celltypist.output.zarr, subset_dict=wildcards, all_params=True),
+        predict_sex=lambda wildcards: mcfg.get_output_files(
+            rules.predict_sex.output.zarr, subset_dict=wildcards, all_params=True,
+        ) if mcfg.get_from_parameters(wildcards, 'predict_sex', default=None) else [],
     output:
         zarr=directory(mcfg.out_dir / f'{paramspace.wildcard_pattern}.zarr')
     conda:
