@@ -230,16 +230,22 @@ def match_genes(var_df, gene_list, column=None, return_index=True, as_list=False
         gene_list.extend(genes)
         gene_list.remove(path)
 
-    try:
+    # Handle empty gene list - return empty result instead of matching all genes
+    if not gene_list:
+        logging.warning('Gene list is empty after processing, returning empty result')
         genes = var_df.index.to_series() if column is None else var_df[column]
-        pattern = '|'.join(gene_list)
-        genes = genes[genes.astype(str).str.contains(pattern, regex=True)].drop_duplicates()
-    except Exception as e:
-        logging.error(f'Error: {e}')
-        logging.error(f'Gene list: {gene_list}')
-        logging.error(f'Pattern: {pattern}')
-        logging.error(f'Gene names: {var_df.index}')
-        raise e
+        genes = genes.iloc[:0]  # Empty series with same structure
+    else:
+        try:
+            genes = var_df.index.to_series() if column is None else var_df[column]
+            pattern = '|'.join(gene_list)
+            genes = genes[genes.astype(str).str.contains(pattern, regex=True)].drop_duplicates()
+        except Exception as e:
+            logging.error(f'Error: {e}')
+            logging.error(f'Gene list: {gene_list}')
+            logging.error(f'Pattern: {pattern}')
+            logging.error(f'Gene names: {var_df.index}')
+            raise e
 
     if return_index:
         genes = genes.index
