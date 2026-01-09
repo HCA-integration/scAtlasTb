@@ -46,12 +46,16 @@ if 'feature_name' in adata.var.columns:
     adata.var_names = adata.var['feature_name']
 adata.var_names = adata.var_names.astype(str)
 
+# ensure unique observation names to avoid reindexing errors
+obs_names_old = adata.obs_names
+adata.obs_names_make_unique()
+
 if not is_normalized:
     print('Normalizing and log-transforming data...', flush=True)
     sc.pp.normalize_total(adata, target_sum=1e4)
     sc.pp.log1p(adata)
 
-adata = dask_compute(adata)
+adata = dask_compute(adata, layers='X')
 
 # run celltypist
 model = models.Model.load(model=input_model)
@@ -89,6 +93,7 @@ if label_key:
 prefix = f'celltypist_{model_name}:'
 obs = predictions.to_adata(insert_labels=True, insert_conf=True, prefix=prefix).obs
 adata.obs = obs[[x for x in obs.columns if x.startswith(prefix)]]
+adata.obs_names = obs_names_old
 
 print(f'Write file: {output_file}...', flush=True)
 write_zarr_linked(
