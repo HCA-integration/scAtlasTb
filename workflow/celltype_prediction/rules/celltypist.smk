@@ -5,7 +5,7 @@ envvars:
     "CELLTYPIST_FOLDER"
 
 
-rule get_celltypist_model:
+rule celltypist_get_model:
     output:
         model=model_dir / '{celltypist_model}.pkl'
     conda:
@@ -19,7 +19,7 @@ rule get_celltypist_model:
 rule celltypist:
     input:
         zarr=lambda wildcards: mcfg.get_input_file(**wildcards),
-        model=rules.get_celltypist_model.output.model,
+        model=rules.celltypist_get_model.output.model,
     output:
         zarr=directory(mcfg.out_dir / 'celltypist' / paramspace.wildcard_pattern / '{celltypist_model}.zarr'),
         png=directory(mcfg.image_dir / paramspace.wildcard_pattern / 'celltypist--{celltypist_model}'),
@@ -38,3 +38,9 @@ rule celltypist:
         gpu=lambda w, attempt: mcfg.get_resource(resource_key='gpu', profile='cpu', attempt=attempt),
     script:
         '../scripts/celltypist.py'
+
+
+rule celltypist_all:
+    input: 
+        celltypist=mcfg.get_output_files(rules.celltypist.output.zarr, all_params=True),
+    localrule: True
