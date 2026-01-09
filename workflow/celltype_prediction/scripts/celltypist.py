@@ -29,7 +29,12 @@ print(f'Read file: {input_file}...', flush=True)
 kwargs = {'X': layer, 'obs': 'obs', 'var': 'var'}
 if params.get('majority_voting') and not params.get('over_clustering'):
     kwargs |=  {'obsm': 'obsm', 'obsp': 'obsp', 'uns': 'uns'}
-adata = read_anndata(input_file, **kwargs)
+adata = read_anndata(
+    input_file,
+    dask=True,
+    backed=True,
+    **kwargs,
+)
 
 if label_key is not None:
     if label_key not in adata.obs.columns:
@@ -44,6 +49,8 @@ if not is_normalized:
     print('Normalizing and log-transforming data...', flush=True)
     sc.pp.normalize_total(adata, target_sum=1e4)
     sc.pp.log1p(adata)
+
+adata = dask_compute(adata)
 
 # run celltypist
 model = models.Model.load(model=input_model)
