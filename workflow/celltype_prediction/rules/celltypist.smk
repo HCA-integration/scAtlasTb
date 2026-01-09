@@ -30,7 +30,7 @@ rule celltypist:
         label_key=lambda wildcards: mcfg.get_from_parameters(wildcards, 'reference_label'),
         celltypist_params=lambda wildcards: mcfg.get_from_parameters(wildcards, 'celltypist').get('params', {}),
         layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'counts', default=None),
-        is_normalized=lambda wildcards: mcfg.get_from_parameters(wildcards, 'is_normalized', default=True),
+        is_normalized=lambda wildcards: mcfg.get_from_parameters(wildcards, 'is_normalized', default=False),
     resources:
         partition=lambda w, attempt: mcfg.get_resource(resource_key='partition', profile='cpu', attempt=attempt),
         qos=lambda w, attempt: mcfg.get_resource(resource_key='qos', profile='cpu', attempt=attempt),
