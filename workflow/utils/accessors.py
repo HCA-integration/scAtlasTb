@@ -3,6 +3,7 @@ import numpy as np
 import anndata as ad
 from dask import array as da
 import logging
+import re
 logging.basicConfig(level=logging.INFO)
 
 from .io import to_memory
@@ -195,13 +196,71 @@ def parse_gene_names(adata, gene_list):
     gene_list = [g for g in gene_list if g in var_names]
 
     if genes_not_in_var:
-        mask = var_names.str.contains(pat='|'.join(genes_not_in_var))
+        mask = var_names.str.contains(pat='|'.join(re.escape(g) for g in genes_not_in_var))
         gene_list += var_names[mask].tolist()
 
     return gene_list
 
 
 def match_genes(var_df, gene_list, column=None, return_index=True, as_list=False):
+    """
+    Match genes from a provided list against a variable (gene) annotation table.
+
+    This function supports three kinds of gene specifications:
+      1. Direct gene identifiers contained in `gene_list`.
+      2. File paths pointing to plain-text files, one gene identifier per line.
+      3. HTTP(S) URLs pointing to plain-text resources, one gene identifier per line.
+
+    Any entry in `gene_list` that resolves to an existing local file path or a valid URL
+    is read and replaced by the list of gene identifiers extracted from that resource.
+    All collected gene identifiers (original and loaded) are then used to construct a
+    regular-expression pattern which is matched against the genes in `var_df`.
+
+    Parameters
+    ----------
+    var_df
+        A pandas-like DataFrame or Series containing gene annotations, typically
+        ``adata.var``. Matching is performed either on its index or on a specified
+        column.
+    gene_list
+        Iterable of strings representing gene identifiers to match. Entries may
+        also be:
+          * Paths to local text files (one gene per line), or
+          * HTTP(S) URLs to text resources (one gene per line).
+        For such entries, the file/URL is read and the contained genes are added
+        to the list of genes to match.
+    column
+        Optional name of a column in ``var_df`` to use for matching. If ``None``,
+        the index of ``var_df`` is used.
+    return_index
+        If ``True``, return the index labels corresponding to the matched genes.
+        If ``False``, return the matched values themselves (e.g. a Series or
+        column slice from ``var_df``).
+    as_list
+        If ``True``, convert the final result (index or values) to a Python
+        ``list`` before returning. If ``False``, return it in its native type
+        (e.g. pandas Index or Series).
+
+    Returns
+    -------
+    genes
+        The set of matched genes. Depending on the combination of flags:
+          * If ``return_index=True`` and ``as_list=False``: a pandas Index of
+            matched gene indices.
+          * If ``return_index=True`` and ``as_list=True``: a ``list`` of matched
+            gene index labels.
+          * If ``return_index=False`` and ``as_list=False``: a pandas Series or
+            similar object of matched gene values.
+          * If ``return_index=False`` and ``as_list=True``: a ``list`` of matched
+            gene values.
+
+    Raises
+    ------
+    Exception
+        Propagates any exception raised while reading from URLs or if regex-based
+        matching against ``var_df`` fails. Additional context is logged using the
+        module logger.
+    """
     import urllib
     from pathlib import Path
 
@@ -239,7 +298,7 @@ def match_genes(var_df, gene_list, column=None, return_index=True, as_list=False
         genes = genes[genes.index.isin([])]  # Empty series preserving structure
     else:
         try:
-            pattern = '|'.join(gene_list)
+            pattern = '|'.join(re.escape(g) for g in gene_list)
             genes = genes[genes.astype(str).str.contains(pattern, regex=True)].drop_duplicates()
         except Exception as e:
             logging.error(f'Error: {e}')
@@ -248,10 +307,10 @@ def match_genes(var_df, gene_list, column=None, return_index=True, as_list=False
             logging.error(f'Gene names: {var_df.index}')
             raise e
 
+
     if return_index:
         genes = genes.index
 
     if as_list:
         genes = genes.tolist()
-    
     return genes
