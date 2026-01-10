@@ -18,7 +18,7 @@ DATASETS:
     input:
       celltype_prediction:
         raw: data/pbmc68k.h5ad
-        preprocessed: test/input/preprocessing/dataset~all/file_id~pbmc/preprocessed.zarr
+        preprocessed: test/input/preprocessing/dataset~all/file_id~pbmc.zarr
     celltype_prediction:
       reference_label: bulk_labels
       counts: layers/counts
@@ -26,7 +26,7 @@ DATASETS:
       celltypist:
         params:
           majority_voting: true
-          over_clustering: n_genes
+          over_clustering: bulk_labels
         models:
           - Healthy_COVID19_PBMC
           - Immune_All_Low
@@ -34,20 +34,33 @@ DATASETS:
   large:
     input:
       celltype_prediction:
-        Lee2020: test/input/load_data/filtered/Lee2020.zarr
+        Lee2020: test/input/load_data/harmonize_metadata/Lee2020.zarr
+        Schulte2020: test/input/load_data/harmonize_metadata/SchulteSchrepping2020.zarr
     celltype_prediction:
       reference_label: cell_type
       counts: X
       is_normalized: false
+      threads: 5
       celltypist:
         models:
           - COVID19_HumanChallenge_Blood
+      predict_sex:
+        donor_key: tech_id
+        predict_column: sex_predicted
+        reference_key: sex
+        y_threshold: 50
+        x_threshold: 50
+        imbalance_frac: 0.3
+        y_genes:
+          - SRY
+          - DDX3Y
+          # - https://raw.githubusercontent.com/prabhakarlab/AIDA_Phase1/master/01_QualityControl/list_chrY_nonPAR_genes.txt
   
   preprocessed:
     input:
       celltype_prediction:
         test: data/pbmc68k.h5ad
-        large: test/input/preprocessing/dataset~large/file_id~blood/preprocessed.zarr
+        large: test/input/preprocessing/dataset~large/file_id~blood.zarr
     celltype_prediction:
       counts: layers/normcounts
       is_normalized: true
