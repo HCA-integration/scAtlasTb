@@ -70,7 +70,13 @@ logging.info(covariate_bar_labels)
 # create bar labels for permuted covariates
 if len(g.containers) > 1:
     perm_bar_labels = df.groupby('covariate', sort=False).first()['perm_std'].apply(round_values, prefix='std=')
-    g.bar_label(g.containers[1], labels=perm_bar_labels, padding=25)
+    g.bar_label(
+        g.containers[1],
+        labels=perm_bar_labels,
+        padding=25,
+        label_type='edge',
+    )
+
 
 plt.xticks(rotation=90)
 sns.despine()
