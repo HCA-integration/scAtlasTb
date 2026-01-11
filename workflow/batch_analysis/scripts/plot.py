@@ -84,7 +84,7 @@ if len(g.containers) > 1:
         g.annotate(
             label,
             xy=(x, y_center),
-            xytext=(10, 10),          # vertical offset in POINTS
+            xytext=(10, 10),          # horizontal and vertical offset in POINTS (x, y)
             textcoords="offset points",
             va="center",
             ha="left",
