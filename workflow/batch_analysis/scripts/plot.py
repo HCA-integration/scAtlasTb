@@ -47,7 +47,7 @@ g.set(title=title)
 
 def round_values(x, prefix='', n_digits=3):
     if x < 10 ** (-n_digits):
-        f'{prefix}{x:.2e}'
+        return f'{prefix}{x:.2e}'
     elif pd.notna(x):
         return f'{prefix}{x:.{n_digits}f}'
     return ''
