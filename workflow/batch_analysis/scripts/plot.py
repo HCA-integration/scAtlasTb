@@ -33,6 +33,10 @@ df = df.sort_values(
     ascending=[False, True, False]
 )
 
+# Adjust figure size based on the number of covariates
+num_covariates = df['covariate'].nunique()
+fig, ax = plt.subplots(figsize=(10, 5 + num_covariates * 0.75))
+
 logging.info('Barplot...')
 g = sns.barplot(
     data=df,
@@ -43,6 +47,7 @@ g = sns.barplot(
     dodge=True,
     err_kws={'linewidth': 1},
     capsize=.1,
+    ax=ax,
 )
 g.set(title=title)
 
@@ -71,13 +76,20 @@ logging.info(covariate_bar_labels)
 # create bar labels for permuted covariates
 if len(g.containers) > 1:
     perm_bar_labels = df.groupby('covariate', sort=False).first()['perm_std'].apply(round_values, prefix='std=')
-    g.bar_label(
-        g.containers[1],
-        labels=perm_bar_labels,
-        padding=25,
-        label_type='edge',
-    )
 
+    for rect, label in zip(g.containers[1], perm_bar_labels):
+        x = rect.get_width()
+        y_center = rect.get_y() + rect.get_height() / 2
+
+        g.annotate(
+            label,
+            xy=(x, y_center),
+            xytext=(10, 10),          # vertical offset in POINTS
+            textcoords="offset points",
+            va="center",
+            ha="left",
+            fontsize=10,
+        )
 
 plt.xticks(rotation=90)
 sns.despine()
@@ -90,7 +102,7 @@ plt.clf()
 plt.grid()
 
 # Create the violin for permutations
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize=(10, 4 + num_covariates * 0.25))
 
 sns.violinplot(
     data=df[df['permuted']],
