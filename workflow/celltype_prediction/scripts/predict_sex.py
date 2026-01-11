@@ -18,6 +18,8 @@ Y_GENES = [
 ]
 X_GENES = ["XIST"]
 
+Y_NONPAR_GENES = ["https://raw.githubusercontent.com/prabhakarlab/AIDA_Phase1/master/01_QualityControl/list_chrY_nonPAR_genes.txt"]
+Y_PAR_GENES = ["https://raw.githubusercontent.com/prabhakarlab/AIDA_Phase1/master/01_QualityControl/list_chrY_PAR_genes.txt"]
 
 input_file = snakemake.input[0]
 output_file = snakemake.output[0]
@@ -27,11 +29,16 @@ is_normalized = snakemake.params.get("is_normalized", True)
 params = snakemake.params.get("params", {})
 donor_key = params.get("donor_key")
 donors = params.get("donors")
+
 x_genes = params.get("x_genes", X_GENES)
 y_genes = params.get("y_genes", Y_GENES)
 x_threshold = params.get("x_threshold", 0)
 y_threshold = params.get("y_threshold", 4)
 imbalance_frac = float(params.get("imbalance_frac", 0.1))
+
+y_nonpar_genes = params.get("y_nonpar_genes", Y_NONPAR_GENES)
+y_par_genes = params.get("y_par_genes", Y_PAR_GENES)
+
 predict_key = params.get("predict_column", "sex")
 reference_key = params.get("reference_key", predict_key)
 
@@ -183,6 +190,105 @@ def predict_sex_by_donor(
     return donor_exp
 
 
+def predict_sex_by_chrY_ratio(
+    adata,
+    donor_key,
+    y_nonpar_genes,
+    y_par_genes,
+    feature_column=None,
+    threshold=0.5,
+    default=None,
+    predict_key="sex",
+    nonpar_col="chrY_nonPAR_UMIs",
+    par_col="chrY_PAR_UMIs",
+):
+    """
+    Predict donor sex using the ratio of chrY non-PAR to PAR UMIs.
+
+    This function mirrors the provided R logic:
+
+    1. Compute per-cell UMI sums for chrY non-PAR genes and chrY PAR genes.
+    2. Aggregate these sums per donor (``donor_key``).
+    3. Compute the ratio ``nonPAR_to_PAR = nonPAR_UMIs / PAR_UMIs`` per donor.
+    4. Classify sex as ``"male"`` if the ratio is >= ``threshold`` (default 0.5),
+       otherwise ``"female"``. If the ratio is undefined due to zero PAR counts,
+       it is treated as ``inf`` and thus classified as ``"male"``.
+
+    Parameters
+    ----------
+    adata
+        AnnData-like object with expression in ``adata.X`` and donor IDs in
+        ``adata.obs[donor_key]``.
+    donor_key : str
+        Column name in ``adata.obs`` indicating the donor ID used to group cells.
+    y_nonpar_genes : sequence
+        Gene identifiers for chrY non-PAR genes.
+    y_par_genes : sequence
+        Gene identifiers for chrY PAR genes.
+    feature_column : str, optional
+        Column in ``adata.var`` to match genes. If ``None``, matches against
+        ``adata.var_names``.
+    threshold : float, optional
+        Cutoff for ``nonPAR_to_PAR`` above which donors are classified as male.
+    default : str or None, optional
+        Label for donors with missing ratios if desired.
+    predict_key : str, optional
+        Name of the output sex prediction column.
+    nonpar_col, par_col : str, optional
+        Column names for aggregated non-PAR and PAR UMIs in the output.
+
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame indexed by donor containing ``nonpar_col``, ``par_col``,
+        ``nonPAR_to_PAR``, and a categorical ``predict_key`` column with
+        ``"male"``/``"female"``.
+    """
+    from fast_array_utils import stats
+
+    if feature_column:
+        nonpar_mask = adata.var[feature_column].isin(y_nonpar_genes)
+        par_mask = adata.var[feature_column].isin(y_par_genes)
+    else:
+        nonpar_mask = adata.var_names.isin(y_nonpar_genes)
+        par_mask = adata.var_names.isin(y_par_genes)
+
+    nonpar_cell = stats.sum(adata[:, nonpar_mask].X, axis=1)
+    par_cell = stats.sum(adata[:, par_mask].X, axis=1)
+
+    df = pd.DataFrame(
+        {
+            donor_key: adata.obs[donor_key].to_numpy(),
+            nonpar_col: nonpar_cell,
+            par_col: par_cell,
+        }
+    )
+
+    donor_chrY = df.groupby(donor_key, sort=False, observed=True).sum()
+
+    nonpar_vals = donor_chrY[nonpar_col].to_numpy(dtype=float)
+    par_vals = donor_chrY[par_col].to_numpy(dtype=float)
+    ratio = np.divide(
+        nonpar_vals,
+        par_vals,
+        out=np.full_like(nonpar_vals, np.inf),
+        where=par_vals != 0,
+    )
+    donor_chrY["nonPAR_to_PAR"] = ratio
+
+    donor_chrY[predict_key] = np.where(
+        donor_chrY["nonPAR_to_PAR"] >= threshold,
+        "male",
+        "female",
+    )
+
+    if default is not None:
+        mask_nan = ~np.isfinite(donor_chrY["nonPAR_to_PAR"])
+        donor_chrY.loc[mask_nan, predict_key] = default
+
+    return donor_chrY
+
+
 logging.info(f"Read file: {input_file}...")
 adata = read_anndata(
     input_file,
@@ -243,6 +349,18 @@ donor_exp = predict_sex_by_donor(
 )
 
 adata.obs = adata.obs.join(donor_exp[predict_key], on=donor_key)
+
+logging.info(f'Predict sex by chrY non-PAR to PAR ratio for {len(donors)} donors...')
+donor_chrY = predict_sex_by_chrY_ratio(
+    adata,
+    donor_key=donor_key,
+    y_nonpar_genes=y_nonpar_genes,
+    y_par_genes=y_par_genes,
+    feature_column='feature_name',
+    threshold=params.get("chrY_threshold", 0.5),
+    predict_key=f"{predict_key}_chrY",
+)
+adata.obs = adata.obs.join(donor_chrY[[f"{predict_key}_chrY"]], on=donor_key)
 
 adata.uns['predict_sex'] = {
     "x_genes": x_genes_use,
