@@ -1,7 +1,7 @@
 import logging
 logging.basicConfig(level=logging.INFO)
 import pandas as pd
-import numpy as np
+
 from matplotlib import pyplot as plt
 import seaborn as sns
 from matplotlib import rcParams
@@ -63,7 +63,7 @@ df['p-val'] = df['p-val'].apply(round_values, prefix='p-val=', n_digits=3)
 
 # create bar labels for covariate
 covariate_bar_labels = df.groupby('covariate', sort=False).first()[
-    ['pcr_string', 'n_covariates', 'z_score', 'signif']
+    ['pcr_string', 'n_covariates', 'z_score', 'p-val', 'signif']
 ].astype(str).agg(lambda x: ', '.join([s for s in x if s]), axis=1)
 g.bar_label(g.containers[0], labels=covariate_bar_labels, padding=10)
 logging.info(covariate_bar_labels)
@@ -129,4 +129,4 @@ sns.despine()
 ax.set(title=title)
 
 logger.info('Save violin plot...')
-plt.savefig(output_violin, bbox_inches='tight',dpi=300)
+plt.savefig(output_violin, bbox_inches='tight', dpi=300)
