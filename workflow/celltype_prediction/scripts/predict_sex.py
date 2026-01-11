@@ -1,6 +1,7 @@
 import logging
 import numpy as np
 import pandas as pd
+from pprint import pformat
 
 from utils.io import read_anndata, write_zarr_linked
 from utils.accessors import match_genes
@@ -18,6 +19,8 @@ Y_GENES = [
 ]
 X_GENES = ["XIST"]
 
+Y_NONPAR_GENES = ["https://raw.githubusercontent.com/prabhakarlab/AIDA_Phase1/master/01_QualityControl/list_chrY_nonPAR_genes.txt"]
+Y_PAR_GENES = ["https://raw.githubusercontent.com/prabhakarlab/AIDA_Phase1/master/01_QualityControl/list_chrY_PAR_genes.txt"]
 
 input_file = snakemake.input[0]
 output_file = snakemake.output[0]
@@ -27,13 +30,28 @@ is_normalized = snakemake.params.get("is_normalized", True)
 params = snakemake.params.get("params", {})
 donor_key = params.get("donor_key")
 donors = params.get("donors")
+
 x_genes = params.get("x_genes", X_GENES)
 y_genes = params.get("y_genes", Y_GENES)
 x_threshold = params.get("x_threshold", 0)
 y_threshold = params.get("y_threshold", 4)
 imbalance_frac = float(params.get("imbalance_frac", 0.1))
+
+y_nonpar_genes = params.get("y_nonpar_genes", Y_NONPAR_GENES)
+y_par_genes = params.get("y_par_genes", Y_PAR_GENES)
+
 predict_key = params.get("predict_column", "sex")
 reference_key = params.get("reference_key", predict_key)
+
+
+def parse_genes(gene_list, adata):
+    if isinstance(gene_list, str):
+        gene_list = [gene_list]
+
+    genes_use = match_genes(adata.var, gene_list, column='feature_name', return_index=False, as_list=True)
+    assert len(genes_use) > 0, f"No genes found in adata.var['feature_name']:\n{pformat(gene_list)}"
+    logging.info(f'Using {len(genes_use)} genes from list:\n{pformat(gene_list)}')
+    return genes_use
 
 
 def predict_sex_by_donor(
@@ -183,6 +201,110 @@ def predict_sex_by_donor(
     return donor_exp
 
 
+def predict_sex_by_chrY_ratio(
+    adata,
+    donor_key,
+    y_nonpar_genes,
+    y_par_genes,
+    feature_column=None,
+    threshold=0.5,
+    default=None,
+    predict_key="sex",
+    nonpar_col="chrY_nonPAR_UMIs",
+    par_col="chrY_PAR_UMIs",
+):
+    """
+    Predict donor sex using the ratio of chrY non-PAR to PAR UMIs.
+
+    This function mirrors the provided R logic:
+
+    1. Compute per-cell UMI sums for chrY non-PAR genes and chrY PAR genes.
+    2. Aggregate these sums per donor (``donor_key``).
+    3. Compute the ratio ``nonPAR_to_PAR = nonPAR_UMIs / PAR_UMIs`` per donor.
+    4. Classify sex as ``"male"`` if the ratio is >= ``threshold`` (default 0.5),
+       otherwise ``"female"``. If the ratio is undefined due to zero PAR counts,
+       it is treated as ``inf`` and thus classified as ``"male"``.
+
+    Parameters
+    ----------
+    adata
+        AnnData-like object with expression in ``adata.X`` and donor IDs in
+        ``adata.obs[donor_key]``.
+    donor_key : str
+        Column name in ``adata.obs`` indicating the donor ID used to group cells.
+    y_nonpar_genes : sequence
+        Gene identifiers for chrY non-PAR genes.
+    y_par_genes : sequence
+        Gene identifiers for chrY PAR genes.
+    feature_column : str, optional
+        Column in ``adata.var`` to match genes. If ``None``, matches against
+        ``adata.var_names``.
+    threshold : float, optional
+        Cutoff for ``nonPAR_to_PAR`` above which donors are classified as male.
+    default : str or None, optional
+        Label for donors with missing ratios if desired.
+    predict_key : str, optional
+        Name of the output sex prediction column.
+    nonpar_col, par_col : str, optional
+        Column names for aggregated non-PAR and PAR UMIs in the output.
+
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame indexed by donor containing ``nonpar_col``, ``par_col``,
+        ``nonPAR_to_PAR``, and a ``predict_key`` column with values
+        ``"male"``/``"female"``.
+    """
+    from fast_array_utils import stats
+
+    if feature_column:
+        nonpar_mask = adata.var[feature_column].isin(y_nonpar_genes)
+        par_mask = adata.var[feature_column].isin(y_par_genes)
+    else:
+        nonpar_mask = adata.var_names.isin(y_nonpar_genes)
+        par_mask = adata.var_names.isin(y_par_genes)
+
+    nonpar_cell = stats.sum(adata[:, nonpar_mask].X, axis=1)
+    par_cell = stats.sum(adata[:, par_mask].X, axis=1)
+
+    df = pd.DataFrame(
+        {
+            donor_key: adata.obs[donor_key].to_numpy(),
+            nonpar_col: nonpar_cell,
+            par_col: par_cell,
+        }
+    )
+
+    donor_chrY = df.groupby(donor_key, sort=False, observed=True).sum()
+
+    nonpar_vals = donor_chrY[nonpar_col].to_numpy(dtype=float)
+    par_vals = donor_chrY[par_col].to_numpy(dtype=float)
+    ratio = np.divide(
+        nonpar_vals,
+        par_vals,
+        out=np.full_like(nonpar_vals, np.inf),
+        where=par_vals != 0,
+    )
+    donor_chrY["nonPAR_to_PAR"] = ratio
+
+    donor_chrY[predict_key] = np.where(
+        donor_chrY["nonPAR_to_PAR"] >= threshold,
+        "male",
+        "female",
+    )
+
+    if default is not None:
+        # Only apply the default when both PAR and nonPAR counts are zero
+        mask_nan = (
+            ~np.isfinite(donor_chrY["nonPAR_to_PAR"])
+            & (nonpar_vals == 0)
+            & (par_vals == 0)
+        )
+        donor_chrY.loc[mask_nan, predict_key] = default
+
+    return donor_chrY
+
+
 logging.info(f"Read file: {input_file}...")
 adata = read_anndata(
     input_file,
@@ -194,30 +316,9 @@ adata = read_anndata(
     uns="uns",
 )
 
-# parse genes
-if 'feature_name' not in adata.var.columns:
-    adata.var['feature_name'] = adata.var_names.astype(str)
-
-if isinstance(x_genes, str):
-    x_genes = [x_genes]
-
-if isinstance(y_genes, str):
-    y_genes = [y_genes]
-
-x_genes_use = match_genes(adata.var, x_genes, column='feature_name', return_index=False, as_list=True)
-y_genes_use = match_genes(adata.var, y_genes, column='feature_name', return_index=False, as_list=True)
-
-assert len(x_genes_use) > 0, f'No X genes found in adata.var_names: {x_genes}'
-assert len(y_genes_use) > 0, f'No Y genes found in adata.var_names: {y_genes}'
-
-logging.info(f'Using {len(x_genes_use)} X genes: {x_genes_use}')
-logging.info(f'Using {len(y_genes_use)} Y genes: {y_genes_use}')
-
 # check donors
 assert donor_key in adata.obs.columns, f'"{donor_key}" not in adata.obs.columns'
-columns = [donor_key]
-if reference_key in adata.obs.columns:
-    columns.append(reference_key)
+columns = [donor_key] + ([reference_key] if reference_key in adata.obs.columns else [])
 adata.obs = adata.obs[columns]
 
 if not donors:
@@ -229,39 +330,85 @@ else:
 missing_donors = set(donors) - set(adata.obs[donor_key].unique().tolist())
 assert len(missing_donors) == 0, f"Donors not found in adata: {missing_donors}"
 
+# parse genes
+if 'feature_name' not in adata.var.columns:
+    adata.var['feature_name'] = adata.var_names.astype(str)
+
+x_genes = parse_genes(x_genes, adata)
+y_genes = parse_genes(y_genes, adata)
+y_nonpar_genes = parse_genes(y_nonpar_genes, adata)
+y_par_genes = parse_genes(y_par_genes, adata)
+
+logging.info(f'Predict sex by X and Y gene expression for {len(donors)} donors...')
 donor_exp = predict_sex_by_donor(
     adata,
     donor_key=donor_key,
     predict_key=predict_key,
-    x_genes=x_genes_use,
-    y_genes=y_genes_use,
+    x_genes=x_genes,
+    y_genes=y_genes,
     default=None,
     feature_column='feature_name',
     x_threshold=x_threshold,
     y_threshold=y_threshold,
     frac=imbalance_frac,
 )
-
 adata.obs = adata.obs.join(donor_exp[predict_key], on=donor_key)
 
+logging.info(f'Predict sex by chrY non-PAR to PAR ratio for {len(donors)} donors...')
+donor_chrY = predict_sex_by_chrY_ratio(
+    adata,
+    donor_key=donor_key,
+    y_nonpar_genes=y_nonpar_genes,
+    y_par_genes=y_par_genes,
+    feature_column='feature_name',
+    threshold=params.get("chrY_threshold", 0.5),
+    predict_key=f"{predict_key}_chrY",
+)
+adata.obs = adata.obs.join(donor_chrY[[f"{predict_key}_chrY"]], on=donor_key)
+
 adata.uns['predict_sex'] = {
-    "x_genes": x_genes_use,
-    "y_genes": y_genes_use,
-    "x_threshold": x_threshold,
-    "y_threshold": y_threshold,
-    "imbalance_frac": imbalance_frac,
-    "predictions": donor_exp,
+    "X_Y_expression": {
+        "predictions": donor_exp,
+        "x_genes": x_genes,
+        "y_genes": y_genes,
+        "x_threshold": x_threshold,
+        "y_threshold": y_threshold,
+        "imbalance_frac": imbalance_frac,
+    },
+    "chrY_ratio": {
+        "y_nonpar_genes": y_nonpar_genes,
+        "y_par_genes": y_par_genes,
+        "predictions": donor_chrY,
+    },
 }
 
 logging.info(f'Predicted sex for {len(donors)} donors.')
 df = adata.obs
 if reference_key in df.columns:
-    df = df[df[reference_key] != df[predict_key]]
-    donors = df[donor_key].unique().tolist()
-    donor_exp = donor_exp.query(f'{donor_key}.isin(@donors)')
+    # subset to reference with non-missing values
+    ref_mask = df[reference_key].isin(["male", "female"])
 
-logging.info(donor_exp)
-logging.info(f'\n{df.value_counts(dropna=False)}')
+    # expression-based prediction
+    exp_mismatch_donors = df[(df[reference_key] != df[predict_key])][donor_key].dropna().unique()
+    donor_exp = donor_exp.loc[exp_mismatch_donors]
+    accuracy = (df.loc[ref_mask, reference_key] == df.loc[ref_mask, predict_key]).mean()
+    adata.uns['predict_sex']['X_Y_expression']['accuracy'] = accuracy
+    logging.info(f'X_Y_expression accuracy: {accuracy:.2%}\n{donor_exp.to_string()}')
+
+    # chrY-based prediction
+    chrY_mismatch_donors = df[(df[reference_key] != df[f"{predict_key}_chrY"])][donor_key].dropna().unique()
+    donor_chrY = donor_chrY.loc[chrY_mismatch_donors]
+    accuracy = (df.loc[ref_mask, reference_key] == df.loc[ref_mask, f"{predict_key}_chrY"]).mean()
+    adata.uns['predict_sex']['chrY_ratio']['accuracy'] = accuracy
+    logging.info(f'chrY_ratio accuracy: {accuracy:.2%}\n{donor_chrY.to_string()}')
+
+    # subset to union of mismatches
+    df = df[df[donor_key].isin(set(exp_mismatch_donors) | set(chrY_mismatch_donors))]
+else:
+    logging.info(f'X_Y_expression:\n{donor_exp.to_string()}')
+    logging.info(f'chrY_ratio:\n{donor_chrY.to_string()}')
+
+logging.info(f'Predictions:\n{df.value_counts(dropna=False)}')
 
 logging.info(f'Write file: {output_file}...')
 write_zarr_linked(
