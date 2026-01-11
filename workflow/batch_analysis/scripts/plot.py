@@ -93,7 +93,7 @@ plt.grid()
 fig, ax = plt.subplots()
 
 sns.violinplot(
-    data=df[df['permuted'] == True],
+    data=df[df['permuted']],
     x='pcr',
     y='covariate',
     fill=False,
@@ -104,7 +104,7 @@ sns.violinplot(
 
 # Overlay points for non-permuted values
 sns.stripplot(
-    data=df[df['permuted'] == False],
+    data=df[~df['permuted']],
     x='pcr',
     y='covariate',
     color='red',      # pick a color that stands out
