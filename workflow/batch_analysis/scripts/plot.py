@@ -13,6 +13,7 @@ output_bar = snakemake.output.barplot
 output_violin = snakemake.output.violinplot
 dataset = snakemake.wildcards.dataset
 file_id = snakemake.wildcards.file_id
+n_permute = snakemake.params.n_permute
 
 logger.info('Read TSV...')
 df = pd.read_table(input_file)
@@ -22,6 +23,9 @@ if df.shape[0] == 0:
     plt.savefig(output_bar)
     plt.savefig(output_violin)
     exit(0)
+
+title = 'Principal Component Regression scores of covariates for'
+title += f'\ndataset={dataset}\nfile_id={file_id}\n{n_permute} permutations'
 
 df = df.sort_values(
     ['pcr', 'n_covariates', 'covariate'],
@@ -39,7 +43,7 @@ g = sns.barplot(
     err_kws={'linewidth': 1},
     capsize=.1,
 )
-g.set(title=f'Principal Component Regression scores of covariates for: {dataset} {file_id}')
+g.set(title=title)
 
 def round_values(x, prefix='', n_digits=3):
     if x < 10 ** (-n_digits):
@@ -82,7 +86,7 @@ g = sns.violinplot(
     dodge=False,
 )
 sns.despine()
-g.set(title=f'PCR of covariates for: {dataset} {file_id}')
+ax.set(title=title)
 
 logger.info('Save violin plot...')
 plt.savefig(output_violin, bbox_inches='tight',dpi=300)
