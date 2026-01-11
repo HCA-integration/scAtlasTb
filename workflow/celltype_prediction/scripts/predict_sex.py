@@ -43,6 +43,16 @@ predict_key = params.get("predict_column", "sex")
 reference_key = params.get("reference_key", predict_key)
 
 
+def parse_genes(gene_list, adata):
+    if isinstance(gene_list, str):
+        gene_list = [gene_list]
+
+    genes_use = match_genes(adata.var, gene_list, column='feature_name', return_index=False, as_list=True)
+    assert len(genes_use) > 0, f'No genes found in adata.var_names: {gene_list}'
+    logging.info(f'Using {len(genes_use)} genes.')
+    return genes_use
+
+
 def predict_sex_by_donor(
     adata,
     donor_key,
@@ -300,30 +310,9 @@ adata = read_anndata(
     uns="uns",
 )
 
-# parse genes
-if 'feature_name' not in adata.var.columns:
-    adata.var['feature_name'] = adata.var_names.astype(str)
-
-if isinstance(x_genes, str):
-    x_genes = [x_genes]
-
-if isinstance(y_genes, str):
-    y_genes = [y_genes]
-
-x_genes_use = match_genes(adata.var, x_genes, column='feature_name', return_index=False, as_list=True)
-y_genes_use = match_genes(adata.var, y_genes, column='feature_name', return_index=False, as_list=True)
-
-assert len(x_genes_use) > 0, f'No X genes found in adata.var_names: {x_genes}'
-assert len(y_genes_use) > 0, f'No Y genes found in adata.var_names: {y_genes}'
-
-logging.info(f'Using {len(x_genes_use)} X genes: {x_genes_use}')
-logging.info(f'Using {len(y_genes_use)} Y genes: {y_genes_use}')
-
 # check donors
 assert donor_key in adata.obs.columns, f'"{donor_key}" not in adata.obs.columns'
-columns = [donor_key]
-if reference_key in adata.obs.columns:
-    columns.append(reference_key)
+columns = [donor_key] + ([reference_key] if reference_key in adata.obs.columns else [])
 adata.obs = adata.obs[columns]
 
 if not donors:
@@ -335,19 +324,28 @@ else:
 missing_donors = set(donors) - set(adata.obs[donor_key].unique().tolist())
 assert len(missing_donors) == 0, f"Donors not found in adata: {missing_donors}"
 
+# parse genes
+if 'feature_name' not in adata.var.columns:
+    adata.var['feature_name'] = adata.var_names.astype(str)
+
+x_genes = parse_genes(x_genes, adata)
+y_genes = parse_genes(y_genes, adata)
+y_nonpar_genes = parse_genes(y_nonpar_genes, adata)
+y_par_genes = parse_genes(y_par_genes, adata)
+
+logging.info(f'Predict sex by X and Y gene expression for {len(donors)} donors...')
 donor_exp = predict_sex_by_donor(
     adata,
     donor_key=donor_key,
     predict_key=predict_key,
-    x_genes=x_genes_use,
-    y_genes=y_genes_use,
+    x_genes=x_genes,
+    y_genes=y_genes,
     default=None,
     feature_column='feature_name',
     x_threshold=x_threshold,
     y_threshold=y_threshold,
     frac=imbalance_frac,
 )
-
 adata.obs = adata.obs.join(donor_exp[predict_key], on=donor_key)
 
 logging.info(f'Predict sex by chrY non-PAR to PAR ratio for {len(donors)} donors...')
