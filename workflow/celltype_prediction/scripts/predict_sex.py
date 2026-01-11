@@ -251,7 +251,7 @@ def predict_sex_by_chrY_ratio(
     -------
     pandas.DataFrame
         DataFrame indexed by donor containing ``nonpar_col``, ``par_col``,
-        ``nonPAR_to_PAR``, and a categorical ``predict_key`` column with
+        ``nonPAR_to_PAR``, and a ``predict_key`` column with values
         ``"male"``/``"female"``.
     """
     from fast_array_utils import stats
@@ -293,7 +293,12 @@ def predict_sex_by_chrY_ratio(
     )
 
     if default is not None:
-        mask_nan = ~np.isfinite(donor_chrY["nonPAR_to_PAR"])
+        # Only apply the default when both PAR and nonPAR counts are zero
+        mask_nan = (
+            ~np.isfinite(donor_chrY["nonPAR_to_PAR"])
+            & (nonpar_vals == 0)
+            & (par_vals == 0)
+        )
         donor_chrY.loc[mask_nan, predict_key] = default
 
     return donor_chrY
