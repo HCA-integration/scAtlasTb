@@ -52,17 +52,20 @@ def round_values(x, prefix='', n_digits=3):
         return f'{prefix}{x:.{n_digits}f}'
     return ''
 
-df['pcr_string'] = df['pcr'].apply(round_values)
+# Prepend "pcr=" to the string
+df['pcr_string'] = df['pcr'].apply(round_values, prefix='pcr=')
 df['n_covariates'] = df['n_covariates'].apply(lambda x: f'n={x}')
-df['signif'] = df['z_score'].apply(lambda x: '**' if x > 3 else '*' if x > 1.5 else '')
+# df['signif'] = df['z_score'].apply(lambda x: '**' if x > 3 else '*' if x > 1.5 else '')
+df['signif'] = df['p-val'].apply(lambda x: '**' if x <= 0.01 else '*' if x <= 0.05 else '')
 df['z_score'] = df['z_score'].apply(round_values, prefix='z=', n_digits=2)
+df['p-val'] = df['p-val'].apply(round_values, prefix='p-val=', n_digits=3)
 
 # create bar labels for covariate
 covariate_bar_labels = df.groupby('covariate', sort=False).first()[
-    ['pcr_string', 'z_score', 'n_covariates', 'signif']
+    ['pcr_string', 'n_covariates', 'z_score', 'signif']
 ].astype(str).agg(lambda x: ', '.join([s for s in x if s]), axis=1)
-print(covariate_bar_labels)
 g.bar_label(g.containers[0], labels=covariate_bar_labels, padding=10)
+logging.info(covariate_bar_labels)
 
 # create bar labels for permuted covariates
 if len(g.containers) > 1:
