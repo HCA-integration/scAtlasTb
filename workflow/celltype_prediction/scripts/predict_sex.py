@@ -361,23 +361,48 @@ donor_chrY = predict_sex_by_chrY_ratio(
 adata.obs = adata.obs.join(donor_chrY[[f"{predict_key}_chrY"]], on=donor_key)
 
 adata.uns['predict_sex'] = {
-    "x_genes": x_genes_use,
-    "y_genes": y_genes_use,
-    "x_threshold": x_threshold,
-    "y_threshold": y_threshold,
-    "imbalance_frac": imbalance_frac,
-    "predictions": donor_exp,
+    "X_Y_expression": {
+        "predictions": donor_exp,
+        "x_genes": x_genes,
+        "y_genes": y_genes,
+        "x_threshold": x_threshold,
+        "y_threshold": y_threshold,
+        "imbalance_frac": imbalance_frac,
+    },
+    "chrY_ratio": {
+        "y_nonpar_genes": y_nonpar_genes,
+        "y_par_genes": y_par_genes,
+        "predictions": donor_chrY,
+    },
 }
 
 logging.info(f'Predicted sex for {len(donors)} donors.')
 df = adata.obs
 if reference_key in df.columns:
-    df = df[df[reference_key] != df[predict_key]]
-    donors = df[donor_key].unique().tolist()
-    donor_exp = donor_exp.query(f'{donor_key}.isin(@donors)')
+    # subset to reference with non-missing values
+    ref_mask = df[reference_key].isin(["male", "female"])
 
-logging.info(donor_exp)
-logging.info(f'\n{df.value_counts(dropna=False)}')
+    # expression-based prediction
+    exp_mismatch_donors = df[(df[reference_key] != df[predict_key])][donor_key].dropna().unique()
+    donor_exp = donor_exp.loc[exp_mismatch_donors]
+    accuracy = (df.loc[ref_mask, reference_key] == df.loc[ref_mask, predict_key]).mean()
+    adata.uns['predict_sex']['X_Y_expression']['accuracy'] = accuracy
+    logging.info(f'X_Y_expression accuracy: {accuracy:.2%}\n{donor_exp.to_string()}')
+
+    # chrY-based prediction
+    chrY_mismatch_donors = df[(df[reference_key] != df[f"{predict_key}_chrY"])][donor_key].dropna().unique()
+    donor_chrY = donor_chrY.loc[chrY_mismatch_donors]
+    accuracy = (df.loc[ref_mask, reference_key] == df.loc[ref_mask, f"{predict_key}_chrY"]).mean()
+    adata.uns['predict_sex']['chrY_ratio']['accuracy'] = accuracy
+    logging.info(f'chrY_ratio accuracy: {accuracy:.2%}\n{donor_chrY.to_string()}')
+
+    # subset to union of mismatches
+    df = df[df[donor_key].isin(set(exp_mismatch_donors) | set(chrY_mismatch_donors))]
+else:
+    logging.info(f'X_Y_expression:\n{donor_exp.to_string()}')
+    logging.info(f'chrY_ratio:\n{donor_chrY.to_string()}')
+
+logging.info(f'Predictions:\n{df.value_counts(dropna=False)}')
 
 logging.info(f'Write file: {output_file}...')
 write_zarr_linked(
