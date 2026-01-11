@@ -48,8 +48,8 @@ def parse_genes(gene_list, adata):
         gene_list = [gene_list]
 
     genes_use = match_genes(adata.var, gene_list, column='feature_name', return_index=False, as_list=True)
-    assert len(genes_use) > 0, f'No genes found in adata.var_names: {gene_list}'
-    logging.info(f'Using {len(genes_use)} genes.')
+    assert len(genes_use) > 0, f"No genes found in adata.var['feature_name']: {gene_list}"
+    logging.info(f'Using {len(genes_use)} genes from list: {gene_list}')
     return genes_use
 
 
