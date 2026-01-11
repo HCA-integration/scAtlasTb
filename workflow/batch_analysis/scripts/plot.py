@@ -16,11 +16,11 @@ dataset = snakemake.wildcards.dataset
 file_id = snakemake.wildcards.file_id
 n_permute = snakemake.params.n_permute
 
-logger.info('Read TSV...')
+logging.info('Read TSV...')
 df = pd.read_table(input_file)
 
 if df.shape[0] == 0:
-    logger.info('Empty TSV, skip plotting')
+    logging.info('Empty TSV, skip plotting')
     plt.savefig(output_bar)
     plt.savefig(output_violin)
     exit(0)
@@ -33,7 +33,7 @@ df = df.sort_values(
     ascending=[False, True, False]
 )
 
-logger.info('Barplot...')
+logging.info('Barplot...')
 g = sns.barplot(
     data=df,
     x='pcr',
@@ -82,7 +82,7 @@ if len(g.containers) > 1:
 plt.xticks(rotation=90)
 sns.despine()
 
-logger.info('Save barplot...')
+logging.info('Save barplot...')
 plt.savefig(output_bar, bbox_inches='tight', dpi=300)
 
 logging.info('Violin plot...')
@@ -128,5 +128,5 @@ ax2.spines['right'].set_visible(False)
 sns.despine()
 ax.set(title=title)
 
-logger.info('Save violin plot...')
+logging.info('Save violin plot...')
 plt.savefig(output_violin, bbox_inches='tight', dpi=300)
