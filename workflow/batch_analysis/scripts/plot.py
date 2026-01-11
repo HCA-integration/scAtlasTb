@@ -1,6 +1,7 @@
 import logging
 logging.basicConfig(level=logging.INFO)
 import pandas as pd
+import numpy as np
 from matplotlib import pyplot as plt
 import seaborn as sns
 from matplotlib import rcParams
@@ -87,13 +88,43 @@ plt.savefig(output_bar, bbox_inches='tight', dpi=300)
 logging.info('Violin plot...')
 plt.clf()
 plt.grid()
-g = sns.violinplot(
-    data=df,
+
+# Create the violin for permutations
+fig, ax = plt.subplots()
+
+sns.violinplot(
+    data=df[df['permuted'] == True],
     x='pcr',
     y='covariate',
-    hue='permuted',
+    fill=False,
+    inner='quart',
     dodge=False,
+    ax=ax,
 )
+
+# Overlay points for non-permuted values
+sns.stripplot(
+    data=df[df['permuted'] == False],
+    x='pcr',
+    y='covariate',
+    color='red',      # pick a color that stands out
+    size=8,
+    marker='o',
+    dodge=False,
+    ax=ax,
+)
+
+ax2 = ax.twinx()
+ax2.set_ylim(ax.get_ylim())
+
+# set side labels directly
+ax2.set_yticks(ax.get_yticks())
+ax2.set_yticklabels([covariate_bar_labels.get(c, "") for c in df['covariate'].unique()])
+
+# hide ticks and spine
+ax2.tick_params(left=False, right=False, length=0)
+ax2.spines['right'].set_visible(False)
+
 sns.despine()
 ax.set(title=title)
 
