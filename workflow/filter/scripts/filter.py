@@ -26,9 +26,13 @@ logging.info(adata.__str__())
 
 mask = pd.Series(np.full(adata.n_obs, True, dtype=bool), index=adata.obs_names)
 
-ex_filters = params.get('remove_by_column', {})
-logging.info(pformat(ex_filters))
-for column, values in ex_filters.items():
+for column, values in params.get('keep_by_column', {}).items():
+    logging.info(f'keep cells matching {len(values)} value(s) from column="{column}"...')
+    values = [str(v) for v in values]
+    mask &= adata.obs[column].astype(str).isin(values)
+    logging.info(f'{mask.sum()} cells remaining')
+
+for column, values in params.get('remove_by_column', {}).items():
     logging.info(f'remove cells matching {len(values)} value(s) from column="{column}"...')
     values = [str(v) for v in values]
     mask &= ~adata.obs[column].astype(str).isin(values)
