@@ -43,8 +43,8 @@ rule batch_pcr:
     threads:
         lambda w: max(
             1, min(
-                mcfg.get_from_parameters(w, 'max_threads', check_query_keys=False, default=50),
-                mcfg.get_from_parameters(w, 'n_permutations', check_query_keys=False)
+                mcfg.get_from_parameters(w, 'max_threads', check_query_keys=False, default=20),
+                mcfg.get_from_parameters(w, 'n_permutations', check_query_keys=False, default=100)
             )
         )
     resources:
