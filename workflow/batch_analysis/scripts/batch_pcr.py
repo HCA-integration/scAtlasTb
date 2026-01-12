@@ -170,8 +170,10 @@ elif n_permute < 100:
 else:
     stat = np.abs(df['pcr'] - df['perm_mean'])
     null = stat.loc[df['permuted']].values
-    obs = stat.loc[~df['permuted']].values[0]
-    df['p-val'] = (np.sum(null >= obs) + 1) / (n_permute + 1)
+    observed = stat.loc[~df['permuted']].values
+    assert observed.size == 1, "Expected exactly one non-permuted observation for p-value calculation"
+
+    df['p-val'] = (np.sum(null >= observed[0]) + 1) / (n_permute + 1)
     df['signif'] = df['p-val'] <= 0.05
 
 print(df, flush=True)
