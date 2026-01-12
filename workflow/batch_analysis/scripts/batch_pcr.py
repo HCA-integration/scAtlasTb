@@ -90,32 +90,31 @@ else:
 
 logging.info(f'Calculating PCR scores for {n_permute} permutations (using {n_threads} threads)')
 
+X_pca = adata.obsm['X_pca'].astype(np.float32)
+pca_var = adata.uns['pca']['variance']
+obs_cov = adata.obs[[sample_key, covariate]].copy()
 
-def run_pcr(adata, covariate, sample_key, i, seed, **kwargs):
-    is_permuted = i > 0
-    if is_permuted:
-        # aggregate covariate per sample for permutation
-        cov_per_sample = adata.obs \
-            .groupby(sample_key, observed=True) \
-            .agg({covariate: 'first'})
-        # Permute covariate per sample
-        rng = np.random.default_rng([i, seed]) # use random seed unique to permutation
-        permuted_values = rng.permutation(cov_per_sample[covariate].values)
-        cov_map = dict(zip(cov_per_sample.index.values, permuted_values))
-        covariate_array = adata.obs[sample_key].map(cov_map)
+sample_codes, uniques = pd.factorize(obs_cov[sample_key], sort=False)
+cov_per_sample = obs_cov \
+    .groupby(sample_key, observed=True)[covariate] \
+    .first() \
+    .reindex(uniques) \
+    .to_numpy()
+
+def run_pcr(i, seed, **kwargs):
+    if i > 0:
+        rng = np.random.default_rng([i, seed])
+        covariate_array = rng.permutation(cov_per_sample)[sample_codes]
     else:
-        # Use original covariate
-        covariate_array = adata.obs[covariate]
+        covariate_array = obs_cov[covariate].values
 
-    result = scib.me.pc_regression(
-        adata.obsm['X_pca'],
-        pca_var=adata.uns['pca']['variance'],
+    return f"{covariate}-{i}", i > 0, scib.me.pc_regression(
+        X_pca,
+        pca_var=pca_var,
         covariate=covariate_array,
-        **kwargs
+        **kwargs,
     )
     
-    return f'{covariate}-{i}', is_permuted, result
-
 
 def chunked_parallel_jobs(jobs, chunk_size, n_threads):
     results = []
@@ -126,18 +125,11 @@ def chunked_parallel_jobs(jobs, chunk_size, n_threads):
             require='sharedmem',
         )(chunk)
         results.extend(chunk_results)
-        # Explicit cleanup
-        del chunk_results
-        del chunk
-        gc.collect()
     return results
 
 
 all_jobs = [
     delayed(run_pcr)(
-        adata=adata,
-        covariate=covariate,
-        sample_key=sample_key,
         i=i,
         seed=42,
         verbose=False,
