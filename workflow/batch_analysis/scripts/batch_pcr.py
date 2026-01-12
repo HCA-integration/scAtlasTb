@@ -73,7 +73,7 @@ else:
     nonunique_map = (
         adata.obs.groupby(sample_key, observed=False)[covariate]
         .unique()
-        .sort_values()
+        .apply(sorted)
         .loc[lambda x: x.str.len() > 1]
     )
     assert nonunique_map.shape[0] == 0, \
@@ -163,16 +163,16 @@ df['perm_std'] = df.loc[df['permuted'], 'pcr'].std()
 df['z_score'] = (df['pcr'] - df['perm_mean']) / df['perm_std']
 if n_permute == 0:
     df['p-val'] = np.nan
+    df['signif'] = False
+elif n_permute < 100:
+    df['signif'] = df['z_score'] > 1.5
+    df['p-val'] = df.loc[df['permuted'], 'signif'].sum() / n_permute
 else:
-    # df['p-val'] = df.loc[df['permuted'], 'signif'].sum() / n_permute
     stat = np.abs(df['pcr'] - df['perm_mean'])
     null = stat.loc[df['permuted']].values
     obs = stat.loc[~df['permuted']].values[0]
     df['p-val'] = (np.sum(null >= obs) + 1) / (n_permute + 1)
-    if n_permute < 100:
-        df['signif'] = df['z_score'] > 1.5
-    else:
-        df['signif'] = df['p-val'] <= 0.05
+    df['signif'] = df['p-val'] <= 0.05
 
 print(df, flush=True)
 df.to_csv(output_file, sep='\t', index=False)
