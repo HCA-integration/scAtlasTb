@@ -7,8 +7,8 @@ DATASETS:
       batch_analysis: test/input/blood_pca.zarr
     batch_analysis:
       covariates:
-        - sample
-        - donor
+        - tech_id
+        - donor_id
         - assay
         - sex
         - disease
@@ -20,7 +20,8 @@ DATASETS:
         - disease
         - self_reported_ethnicity
       n_permutations: 1000
-      sample: sample,donor
+      max_threads: 50
+      sample: tech_id,donor_id
   
   simple:
     input:
@@ -28,7 +29,6 @@ DATASETS:
     batch_analysis:
       covariates:
         - assay
-      n_permutations: 1000
       highly_variable_genes:
       pca:
 
@@ -37,6 +37,7 @@ DATASETS:
       batch_analysis: test/input/pbmc68k.h5ad
     batch_analysis:
       sample: batch, bulk_labels
+      n_permutations: 1000
       covariates:
         - bulk_labels
         - batch
