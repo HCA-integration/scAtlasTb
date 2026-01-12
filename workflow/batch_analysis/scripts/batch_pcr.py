@@ -73,7 +73,7 @@ else:
     nonunique_map = (
         adata.obs.groupby(sample_key, observed=False)[covariate]
         .unique()
-        .apply(lambda x: sorted(x))
+        .apply(sorted)
         .loc[lambda x: x.str.len() > 1]
     )
     assert nonunique_map.shape[0] == 0, \
