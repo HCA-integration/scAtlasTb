@@ -1,6 +1,7 @@
 from anndata.experimental import read_elem
 import zarr
 import glob
+from pathlib import Path
 import yaml
 import pandas as pd
 import numpy as np
@@ -20,7 +21,7 @@ for file in files:
     module_config = config['DATASETS'][dataset]['reference_mapping'].get('scarches', {})
     
     
-    print(f'Testing reference mapping output: {file}...')
+    print(f'Testing reference mapping output: {file}...', flush=True)
     
     with zarr.open(file) as z:
         obs = read_elem(z["obs"])
@@ -28,7 +29,7 @@ for file in files:
         var = read_elem(z["var"])
     
 
-    print("  ✓ Testing reference mapping outputs...")
+    print("  ✓ Testing reference mapping outputs...", flush=True)
     
     # Check for latent embedding
     assert 'X_emb' in obsm, "Expected 'X_emb' in obsm keys"
@@ -40,7 +41,7 @@ for file in files:
     assert not np.any(np.isnan(latent_embedding)), f"Latent embedding should not contain NaN values"
 
     
-    print("  ✓ Testing model parameter consistency...")
+    print("  ✓ Testing model parameter consistency...", flush=True)
     model_params = module_config.get('model_params', {})
     
     # Check batch key if specified
@@ -68,30 +69,34 @@ for file in files:
                     assert covariate in obs.columns, f"Covariate '{covariate}' not found in obs columns"
     
     
-    print("  ✓ Testing data integrity...")
+    print("  ✓ Testing data integrity...", flush=True)
     
     # Check for reasonable cell and gene counts
     assert len(obs) > 0, "Should have > 0 cells"
     assert len(var) > 0, "Should have > 0 genes"
     assert len(obs) < 1_000_000, "Suspiciously high number of cells (>1M)"
     
-    print(f"  ✅ All tests passed for {file}")
+    print(f"  ✅ All tests passed for {file}", flush=True)
 
 # Check for model output directory
-model_dirs = glob.glob('test/out/reference_mapping/model/dataset~*/file_id~*')
+model_path = Path('test/out/reference_mapping/model/')
+model_dirs = [
+    p for p in model_path.glob('dataset~*/file_id~*/')
+    if p.suffix != '.zarr'
+]
 if model_dirs:
-    print(f"\n✓ Found {len(model_dirs)} model output directories")
+    print(f"\n✓ Found {len(model_dirs)} model output directories", flush=True)
     for model_dir in model_dirs:
-        print(f"  Checking model directory: {model_dir}")
+        print(f"  Checking model directory: {model_dir}", flush=True)
         # Check for typical scVI-tools model files
         expected_files = ['model.pt'] #, 'attr.pkl', 'var_names.csv']
         for expected_file in expected_files:
             model_file_path = f"{model_dir}/{expected_file}"
             import os
             if os.path.exists(model_file_path):
-                print(f"    ✓ Found {expected_file}")
+                print(f"    ✓ Found {expected_file}", flush=True)
             else:
-                print(f"    ⚠ Missing {expected_file} (may be optional)")
+                print(f"    ⚠ Missing {expected_file} (may be optional)", flush=True)
 
-print(f"\n🎉 Reference mapping tests completed successfully for {len(files)} output files!")
+print(f"\n🎉 Reference mapping tests completed successfully for {len(files)} output files!", flush=True)
 
