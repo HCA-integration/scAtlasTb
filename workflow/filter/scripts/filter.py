@@ -24,7 +24,12 @@ write_copy = params.get('write_copy', False) or input_file.endswith('.h5ad')
 adata = read_anndata(input_file, dask=True, backed=True)
 logging.info(adata.__str__())
 
-mask = pd.Series(np.full(adata.n_obs, True, dtype=bool), index=adata.obs_names)
+# Initialize mask based on whether keep_by filters are present
+# If keep_by filters exist, start with False (only keep matching cells)
+# Otherwise, start with True (keep all cells, then remove)
+has_keep_filters = params.get('keep_by_column', {}) or params.get('keep_by_query', [])
+initial_value = False if has_keep_filters else True
+mask = pd.Series(np.full(adata.n_obs, initial_value, dtype=bool), index=adata.obs_names)
 
 for column, values in params.get('keep_by_column', {}).items():
     logging.info(f'keep cells matching {len(values)} value(s) from column="{column}"...')
@@ -32,15 +37,15 @@ for column, values in params.get('keep_by_column', {}).items():
     mask |= adata.obs[column].astype(str).isin(values)
     logging.info(f'{mask.sum()} cells remaining')
 
+for query in params.get('keep_by_query', []):
+    logging.info(f'keep by query="{query}"...')
+    mask |= adata.obs.eval(query)
+    logging.info(f'{mask.sum()} cells remaining')
+
 for column, values in params.get('remove_by_column', {}).items():
     logging.info(f'remove cells matching {len(values)} value(s) from column="{column}"...')
     values = [str(v) for v in values]
     mask &= ~adata.obs[column].astype(str).isin(values)
-    logging.info(f'{mask.sum()} cells remaining')
-
-for query in params.get('keep_by_query', []):
-    logging.info(f'keep by query="{query}"...')
-    mask |= adata.obs.eval(query)
     logging.info(f'{mask.sum()} cells remaining')
 
 for query in params.get('remove_by_query', []):

@@ -77,10 +77,11 @@ DATASETS:
   - Within `keep_by_column`: cells are retained if they match ANY value in ANY specified column
   - Within `keep_by_query`: cells are retained only if they match ANY of the query conditions
 - The final mask keeps cells that:
-  1. Do NOT match any values in `remove_by_column` columns, AND
-  2. Do NOT match any `remove_by_query` conditions, AND  
-  3. DO match all `keep_by_column` conditions (if specified)
-  4. DO match all `keep_by_query` conditions (if specified)
+  1. If `keep_by` filters are specified: DO match at least ONE condition from `keep_by_column` OR `keep_by_query`, AND
+  2. Do NOT match any values in `remove_by_column` columns, AND
+  3. Do NOT match any `remove_by_query` conditions.
+  
+  If no `keep_by` filters are specified, all cells are initially kept and only `remove_by` filters are applied.
 
 ## Input/Output
 
