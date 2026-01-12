@@ -28,7 +28,7 @@ def get_files_for_metadata_harm(wildcards):
             get_wildcards(dataset_df, columns=all_but(dataset_df.columns,'subset'), wildcards=wildcards)
         )
     file_path = meta['url']
-    anno_file = meta['annotation_file']
+    anno_file = meta.get('annotation_file')
 
     # download file if not present
     if not Path(str(file_path)).exists():
