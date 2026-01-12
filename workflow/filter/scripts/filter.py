@@ -27,7 +27,7 @@ logging.info(adata.__str__())
 # Initialize mask based on whether keep_by filters are present
 # If keep_by filters exist, start with False (only keep matching cells)
 # Otherwise, start with True (keep all cells, then remove)
-has_keep_filters = bool(params.get('keep_by_column', {}) or params.get('keep_by_query', []))
+has_keep_filters = params.get('keep_by_column', {}) or params.get('keep_by_query', [])
 initial_value = False if has_keep_filters else True
 mask = pd.Series(np.full(adata.n_obs, initial_value, dtype=bool), index=adata.obs_names)
 

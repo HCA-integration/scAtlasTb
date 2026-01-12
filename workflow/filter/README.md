@@ -79,7 +79,7 @@ DATASETS:
 - The final mask keeps cells that:
   1. If `keep_by` filters are specified: DO match at least ONE condition from `keep_by_column` OR `keep_by_query`, AND
   2. Do NOT match any values in `remove_by_column` columns, AND
-  3. Do NOT match any `remove_by_query` conditions
+  3. Do NOT match any `remove_by_query` conditions.
   
   If no `keep_by` filters are specified, all cells are initially kept and only `remove_by` filters are applied.
 
