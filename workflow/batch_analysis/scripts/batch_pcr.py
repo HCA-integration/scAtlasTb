@@ -59,22 +59,34 @@ with open(setup_file, 'r') as f:
     setup = yaml.safe_load(f)
 n_permute = setup['n_permute']
 
-nonunique_map = (
-    adata.obs.groupby(sample_key, observed=False)[covariate]
-    .unique()
-    .apply(lambda x: sorted(x))
-    .loc[lambda x: x.str.len() > 1]
-)
-assert nonunique_map.shape[0] == 0, \
-    f'Each sample (defined by {sample_key}) must have exactly one value for covariate {covariate}, '  \
-    f'but found values:\n{nonunique_map}'
 
-value_counts = adata.obs[[sample_key, covariate]].drop_duplicates().value_counts(covariate)
-logging.info(value_counts)
+def is_categorical_series(s, max_unique=10):
+    return (
+        pd.api.types.is_categorical_dtype(s) or
+        pd.api.types.is_object_dtype(s) or
+        (pd.api.types.is_numeric_dtype(s) and s.nunique() <= max_unique)
+    )
 
-if value_counts.max() == 1:
-    logging.info('Sample key is the same as covariate, skipping permutation...')
-    n_permute = 0
+if not is_categorical_series(adata.obs[covariate]):
+    adata.obs[covariate] = adata.obs[covariate].astype(np.float32)
+else:
+    nonunique_map = (
+        adata.obs.groupby(sample_key, observed=False)[covariate]
+        .unique()
+        .apply(lambda x: sorted(x))
+        .loc[lambda x: x.str.len() > 1]
+    )
+    assert nonunique_map.shape[0] == 0, \
+        f'Each sample (defined by {sample_key}) must have exactly one unique value for covariate {covariate}, '  \
+        f'but found values:\n{nonunique_map}'
+
+    value_counts = adata.obs[[sample_key, covariate]].drop_duplicates().value_counts(covariate)
+    logging.info(value_counts[value_counts > 1])
+
+    if value_counts.max() == 1:
+        logging.info('Sample key is the same as covariate, skipping permutation...')
+        n_permute = 0
+
 
 logging.info(f'Calculating PCR scores for {n_permute} permutations (using {n_threads} threads)')
 
