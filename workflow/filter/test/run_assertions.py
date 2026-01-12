@@ -12,7 +12,7 @@ single_outputs = glob.glob('test/out/filter/dataset~*/file_id~*.zarr')
 assert len(single_outputs) > 0, 'No output files found'
 
 for file in single_outputs:
-    matching_datasets = [x for x in config['DATASETS'] if x in file]
+    matching_datasets = [x for x in config['DATASETS'] if f'dataset~{x}/' in file]
     if not matching_datasets:
         logging.info(f'No matching dataset found for {file}, skipping...')
         continue
@@ -38,6 +38,7 @@ for file in single_outputs:
             # Data should be subsetted to only non-filtered cells
             assert adata_out.obs['filtered'].all(), "All cells in subsetted output should have filtered=True"
             assert adata_out.n_obs <= adata_in.n_obs, "Output has more cells than input"
+            logging.info(f'Input cells: {adata_in.n_obs}, Output cells: {adata_out.n_obs}')
         else:
             # Data should retain all cells but have filtered column
             assert adata_out.n_obs == adata_in.n_obs, "subset=False but cell count changed"

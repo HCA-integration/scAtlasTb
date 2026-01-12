@@ -43,9 +43,3 @@ DATASETS:
           - G1
         is_cd14_mono:
           - true
-
-
-defaults:
-  datasets:
-    - test
-    - Lee2020
