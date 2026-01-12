@@ -116,7 +116,6 @@ if rename_obsm_keys:
             continue
         adata.obsm[new_key] = adata.obsm[old_key]
         del adata.obsm[old_key]
-    files_to_keep.append('obsm')
 
 
 if input_new_cols:
