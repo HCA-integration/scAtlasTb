@@ -77,7 +77,7 @@ else:
         .loc[lambda x: x.str.len() > 1]
     )
     assert nonunique_map.shape[0] == 0, \
-        f'Each sample (defined by {sample_key}) must have exactly one unique value for covariate {covariate}, '  \
+        f'Each sample (defined by {sample_key}) must have exactly one value for covariate {covariate}, '  \
         f'but found values:\n{nonunique_map}'
 
     value_counts = adata.obs[[sample_key, covariate]].drop_duplicates().value_counts(covariate)
