@@ -13,3 +13,6 @@ DATASETS:
         layer: layers/counts
         model_params:
           batch_key: batch
+      umap_colors:
+        - batch
+        - bulk_labels

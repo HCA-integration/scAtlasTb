@@ -30,7 +30,7 @@ train_params = dict(
     max_epochs=10,
     early_stopping=True,
     check_val_every_n_epoch=1,
-) | snakemake.params.get('train_kwargs', {})
+) | snakemake.params.get('train_params', {})
 
 batch_key = model_params.pop('batch_key')
 labels_key = model_params.pop('labels_key', None)
