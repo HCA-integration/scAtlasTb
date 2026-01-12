@@ -12,7 +12,7 @@ DATASETS:
         sex:
           - female
       remove_by_column:
-        donor:
+        donor_id:
           - C19-CB-0008 # value not in data
           - Normal 1
           - nCoV 1
