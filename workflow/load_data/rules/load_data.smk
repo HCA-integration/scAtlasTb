@@ -64,7 +64,7 @@ rule harmonize_metadata:
         get_env(config, 'scanpy', env_dir='../../../envs')
     threads: 5
     resources:
-        mem_mb=get_resource(config,profile='cpu',resource_key='mem_mb'),
+        mem_mb=lambda wildcards, attempt: get_resource(config,profile='cpu',resource_key='mem_mb', attempt=attempt),
     # shadow: 'shallow'
     script:
         '../scripts/harmonize_metadata.py'
