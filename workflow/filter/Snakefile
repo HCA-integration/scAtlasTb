@@ -13,7 +13,7 @@ mcfg = ModuleConfig(
         'subset',
         'write_copy',
         'remove_by_column',
-        # 'keep_by_column',
+        'keep_by_column',
         'remove_by_query',
         'keep_by_query',
     ],
@@ -42,6 +42,7 @@ use rule filter from filtering as filter with:
         zarr=directory(mcfg.out_dir / f'{params.wildcard_pattern}.zarr'),
     params:
         remove_by_column=lambda wildcards: mcfg.get_from_parameters(wildcards, 'remove_by_column', default={}),
+        keep_by_column=lambda wildcards: mcfg.get_from_parameters(wildcards, 'keep_by_column', default={}),
         remove_by_query=lambda wildcards: mcfg.get_from_parameters(wildcards, 'remove_by_query', default={}),
         keep_by_query=lambda wildcards: mcfg.get_from_parameters(wildcards, 'keep_by_query', default={}),
         dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=True),

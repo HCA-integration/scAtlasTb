@@ -19,6 +19,9 @@ DATASETS:
           - Normal 1
           - nCoV 1
           - Flu 1
+      keep_by_column:
+        sex:
+          - female
       remove_by_query:
         # pandas query strings for complex filtering conditions
         - 'random < 3'
@@ -52,6 +55,11 @@ DATASETS:
   - Values: List of entries to exclude from that column
   - All entries are treated as strings for comparison
 
+- **`keep_by_column`**: Dictionary defining columns and entries to retain
+  - Keys: Column names in the AnnData observation metadata (`adata.obs`)
+  - Values: List of entries to keep from that column
+  - All entries are treated as strings for comparison
+
 - **`remove_by_query`**: List of pandas query strings for complex filtering conditions
   - Each query string follows pandas DataFrame query syntax
   - Cells matching these queries will be removed
@@ -62,14 +70,18 @@ DATASETS:
 
 ## Behavior
 
-- All filtering conditions are combined with **AND** logic - a cell must pass ALL filters to be retained
-- Within `remove_by_column`: cells are excluded if they match ANY value in ANY specified column
-- Within `remove_by_query`: cells are excluded if they match ANY of the query conditions
-- Within `keep_by_query`: cells are retained only if they match ALL of the query conditions
+- All `remove_by` filtering conditions are combined with **AND** logic - a cell must pass ALL filters to be retained
+  - Within `remove_by_column`: cells are excluded if they match ANY value in ANY specified column
+  - Within `remove_by_query`: cells are excluded if they match ANY of the query conditions
+- All `keep_by` filtering conditions are combined with **OR** logic - a cell only needs to pass ONE filter to be retained
+  - Within `keep_by_column`: cells are retained if they match ANY value in ANY specified column
+  - Within `keep_by_query`: cells are retained only if they match ANY of the query conditions
 - The final mask keeps cells that:
-  1. Do NOT match any values in `remove_by_column` columns, AND
-  2. Do NOT match any `remove_by_query` conditions, AND  
-  3. DO match all `keep_by_query` conditions (if specified)
+  1. If `keep_by` filters are specified: DO match at least ONE condition from `keep_by_column` OR `keep_by_query`, AND
+  2. Do NOT match any values in `remove_by_column` columns, AND
+  3. Do NOT match any `remove_by_query` conditions.
+  
+  If no `keep_by` filters are specified, all cells are initially kept and only `remove_by` filters are applied.
 
 ## Input/Output
 

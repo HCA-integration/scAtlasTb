@@ -8,8 +8,11 @@ DATASETS:
       filter: test/input/load_data/harmonize_metadata/Lee2020.zarr
     filter:
       subset: true
+      keep_by_column:
+        sex:
+          - female
       remove_by_column:
-        donor:
+        donor_id:
           - C19-CB-0008 # value not in data
           - Normal 1
           - nCoV 1
@@ -40,9 +43,3 @@ DATASETS:
           - G1
         is_cd14_mono:
           - true
-
-
-defaults:
-  datasets:
-    - test
-    - Lee2020
