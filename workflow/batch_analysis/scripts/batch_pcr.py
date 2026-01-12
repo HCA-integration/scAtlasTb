@@ -125,6 +125,10 @@ def chunked_parallel_jobs(jobs, chunk_size, n_threads):
             require='sharedmem',
         )(chunk)
         results.extend(chunk_results)
+        # Explicitly clear intermediate results to reduce peak memory usage
+        del chunk_results
+        del chunk
+        gc.collect()
     return results
 
 
