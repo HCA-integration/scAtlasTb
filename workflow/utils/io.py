@@ -79,6 +79,7 @@ def read_anndata(
     chunks: [int, tuple] = None,
     stride: int = 200_000,
     verbose: bool = True,
+    debug: bool = False,
     dask_slots: list = ['layers', 'raw'],
     **kwargs
 ) -> ad.AnnData:
@@ -87,6 +88,9 @@ def read_anndata(
     :param file: path to anndata file in zarr or h5ad format
     :param kwargs: AnnData parameter to zarr group mapping
     """
+    if debug:
+        verbose = True
+
     if exclude_slots is None:
         exclude_slots = []
     elif exclude_slots == 'all':
@@ -120,8 +124,9 @@ def read_anndata(
         backed=backed,
         chunks=chunks,
         stride=stride,
-        verbose=verbose,
         dask_slots=dask_slots,
+        verbose=verbose,
+        debug=debug,
         **kwargs
     )
     if not backed and file_type == 'h5py':
@@ -141,6 +146,7 @@ def read_partial(
     force_sparse_slots: [str, list] = None,
     dask_slots: [str, list] = ['layers', 'raw'],
     verbose: bool = False,
+    debug: bool = False,
     **kwargs
 ) -> ad.AnnData:
     """
@@ -189,6 +195,7 @@ def read_partial(
                     stride=stride,
                     fail_on_missing=False,
                     verbose=False,
+                    debug=debug,
                 )
                 for sub_slot in tqdm(keys, desc=f'Read {from_slot} slots as_dask={as_dask}', disable=not verbose)
             }
@@ -205,6 +212,7 @@ def read_partial(
                 stride=stride,
                 fail_on_missing=False,
                 verbose=verbose,
+                debug=debug,
             )
     
     try:
@@ -244,6 +252,7 @@ def read_slot(
     stride: int = 1000,
     fail_on_missing: bool = True,
     verbose: bool = True,
+    debug: bool = False,
 ):  
     if group is None:
         group = get_store(file)
@@ -279,6 +288,10 @@ def read_slot(
             backed=backed,
             verbose=verbose,
         )
+
+    shape = getattr(slot, "shape", None)
+    if shape and debug:
+        print_flushed(f'shape: {shape}', verbose=verbose)
     
     try:
         slot = subset_slot(
@@ -470,7 +483,6 @@ def link_file(in_file, out_file, relative_path=True, overwrite=False, verbose=Tr
     
     if overwrite and out_file.exists():
         if out_file.is_dir() and not out_file.is_symlink():
-            print_flushed(f'replace {out_file}...', verbose=verbose)
             shutil.rmtree(out_file)
         else:
             out_file.unlink()
@@ -562,7 +574,9 @@ def link_zarr(
         key=lambda item: out_dir.name in str(in_dir_map[item[1]]),
         reverse=False,
     )
-    print_flushed('slot_map:', pformat(slot_map), verbose=verbose)
+    print_flushed('Linking files with the following mappings:', verbose=verbose)
+    for out_slot, in_slot in slot_map:
+        print_flushed(f'  {out_slot} -> {in_slot}, {in_dir_map[in_slot]}', verbose=verbose)
 
     for out_slot, in_slot in slot_map:
         in_dir = in_dir_map[in_slot]
