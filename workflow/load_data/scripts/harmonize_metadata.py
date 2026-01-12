@@ -21,7 +21,6 @@ annotation_file = snakemake.input.get('annotation_file')
 out_file = snakemake.output.zarr
 # out_plot = snakemake.output.plot
 
-backed = snakemake.params.get('backed', True)
 dask = snakemake.params.get('dask', True)
 meta = snakemake.params.get('meta', {})
 logging.info(f'meta:\n{pformat(meta)}')
@@ -30,7 +29,12 @@ logging.info(f'meta:\n{pformat(meta)}')
 # h5ad
 logging.info(f'\033[0;36mread\033[0m {in_file}...')
 try:
-    adata = read_anndata(in_file, backed=backed, dask=dask, stride=500_000)
+    adata = read_anndata(
+        in_file,
+        dask=True,
+        backed=True,
+        stride=500_000,
+    )
     adata = ensure_sparse(adata)
 except Exception as e:
     print(e)
@@ -168,5 +172,4 @@ adata.var.index.set_names('feature_id', inplace=True)
 
 logging.info(f'\033[0;36mwrite\033[0m {out_file}...')
 with da_config.set(num_workers=snakemake.threads):
-    adata = dask_compute(adata)
-    write_zarr(adata, out_file)
+    write_zarr(adata, out_file, compute=not dask)
