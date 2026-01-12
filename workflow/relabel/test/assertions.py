@@ -32,8 +32,10 @@ for file in files:
         mapping_df = read_func(new_label_cfg['file'])
 
         for label in new_label_cfg['order']:
-            assert label == obs.index.name or label in obs.columns, f'"{label}" not found in obs for {file}'
-            assert label in mapping_df.columns, f'"{label}" not found in mapping: {mapping_df.columns}\nfile: {file}'
+            assert label == obs.index.name or label in obs.columns, \
+                f'"{label}" not found in obs for {file}'
+            assert label == obs.index.name or label in mapping_df.columns, \
+                f'"{label}" not found in mapping: {mapping_df.columns}\nfile: {file}'
             # print(obs[label].dtype)
             # print(obs[label].value_counts())
     
