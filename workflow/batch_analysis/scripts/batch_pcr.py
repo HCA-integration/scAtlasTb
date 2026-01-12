@@ -161,7 +161,12 @@ df['signif'] = df['z_score'] > 1.5
 if n_permute == 0:
     df['p-val'] = np.nan
 else:
-    df['p-val'] = df.loc[df['permuted'], 'signif'].sum() / n_permute
+    # df['p-val'] = df.loc[df['permuted'], 'signif'].sum() / n_permute
+    stat = np.abs(df['pcr'] - df['perm_mean'])
+    null = stat.loc[df['permuted']].values
+    obs = stat.loc[~df['permuted']].values[0]
+    df['p-val'] = (np.sum(null >= obs) + 1) / (n_permute + 1)
+    df['signif'] = df['p-val'] <= 0.05
 
 print(df, flush=True)
 df.to_csv(output_file, sep='\t', index=False)
