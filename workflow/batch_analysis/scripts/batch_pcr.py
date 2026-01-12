@@ -59,51 +59,62 @@ with open(setup_file, 'r') as f:
     setup = yaml.safe_load(f)
 n_permute = setup['n_permute']
 
-nonunique_map = (
-    adata.obs.groupby(sample_key, observed=False)[covariate]
-    .unique()
-    .apply(lambda x: sorted(x))
-    .loc[lambda x: x.str.len() > 1]
-)
-assert nonunique_map.shape[0] == 0, \
-    f'Each sample (defined by {sample_key}) must have exactly one value for covariate {covariate}, '  \
-    f'but found values:\n{nonunique_map}'
 
-value_counts = adata.obs[[sample_key, covariate]].drop_duplicates().value_counts(covariate)
-logging.info(value_counts)
+def is_categorical_series(s, max_unique=10):
+    return (
+        pd.api.types.is_categorical_dtype(s) or
+        pd.api.types.is_object_dtype(s) or
+        (pd.api.types.is_numeric_dtype(s) and s.nunique() <= max_unique)
+    )
 
-if value_counts.max() == 1:
-    logging.info('Sample key is the same as covariate, skipping permutation...')
-    n_permute = 0
+if not is_categorical_series(adata.obs[covariate]):
+    adata.obs[covariate] = adata.obs[covariate].astype(np.float32)
+else:
+    nonunique_map = (
+        adata.obs.groupby(sample_key, observed=False)[covariate]
+        .unique()
+        .apply(sorted)
+        .loc[lambda x: x.str.len() > 1]
+    )
+    assert nonunique_map.shape[0] == 0, \
+        f'Each sample (defined by {sample_key}) must have exactly one value for covariate {covariate}, '  \
+        f'but found values:\n{nonunique_map}'
+
+    value_counts = adata.obs[[sample_key, covariate]].drop_duplicates().value_counts(covariate)
+    logging.info(value_counts[value_counts > 1])
+
+    if value_counts.max() == 1:
+        logging.info('Sample key is the same as covariate, skipping permutation...')
+        n_permute = 0
+
 
 logging.info(f'Calculating PCR scores for {n_permute} permutations (using {n_threads} threads)')
 
+X_pca = adata.obsm['X_pca'].astype(np.float32)
+pca_var = adata.uns['pca']['variance']
+obs_cov = adata.obs[[sample_key, covariate]].copy()
 
-def run_pcr(adata, covariate, sample_key, i, seed, **kwargs):
-    is_permuted = i > 0
-    if is_permuted:
-        # aggregate covariate per sample for permutation
-        cov_per_sample = adata.obs \
-            .groupby(sample_key, observed=True) \
-            .agg({covariate: 'first'})
-        # Permute covariate per sample
-        rng = np.random.default_rng([i, seed]) # use random seed unique to permutation
-        permuted_values = rng.permutation(cov_per_sample[covariate].values)
-        cov_map = dict(zip(cov_per_sample.index.values, permuted_values))
-        covariate_array = adata.obs[sample_key].map(cov_map)
+sample_codes, uniques = pd.factorize(obs_cov[sample_key], sort=False)
+cov_per_sample = obs_cov \
+    .groupby(sample_key, observed=True)[covariate] \
+    .first() \
+    .reindex(uniques) \
+    .to_numpy()
+
+def run_pcr(i, seed, **kwargs):
+    if i > 0:
+        rng = np.random.default_rng([i, seed])
+        covariate_array = rng.permutation(cov_per_sample)[sample_codes]
     else:
-        # Use original covariate
-        covariate_array = adata.obs[covariate]
+        covariate_array = obs_cov[covariate].values
 
-    result = scib.me.pc_regression(
-        adata.obsm['X_pca'],
-        pca_var=adata.uns['pca']['variance'],
+    return f"{covariate}-{i}", i > 0, scib.me.pc_regression(
+        X_pca,
+        pca_var=pca_var,
         covariate=covariate_array,
-        **kwargs
+        **kwargs,
     )
     
-    return f'{covariate}-{i}', is_permuted, result
-
 
 def chunked_parallel_jobs(jobs, chunk_size, n_threads):
     results = []
@@ -114,7 +125,7 @@ def chunked_parallel_jobs(jobs, chunk_size, n_threads):
             require='sharedmem',
         )(chunk)
         results.extend(chunk_results)
-        # Explicit cleanup
+        # Explicitly clear intermediate results to reduce peak memory usage
         del chunk_results
         del chunk
         gc.collect()
@@ -123,9 +134,6 @@ def chunked_parallel_jobs(jobs, chunk_size, n_threads):
 
 all_jobs = [
     delayed(run_pcr)(
-        adata=adata,
-        covariate=covariate,
-        sample_key=sample_key,
         i=i,
         seed=42,
         verbose=False,
@@ -153,11 +161,20 @@ df['n_covariates'] = n_covariate
 df['perm_mean'] = df.loc[df['permuted'], 'pcr'].mean()
 df['perm_std'] = df.loc[df['permuted'], 'pcr'].std()
 df['z_score'] = (df['pcr'] - df['perm_mean']) / df['perm_std']
-df['signif'] = df['z_score'] > 1.5
 if n_permute == 0:
     df['p-val'] = np.nan
-else:
+    df['signif'] = False
+elif n_permute < 100:
+    df['signif'] = df['z_score'] > 1.5
     df['p-val'] = df.loc[df['permuted'], 'signif'].sum() / n_permute
+else:
+    stat = np.abs(df['pcr'] - df['perm_mean'])
+    null = stat.loc[df['permuted']].values
+    observed = stat.loc[~df['permuted']].values
+    assert observed.size == 1, "Expected exactly one non-permuted observation for p-value calculation"
+
+    df['p-val'] = (np.sum(null >= observed[0]) + 1) / (n_permute + 1)
+    df['signif'] = df['p-val'] <= 0.05
 
 print(df, flush=True)
 df.to_csv(output_file, sep='\t', index=False)
