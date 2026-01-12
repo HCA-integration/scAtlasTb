@@ -77,7 +77,7 @@ rule plot:
         barplot=mcfg.image_dir / paramspace.wildcard_pattern / 'batch_pcr_bar.png',
         violinplot=mcfg.image_dir / paramspace.wildcard_pattern / 'batch_pcr_violin.png',
     params:
-        n_permute=lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_permutations', default=10),
+        n_permute=lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_permutations', default=100),
     conda:
         get_env(config, 'scanpy')
     script:
