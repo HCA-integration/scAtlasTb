@@ -13,7 +13,7 @@ batch_key = snakemake.params.get('batch_key')
 chunk_size = snakemake.params.get('chunk_size', 100_000)
 
 def group_batches(adata, batch_key, chunk_size=100_000):
-    value_counts = adata.obs[batch_key].value_counts(sort=False, dropna=False)
+    value_counts = adata.obs[batch_key].value_counts(sort=False, dropna=True)
     logging.info(f'Value counts: {value_counts}')
 
     # Group batches such that each group has <= chunk_size cells (or size of 1 batch)

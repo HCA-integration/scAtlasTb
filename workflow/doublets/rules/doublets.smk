@@ -51,7 +51,7 @@ rule scrublet:
         partition=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='partition', attempt=attempt),
         qos=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='qos', attempt=attempt),
         gpu=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='gpu', attempt=attempt),
-        mem_mb=lambda w, attempt: get_mem_mb(attempt, profile='gpu'),
+        mem_mb=lambda w, attempt: get_mem_mb(attempt=attempt, profile='gpu'),
     script:
         '../scripts/scrublet.py'
 
