@@ -12,21 +12,19 @@ mcfg = ModuleConfig(
 )
 paramspace = mcfg.get_paramspace()
 
-include: 'rules/scarches.smk'
 
-
-rule all:
-    input:
-        mcfg.get_output_files(rules.scarches.output)
-    default_target: True
-    localrule: True
-
+module preprocessing:
+    snakefile: "../../preprocessing/rules/rules.smk"
+    config: config
 
 module common:
     snakefile: "../common/Snakefile"
     config: config
 
 use rule * from common as common_ *
+
+include: 'rules/scarches.smk'
+include: 'rules/umap.smk'
 
 
 rule dependency_graph:
@@ -36,4 +34,12 @@ rule dependency_graph:
             images=mcfg.image_dir,
             target='all'
         )
+    localrule: True
+
+
+rule all:
+    input:
+        mcfg.get_output_files(),
+        mcfg.get_output_files(rules.reference_mapping_plot_umap.output),
+    default_target: True
     localrule: True
