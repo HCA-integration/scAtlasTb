@@ -94,6 +94,7 @@ if annotation_file is not None:
 adata.obs['donor'] = adata.obs[meta.pop('donor_column')]
 
 tech_id_columns = [s.strip() for s in meta.pop('tech_id').split('+')]
+logging.info(f'tech_id_columns: {tech_id_columns}')
 adata.obs['tech_id'] = adata.obs[tech_id_columns].astype(str).apply(lambda x: '-'.join(x), axis=1)
 adata.obs['sample'] = adata.obs['tech_id'] # keep for backwards compatibility
 

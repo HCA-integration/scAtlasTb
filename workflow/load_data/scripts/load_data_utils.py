@@ -44,9 +44,7 @@ SCHEMAS = {
     "EXTRA_COLUMNS": [
         'barcode',
         'organ',
-        'donor',
         'tech_id',
-        'sample', # DEPRECATED
         'batch_condition',
         'author_annotation',
         'reference',
@@ -56,6 +54,9 @@ SCHEMAS = {
         'pipeline_version',
         'institution',
         'remapping_sample',
+        'remapping_sample_barcode',
+        'barcode_old',
+        'age',
     ],
     "TIER1": [
         'sample_id',
