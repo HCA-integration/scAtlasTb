@@ -28,7 +28,7 @@ def get_files_for_metadata_harm(wildcards):
             get_wildcards(dataset_df, columns=all_but(dataset_df.columns,'subset'), wildcards=wildcards)
         )
     file_path = meta['url']
-    anno_file = meta['annotation_file']
+    anno_file = meta.get('annotation_file')
 
     # download file if not present
     if not Path(str(file_path)).exists():
@@ -56,7 +56,6 @@ rule harmonize_metadata:
         meta=lambda wildcards: unlist_dict(
             get_wildcards(dataset_df, columns=all_but(dataset_df.columns,'subset'), wildcards=wildcards)
         ),
-        backed=True,
         dask=True,
     output:
         zarr=directory(out_dir / 'harmonize_metadata' / '{dataset}.zarr'),
@@ -65,7 +64,7 @@ rule harmonize_metadata:
         get_env(config, 'scanpy', env_dir='../../../envs')
     threads: 5
     resources:
-        mem_mb=get_resource(config,profile='cpu',resource_key='mem_mb'),
+        mem_mb=lambda wildcards, attempt: get_resource(config,profile='cpu',resource_key='mem_mb', attempt=attempt),
     # shadow: 'shallow'
     script:
         '../scripts/harmonize_metadata.py'

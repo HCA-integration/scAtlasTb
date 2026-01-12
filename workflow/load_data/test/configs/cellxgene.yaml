@@ -9,7 +9,7 @@ env_mode: local # from_yaml
 filter_per_study:
   SchulteSchrepping2020:
     remove_by_column:
-      sample:
+      tech_id:
         - Schulte-Schrepping_C2P01H_d0
         - Schulte-Schrepping_C2P05F_d0
         # - Schulte-Schrepping_C2P07H_d0
@@ -18,7 +18,7 @@ filter_per_study:
         # - Schulte-Schrepping_C2P15H_d0
         # - Schulte-Schrepping_C2P16H_d0
         # - Schulte-Schrepping_C2P19H_d0
-      donor:
+      donor_id:
         - C19-CB-0008
       disease:
         - influenza
