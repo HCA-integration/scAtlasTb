@@ -70,15 +70,17 @@ DATASETS:
 
 ## Behavior
 
-- All filtering conditions are combined with **AND** logic - a cell must pass ALL filters to be retained
-- Within `remove_by_column`: cells are excluded if they match ANY value in ANY specified column
-- Within `keep_by_column`: cells are retained if they match ANY value in ANY specified column
-- Within `remove_by_query`: cells are excluded if they match ANY of the query conditions
-- Within `keep_by_query`: cells are retained only if they match ALL of the query conditions
+- All `remove_by` filtering conditions are combined with **AND** logic - a cell must pass ALL filters to be retained
+  - Within `remove_by_column`: cells are excluded if they match ANY value in ANY specified column
+  - Within `remove_by_query`: cells are excluded if they match ANY of the query conditions
+- All `keep_by` filtering conditions are combined with **OR** logic - a cell only needs to pass ONE filter to be retained
+  - Within `keep_by_column`: cells are retained if they match ANY value in ANY specified column
+  - Within `keep_by_query`: cells are retained only if they match ANY of the query conditions
 - The final mask keeps cells that:
   1. Do NOT match any values in `remove_by_column` columns, AND
   2. Do NOT match any `remove_by_query` conditions, AND  
-  3. DO match all `keep_by_query` conditions (if specified)
+  3. DO match all `keep_by_column` conditions (if specified)
+  4. DO match all `keep_by_query` conditions (if specified)
 
 ## Input/Output
 

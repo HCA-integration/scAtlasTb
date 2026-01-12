@@ -29,7 +29,7 @@ mask = pd.Series(np.full(adata.n_obs, True, dtype=bool), index=adata.obs_names)
 for column, values in params.get('keep_by_column', {}).items():
     logging.info(f'keep cells matching {len(values)} value(s) from column="{column}"...')
     values = [str(v) for v in values]
-    mask &= adata.obs[column].astype(str).isin(values)
+    mask |= adata.obs[column].astype(str).isin(values)
     logging.info(f'{mask.sum()} cells remaining')
 
 for column, values in params.get('remove_by_column', {}).items():
@@ -40,7 +40,7 @@ for column, values in params.get('remove_by_column', {}).items():
 
 for query in params.get('keep_by_query', []):
     logging.info(f'keep by query="{query}"...')
-    mask &= adata.obs.eval(query)
+    mask |= adata.obs.eval(query)
     logging.info(f'{mask.sum()} cells remaining')
 
 for query in params.get('remove_by_query', []):
