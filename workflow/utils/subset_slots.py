@@ -7,8 +7,8 @@ from dask import array as da
 
 
 ## Writing subset masks
-def set_mask_per_slot(slot, mask, out_dir, mask_dir=None, in_slot=None, in_dir=None):
-    
+def set_mask_per_slot(slot, mask, out_dir, mask_dir=None, in_slot=None, in_dir=None, link_slot=None):
+
     def _call_function_per_slot(func, path, *args, **kwargs):
         if path.is_dir() and (path / '.zattrs').exists():
             func(*args, **kwargs)
@@ -16,21 +16,22 @@ def set_mask_per_slot(slot, mask, out_dir, mask_dir=None, in_slot=None, in_dir=N
     if slot == 'uns':
         # do not set mask for uns slots
         return
-    
+
     out_dir = Path(out_dir)
     slot_dir = out_dir / slot
     if not slot_dir.exists():
         print(f'Slot directory {slot_dir} does not exist, skipping mask for slot {slot}', flush=True)
         return
 
-    link_slot = slot_dir.is_symlink() and in_slot is not None
+    if link_slot is None:
+        link_slot = slot_dir.is_symlink() and in_slot is not None
 
     if mask_dir is None:
         mask_dir = out_dir / 'subset_mask'
 
     # set to the slot-specific mask directory
     mask_dir = init_mask_dir(mask_dir, slot, in_slot, in_dir)
-    
+
     if mask is None:
         if not link_slot:
             # remove any old mask, since a new slot will be written in the correct shape
@@ -43,9 +44,9 @@ def set_mask_per_slot(slot, mask, out_dir, mask_dir=None, in_slot=None, in_dir=N
         mask = mask[0]
     elif slot.startswith(('var', 'raw/var')):
         mask = mask[1]
-    
+
     match slot:
-        
+
         case _ if slot in ['X', 'raw/X'] or slot.startswith(('layers/', 'raw/layers/')):
             save_feature_matrix_mask(
                 mask_dir=mask_dir,
@@ -59,7 +60,7 @@ def set_mask_per_slot(slot, mask, out_dir, mask_dir=None, in_slot=None, in_dir=N
                 mask=mask,
                 link_slot=link_slot
             )
-        
+
         case 'layers' | 'raw/layers':
             for path in slot_dir.iterdir():
                 _call_function_per_slot(
@@ -69,7 +70,7 @@ def set_mask_per_slot(slot, mask, out_dir, mask_dir=None, in_slot=None, in_dir=N
                     mask=mask,
                     link_slot=link_slot,
                 )
-        
+
         case _ if slot in {
             'obsp', 'obsm', 'varp', 'varm',
             'raw/obsp', 'raw/obsm', 'raw/varp', 'raw/varm'
@@ -82,7 +83,7 @@ def set_mask_per_slot(slot, mask, out_dir, mask_dir=None, in_slot=None, in_dir=N
                     mask=mask,
                     link_slot=link_slot,
                 )
-        
+
         case 'raw':
             for path in slot_dir.iterdir():
                 if path.name == 'raw':
@@ -98,6 +99,7 @@ def set_mask_per_slot(slot, mask, out_dir, mask_dir=None, in_slot=None, in_dir=N
                     mask_dir=mask_dir.parent,
                     in_slot=f'{in_slot}/{path.name}' if in_slot else None,
                     in_dir=in_dir,
+                    link_slot=link_slot,
                 )
 
         case _:
@@ -111,7 +113,7 @@ def remove_path(path):
         shutil.rmtree(path)
     elif path.is_file():
         path.unlink()
-    
+
 
 def init_mask_dir(mask_dir, slot, in_slot, in_dir):
     """
