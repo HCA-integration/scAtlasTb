@@ -23,7 +23,7 @@ mcfg = ModuleConfig(
         'pca',
     ],
     dtypes={
-        'n_permutations': int,
+        'max_threads': int,
     }
 )
 paramspace = mcfg.get_paramspace()
