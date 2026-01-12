@@ -227,7 +227,7 @@ This will rename the obsm key `X_pca` to `X_emb` in the AnnData object, without 
 
 ## Other parameters
 
-* `dask`: Whether to use Dask for dask-support when reading and writing files, only applies to inputs that are `h5ad`, because the conplete input needs to be written to a new `zarr` store. Default is `True`.
+* `dask`: Whether to use Dask for dask-support when reading and writing files, only applies to inputs that are `h5ad`, because the complete input needs to be written to a new `zarr` store. Default is `True`.
 * `threads`: Number of threads to use for reading and writing files. Default is `1`.
 
 ## Testing
