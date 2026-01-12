@@ -30,7 +30,7 @@ use rule umap from preprocessing as reference_mapping_compute_umap with:
         anndata=rules.reference_mapping_neighbors.output.zarr,
         rep=rules.reference_mapping_neighbors.output.zarr,
     output:
-        zarr=directory(mcfg.out_dir /  f'{paramspace.wildcard_pattern}.zarr'),
+        zarr=directory(mcfg.out_dir / f'{paramspace.wildcard_pattern}.zarr'),
     threads: 10
     resources:
         partition=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='partition',attempt=attempt, attempt_to_cpu=2),
