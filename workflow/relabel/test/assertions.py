@@ -17,6 +17,7 @@ for file in files:
     print(f'read {file}...')
     with zarr.open(file) as z:
         obs = read_elem(z["obs"])
+        obsm = read_elem(z["obsm"]) if "obsm" in z else {}
     
     # column rename
     rename_cfg = config['DATASETS'][dataset]['relabel'].get('rename_columns')
@@ -31,8 +32,10 @@ for file in files:
         mapping_df = read_func(new_label_cfg['file'])
 
         for label in new_label_cfg['order']:
-            assert label == obs.index.name or label in obs.columns, f'"{label}" not found in obs for {file}'
-            assert label in mapping_df.columns, f'"{label}" not found in mapping: {mapping_df.columns}\nfile: {file}'
+            assert label == obs.index.name or label in obs.columns, \
+                f'"{label}" not found in obs for {file}'
+            assert label == obs.index.name or label in mapping_df.columns, \
+                f'"{label}" not found in mapping: {mapping_df.columns}\nfile: {file}'
             # print(obs[label].dtype)
             # print(obs[label].value_counts())
     
@@ -42,3 +45,10 @@ for file in files:
         sep = merge_cfg.get('order', '-')
         merge_df = pd.read_table(merge_cfg['file'])
         # TODO: check
+    
+    # obsm key rename
+    rename_obsm_cfg = config['DATASETS'][dataset]['relabel'].get('rename_obsm_keys')
+    if rename_obsm_cfg is not None:
+        for old_key, new_key in rename_obsm_cfg.items():
+            assert old_key not in obsm, f'Old key "{old_key}" should not exist in obsm after renaming for {file}'
+            assert new_key in obsm, f'New key "{new_key}" should exist in obsm after renaming for {file}'

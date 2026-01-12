@@ -10,9 +10,11 @@ mcfg = ModuleConfig(
     config=config,
     config_params=[
         'rename_columns',
+        'rename_obsm_keys',
         'new_columns',
         'merge_columns',
         'selective_update',
+        'dask',
         'threads',
     ],
 )
@@ -55,6 +57,8 @@ rule relabel:
         index_col=lambda wildcards: mcfg.get_from_parameters(wildcards, 'new_columns', default={}).get('index_col'),
         merge_sep=lambda wildcards: mcfg.get_from_parameters(wildcards, 'merge_columns', default={}).get('sep', '-'),
         selective_update=lambda wildcards: mcfg.get_from_parameters(wildcards, 'selective_update', default=None),
+        rename_obsm_keys=lambda wildcards: mcfg.get_from_parameters(wildcards, 'rename_obsm_keys', default=None),
+        dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=True),
     conda:
         get_env(config, 'scanpy', env_dir='envs')
     threads:

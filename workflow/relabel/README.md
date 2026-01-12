@@ -42,6 +42,10 @@ DATASETS:
           louvain:
             '6': Dendritic
             '8': 'CD19+ B'
+
+      # rename existing obsm keys
+      rename_obsm_keys:
+        X_pca: X_emb
 ```
 
 ## Mapping modes
@@ -209,6 +213,22 @@ CD4+/CD45RA+/CD25- Naive T	lymphoid
 CD34+	HSCs
 ```
 
+### Rename existing obsm keys: `rename_obsm_keys`
+
+You can rename existing obsm keys in the AnnData object by specifying a mapping of old to new keys.
+
+```yaml
+...
+      rename_obsm_keys:
+        X_pca: X_emb  # rename 'X_pca' to 'X_emb'
+```
+
+This will rename the obsm key `X_pca` to `X_emb` in the AnnData object, without modifying any data.
+
+## Other parameters
+
+* `dask`: Whether to use Dask for dask-support when reading and writing files, only applies to inputs that are `h5ad`, because the complete input needs to be written to a new `zarr` store. Default is `True`.
+* `threads`: Number of threads to use for reading and writing files. Default is `1`.
 
 ## Testing
 

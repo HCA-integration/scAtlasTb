@@ -11,9 +11,7 @@ from dask import config as da_config
 da_config.set(num_workers=snakemake.threads)
 logging.info(f"Dask using {da_config.get('num_workers')} workers")
 
-
 from utils.io import read_anndata, write_zarr_linked
-from utils.misc import dask_compute
 
 
 def convert_dtypes(col):
@@ -86,21 +84,39 @@ output_file = snakemake.output.zarr
 file_id = snakemake.wildcards.file_id
 rename_columns = snakemake.params.get('rename_columns')
 selective_update = snakemake.params.get('selective_update')
+rename_obsm_keys = snakemake.params.get('rename_obsm_keys')
+dask = snakemake.params.get('dask', True)
+
+files_to_keep = ['obs']
+if rename_obsm_keys:
+    files_to_keep.append('obsm')
 
 logging.info('Read adata...')
 kwargs = dict(dask=True, backed=True)
 if input_file.endswith(('.zarr', '.zarr/')):
-    kwargs |= dict(obs='obs')
+    kwargs |= {x: x for x in files_to_keep}
 adata = read_anndata(input_file, **kwargs)
 
 # merge new columns
 if rename_columns:
+    assert isinstance(rename_columns, dict), 'rename_columns must be a dictionary'
     logging.info(f'Rename columns:\n{pformat(rename_columns)}')
     for old_col, new_col in tqdm(rename_columns.items(), desc='Renaming'):
         if old_col not in adata.obs.columns:
             adata.obs[old_col] = 'nan'
         else:
             adata.obs[new_col] = adata.obs[old_col]
+
+if rename_obsm_keys:
+    assert isinstance(rename_obsm_keys, dict), 'rename_obsm_keys must be a dictionary'
+    logging.info(f'Rename obsm keys:\n{pformat(rename_obsm_keys)}')
+    for old_key, new_key in tqdm(rename_obsm_keys.items(), desc='Renaming obsm keys'):
+        if old_key not in adata.obsm.keys():
+            logging.warning(f'Key "{old_key}" not found in adata.obsm. Skipping.')
+            continue
+        adata.obsm[new_key] = adata.obsm[old_key]
+        del adata.obsm[old_key]
+
 
 if input_new_cols:
     index_col = snakemake.params.get('index_col', 'index')
@@ -168,6 +184,7 @@ if input_new_cols:
         logging.info(f'Reset index "{old_index_name}"...')
         adata.obs = adata.obs.reset_index().set_index(old_index_name)
 
+
 # merge existing columns
 if input_merge_cols:
     sep = snakemake.params.get('merge_sep', '-')
@@ -199,6 +216,7 @@ if input_merge_cols:
             adata.obs[col_name] = adata.obs[cols].apply(
                 lambda x: sep.join(x.values.astype(str)), axis=1
             )
+
 
 if selective_update:
     base_column = selective_update.get('base_column')
@@ -248,11 +266,12 @@ if selective_update:
         value_counts = adata.obs.query(combined_query)[columns].value_counts(dropna=False, sort=False)
         logging.info(f'After mapping "{col}", query={combined_query}, n={value_counts.sum()}:\n{pformat(value_counts)}')
 
+
 logging.info(f'Write to {output_file}...')
-dask_compute(adata)
 write_zarr_linked(
     adata,
     in_dir=input_file,
     out_dir=output_file,
-    files_to_keep=['obs']
+    files_to_keep=files_to_keep,
+    compute=not dask,
 )

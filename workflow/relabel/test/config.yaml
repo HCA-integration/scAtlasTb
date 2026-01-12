@@ -47,6 +47,8 @@ DATASETS:
       merge_columns:
         file:  test/input/merge_test.tsv
         sep: '-'
+      rename_obsm_keys:
+        X_pca: X_emb
 
   test_relabel_index:
     input:
