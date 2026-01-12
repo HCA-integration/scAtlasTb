@@ -225,6 +225,11 @@ You can rename existing obsm keys in the AnnData object by specifying a mapping 
 
 This will rename the obsm key `X_pca` to `X_emb` in the AnnData object, without modifying any data.
 
+## Other parameters
+
+* `dask`: Whether to use Dask for dask-support when reading and writing files, only applies to inputs that are `h5ad`, because the conplete input needs to be written to a new `zarr` store. Default is `True`.
+* `threads`: Number of threads to use for reading and writing files. Default is `1`.
+
 ## Testing
 
 Activate the snakemake environment and call `test/run_test.sh` with run specific Snakemake parameters.

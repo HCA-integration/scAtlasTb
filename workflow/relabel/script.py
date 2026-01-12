@@ -11,9 +11,7 @@ from dask import config as da_config
 da_config.set(num_workers=snakemake.threads)
 logging.info(f"Dask using {da_config.get('num_workers')} workers")
 
-
 from utils.io import read_anndata, write_zarr_linked
-from utils.misc import dask_compute
 
 
 def convert_dtypes(col):
@@ -87,6 +85,7 @@ file_id = snakemake.wildcards.file_id
 rename_columns = snakemake.params.get('rename_columns')
 selective_update = snakemake.params.get('selective_update')
 rename_obsm_keys = snakemake.params.get('rename_obsm_keys')
+dask = snakemake.params.get('dask', True)
 
 files_to_keep = ['obs']
 if rename_obsm_keys:
@@ -186,6 +185,7 @@ if input_new_cols:
         logging.info(f'Reset index "{old_index_name}"...')
         adata.obs = adata.obs.reset_index().set_index(old_index_name)
 
+
 # merge existing columns
 if input_merge_cols:
     sep = snakemake.params.get('merge_sep', '-')
@@ -269,10 +269,10 @@ if selective_update:
 
 
 logging.info(f'Write to {output_file}...')
-dask_compute(adata)
 write_zarr_linked(
     adata,
     in_dir=input_file,
     out_dir=output_file,
-    files_to_keep=['obs']
+    files_to_keep=files_to_keep,
+    compute=not dask,
 )
