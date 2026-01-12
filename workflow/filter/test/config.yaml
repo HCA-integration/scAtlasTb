@@ -8,6 +8,9 @@ DATASETS:
       filter: test/input/load_data/harmonize_metadata/Lee2020.zarr
     filter:
       subset: true
+      keep_by_column:
+        sex:
+          - female
       remove_by_column:
         donor:
           - C19-CB-0008 # value not in data
