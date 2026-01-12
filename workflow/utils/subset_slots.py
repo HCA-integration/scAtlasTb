@@ -127,11 +127,11 @@ def init_mask_dir(mask_dir, slot, in_slot, in_dir):
         mask_dir.unlink()
         # Copy the folder from the original location
         shutil.copytree(link_dir, mask_dir)
-    
+
     mask_dir_slot = mask_dir / slot
     # remove any previous copy of the slot mask
     remove_path(mask_dir_slot)
-    
+
     # If this slot should link (copy) an existing subset mask from another slot
     if in_slot and in_dir:
         in_dir = (in_dir / 'subset_mask' / in_slot).resolve()
@@ -152,13 +152,13 @@ def save_feature_matrix_mask(mask_dir, mask, link_slot):
     mask_dir.mkdir(parents=True, exist_ok=True)
     obs_mask_file = mask_dir / 'obs.npy'
     var_mask_file = mask_dir / 'var.npy'
-        
+
     if link_slot:
         mask = (
             update_mask(obs_mask_file, mask[0]),
             update_mask(var_mask_file, mask[1])
         )
-    
+
     np.save(obs_mask_file, mask[0])
     np.save(var_mask_file, mask[1])
 
@@ -166,10 +166,10 @@ def save_feature_matrix_mask(mask_dir, mask, link_slot):
 def save_slot_mask(mask_dir, mask, link_slot):
     mask_dir.mkdir(parents=True, exist_ok=True)
     mask_file = mask_dir / 'mask.npy'
-    
+
     if link_slot:
         mask = update_mask(mask_file, mask)
-    
+
     np.save(mask_file, mask)
 
 
@@ -179,7 +179,7 @@ def update_mask(mask_file, mask):
     """
     if not mask_file.exists():
         return mask
-    
+
     mask_old = np.load(mask_file)
 
     if mask_old.shape == mask.shape:
@@ -190,10 +190,10 @@ def update_mask(mask_file, mask):
     assert mask_old[mask_old].shape == mask.shape, \
         f'Shape mismatch\n mask_old: {mask_old.shape}, mask_old[mask_old]: '\
         f'{mask_old[mask_old].shape}, mask: {mask.shape}\n{mask_file}'
-    
+
     mask_old[mask_old] &= mask
     return mask_old
-    
+
 
 ## Functions for subsetting slots when reading them
 
@@ -214,17 +214,17 @@ def subset_slot(slot_name, slot, mask_dir, chunks=('auto', -1)):
             ) for key, value in slot.items()
         }
         return slot
-    
+
     elif slot_name in ['X', 'raw/X'] or slot_name.startswith(('layers/', 'raw/layers/')):
         slot = _subset_matrix(slot, mask_dir / slot_name)
-    
+
     elif slot_name.startswith(('obs', 'var', 'raw/obs', 'raw/var')):
         slot = _subset_slot(slot_name, slot, mask_dir / slot_name)
 
     # optimise data after subsetting
     if isinstance(slot, da.Array):
         slot = slot.rechunk(chunks=chunks)
-    
+
     if isinstance(slot, pd.DataFrame):
         for col in slot.columns:
             if slot[col].dtype.name != 'category':
@@ -241,6 +241,7 @@ def _ensure_mask_shape(mask, expected, mask_file=None):
             raise TypeError(
                 f"Mask must be a boolean array to subset by itself, got dtype {mask.dtype} for mask file {mask_file}"
             )
+        print(f"Subsetting mask {mask.shape[0]} to match expected shape {expected}", flush=True)
         mask = mask[mask]
     assert mask.shape[0] == expected, \
         f'Mask shape {mask.shape} does not match expected {expected} for mask file {mask_file}'
@@ -250,16 +251,16 @@ def _ensure_mask_shape(mask, expected, mask_file=None):
 def _subset_matrix(slot, mask_dir):
     obs_mask_file = mask_dir / 'obs.npy'
     var_mask_file = mask_dir / 'var.npy'
-    
+
     if not obs_mask_file.exists() or not var_mask_file.exists():
         return slot
-    
+
     obs_mask = np.load(obs_mask_file)
     var_mask = np.load(var_mask_file)
 
     obs_mask = _ensure_mask_shape(obs_mask, slot.shape[0], mask_file=obs_mask_file)
     var_mask = _ensure_mask_shape(var_mask, slot.shape[1], mask_file=var_mask_file)
-    
+
     try:
         return slot[obs_mask, :][:, var_mask].copy()
     except Exception as e:
@@ -273,15 +274,15 @@ def _subset_matrix(slot, mask_dir):
 
 def _subset_slot(slot_name, slot, mask_dir):
     mask_file = mask_dir / 'mask.npy'
-    
+
     if not mask_file.exists():
         return slot
-    
+
     mask = np.load(mask_file)
     mask = _ensure_mask_shape(mask, slot.shape[0], mask_file=mask_file)
 
     if slot_name.startswith('obsp/') or slot_name.startswith('varp/'):
         # subset in both dimensions
         return slot[mask, :][:, mask].copy()
-    
+
     return slot[mask].copy()
