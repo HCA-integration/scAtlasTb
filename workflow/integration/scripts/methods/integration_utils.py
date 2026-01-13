@@ -105,6 +105,16 @@ DRVI_MODEL_PARAMS = [
     'extra_decoder_kwargs',
 ]
 
+SCPOLI_EARLY_STOPPING = {
+    "early_stopping_metric": "val_prototype_loss",
+    "mode": "min",
+    "threshold": 0,
+    "patience": 20,
+    "reduce_lr": True,
+    "lr_patience": 13,
+    "lr_factor": 0.1,
+}
+
 
 def add_metadata(adata, wildcards, params, **kwargs):
     """
