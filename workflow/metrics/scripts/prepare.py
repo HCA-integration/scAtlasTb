@@ -129,7 +129,7 @@ compute_neighbors(
     check_n_neighbors=False,
     **neighbor_args
 )
-g
+
 logging.info(f'Write to {output_file}...')
 logging.info(adata.__str__())
 if is_h5ad:
