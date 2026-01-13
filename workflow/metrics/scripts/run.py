@@ -46,7 +46,6 @@ metric_type = params.get('metric_type')
 assert metric_type in ['batch_correction', 'bio_conservation'], f'Unknown metric_type: {metric_type}'
 allowed_output_types = params.get('allowed_output_types')
 input_type = params.get('input_type')
-comparison = params.get('comparison', False)
 cluster_key = params.get('cluster_key', 'leiden')
 use_covariate = params.get('use_covariate', False)
 use_gene_set = params.get('use_gene_set', False)
@@ -93,26 +92,26 @@ if 'feature_name' in adata.var.columns:
 print(adata, flush=True)
 
 adata_raw = None
-if comparison:
-    logging.info(f'Read raw data for comparison from {input_file} ...')
+if 'raw' in snakemake.input.keys():
+    raw_file = snakemake.input['raw']
+    logging.info(f'Read raw data for comparison from {raw_file} ...')
     adata_raw = read_anndata(
-        input_file,
-        X='raw/X',
-        var='raw/var',
-        varm='raw/varm',
+        raw_file,
+        X='X',
+        var='var',
+        varm='varm',
+        uns='uns',
         dask=True,
         backed=True,
     )
 
     # assemble PCA for unintegrated
-    adata_raw.obsm['X_pca'] = read_anndata(input_file, X='obsm/X_pca_unintegrated').X
+    adata_raw.obsm['X_pca'] = read_anndata(raw_file, X='obsm/X_pca').X
     adata_raw.obs = adata.obs
-    adata_raw.uns['pca'] = adata.uns['pca_unintegrated']
     assert_pca(adata_raw)
     
     if 'feature_name' in adata_raw.var.columns:
         adata_raw.var_names = adata_raw.var['feature_name'].astype(str)
-    adata_raw.obs[batch_key] = adata_raw.obs[batch_key].astype(str)
 
 
 # set default covariates
