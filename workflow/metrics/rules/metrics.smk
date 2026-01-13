@@ -7,11 +7,14 @@ class MetricNotDefinedError(RuntimeError):
 
 
 def get_metric_input(wildcards):
+    files = dict(zarr=rules.prepare.output.zarr)
     if mcfg.get_from_parameters(wildcards, 'needs_clustering', default=False):
-        return rules.metrics_cluster_collect.output.zarr
+        files['zarr'] = rules.metrics_cluster_collect.output.zarr
     if mcfg.get_from_parameters(wildcards, 'use_gene_set', default=False):
-        return rules.score_genes.output.zarr
-    return rules.prepare.output.zarr
+        files['zarr'] = rules.score_genes.output.zarr
+    if mcfg.get_from_parameters(wildcards, 'comparison'):
+        files['raw'] = rules.metrics_pca.output.zarr
+    return files
 
 
 def get_mem_mb(wildcards, attempt):
@@ -40,7 +43,7 @@ rule run:
        resources: gpu={resources.gpu} mem_mb={resources.mem_mb}
        """
     input:
-        zarr=get_metric_input,
+        unpack(get_metric_input)
     output:
         metric=mcfg.out_dir / paramspace.wildcard_pattern / 'label={label}--batch={batch}' / 'metric={metric}.tsv'
     benchmark:

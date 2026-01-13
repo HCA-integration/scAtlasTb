@@ -32,6 +32,7 @@ mcfg = MetricsConfig(
         'corrected',
         'raw_counts',
         'var_mask',
+        'pca',
         'recompute_neighbors',
         'neighbors',
         'clustering',
@@ -66,6 +67,10 @@ wildcard_constraints:
     lineage_key='((?![/]).)*',
     lineage_specific='((?![/]).)*',
 
+
+module preprocessing:
+    snakefile: "../../preprocessing/rules/rules.smk"
+    config: config
 
 module clustering:
     snakefile: "../../clustering/rules/rules.smk"

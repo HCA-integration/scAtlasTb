@@ -22,9 +22,38 @@ rule prepare:
         '../scripts/prepare.py'
 
 
+use rule pca from preprocessing as metrics_pca with:
+    input:
+        lambda wildcards: mcfg.get_input_file(**wildcards),
+    output:
+        zarr=directory(mcfg.out_dir / 'prepare' / paramspace.wildcard_pattern / 'pca.zarr'),
+    params:
+        pca_args=lambda wildcards: mcfg.get_from_parameters(
+            wildcards,
+            'pca',
+            default=dict(
+                mask_var=mcfg.get_from_parameters(wildcards, 'var_mask', default='highly_variable')
+            )
+        ),
+        layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'unintegrated', default=None),
+        subset=True,
+    conda:
+        get_env(config, 'scanpy')
+    resources:
+        partition=lambda w: mcfg.get_resource(resource_key='partition', profile='gpu'),
+        qos=lambda w: mcfg.get_resource(resource_key='qos', profile='gpu'),
+        gpu=lambda w: mcfg.get_resource(resource_key='gpu', profile='gpu'),
+        mem_mb=lambda w, attempt: mcfg.get_resource(resource_key='mem_mb', profile='gpu', attempt=attempt),
+
+
 rule prepare_all:
     input:
-        mcfg.get_output_files(rules.prepare.output)
+        prepare=mcfg.get_output_files(rules.prepare.output),
+        pca=[
+            mcfg.get_output_files(rules.metrics_pca.output, subset_dict=dict(dataset=dataset))
+            for dataset in mcfg.get_datasets()
+            if sum(mcfg.get_from_parameters(dict(dataset=dataset), 'comparison', single_value=False)) > 0
+        ],
     localrule: True
 
 
