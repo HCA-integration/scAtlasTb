@@ -18,6 +18,7 @@ from utils.processing import sc, USE_GPU
 
 input_file = snakemake.input[0]
 output_file = snakemake.output[0]
+layer = snakemake.params.get('layer', 'X')
 scale = snakemake.params.get('scale', False)
 args = snakemake.params.get('args', {})
 dask = snakemake.params.get('dask', True) # get global dask flag
@@ -26,7 +27,7 @@ dask = args.pop('dask', dask) # overwrite with pca-specific dask flag
 logging.info(f'Read "{input_file}"...')
 adata = read_anndata(
     input_file,
-    X='X',
+    X=layer,
     var='var',
     obs='obs',
     uns='uns',
@@ -92,5 +93,6 @@ write_zarr_linked(
     adata,
     input_file,
     output_file,
-    files_to_keep=['obsm', 'uns', 'varm']
+    files_to_keep=['obsm', 'uns', 'varm'],
+    slot_map={'X': layer},
 )
