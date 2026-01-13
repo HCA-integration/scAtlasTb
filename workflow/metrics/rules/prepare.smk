@@ -5,12 +5,12 @@ rule prepare:
         zarr=directory(mcfg.out_dir / 'prepare' / paramspace.wildcard_pattern / 'prepare.zarr'),
     params:
         # labels=lambda wildcards: mcfg.get_from_parameters(wildcards, 'label', single_value=False),
-        neighbor_args=lambda wildcards: mcfg.get_for_dataset(wildcards.dataset, ['preprocessing', 'neighbors'], default={}),
+        neighbor_args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'neighbors', default={}),
+        recompute_neighbors=lambda wildcards: mcfg.get_from_parameters(wildcards, 'recompute_neighbors', default=False),
         unintegrated_layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'unintegrated', default='X'),
         corrected_layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'corrected', default='X'),
         var_mask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'var_mask', default='highly_variable'),
         output_type=lambda wildcards: mcfg.get_from_parameters(wildcards, 'output_type', default='embed'),
-        recompute_neighbors=lambda wildcards: mcfg.get_from_parameters(wildcards, 'recompute_neighbors', default=False),
     conda:
         get_env(config, 'scanpy', gpu_env='rapids_singlecell')
     resources:
@@ -18,7 +18,6 @@ rule prepare:
         qos=lambda w: mcfg.get_resource(resource_key='qos', profile='gpu'),
         gpu=lambda w: mcfg.get_resource(resource_key='gpu', profile='gpu'),
         mem_mb=lambda w, attempt: mcfg.get_resource(resource_key='mem_mb', profile='gpu', attempt=attempt),
-        time="1-00:00:00",
     script:
         '../scripts/prepare.py'
 
