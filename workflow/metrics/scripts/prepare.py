@@ -97,23 +97,16 @@ force_neighbors = (
 )
 
 # set HVGs
-new_var_column = 'metrics_features'
-if var_key in adata.var.columns.values:
-    adata.var[new_var_column] = adata.var[var_key]
-else:
+if var_key is None:
     logging.info(f'"{var_key}" not in adata var, setting all to True\n{pformat(adata.var.columns)}')
-    adata.var[new_var_column] = True
-logging.info(f'Set "{new_var_column}" from "{var_key}" in adata.var: {adata.var[new_var_column].sum()} HVGs')
-
-# logging.info('Filter all zero genes...')
-# all_zero_genes = _filter_genes(adata, min_cells=1)
-# adata.var[new_var_column] = adata.var[new_var_column] & ~adata.var_names.isin(all_zero_genes)
+    adata.var[var_key] = True
+logging.info(f'Set "{var_key}" in adata.var: {adata.var[var_key].sum()} HVGs')
 
 logging.info('Compute PCA...')
 if output_type == 'full':
     sc.pp.pca(
         adata,
-        mask_var=new_var_column,
+        mask_var=var_key,
         svd_solver='covariance_eigh',
     )
     adata = dask_compute(adata, layers='X_pca')
@@ -136,7 +129,7 @@ compute_neighbors(
     check_n_neighbors=False,
     **neighbor_args
 )
-
+g
 logging.info(f'Write to {output_file}...')
 logging.info(adata.__str__())
 if is_h5ad:
