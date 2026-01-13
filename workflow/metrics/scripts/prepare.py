@@ -33,8 +33,8 @@ recompute_neighbors = params.get('recompute_neighbors', False)
 
 PERSIST_MATRIX_THRESHOLD = params.get('PERSIST_MATRIX_THRESHOLD', 5e5)
 
-files_to_keep = ['raw', 'uns', 'var']
-slot_map = {'raw/X': unintegrated_layer}
+files_to_keep = ['uns', 'var']
+slot_map = {}
 
 # determine output types
 output_type = read_anndata(
@@ -136,41 +136,6 @@ compute_neighbors(
     check_n_neighbors=False,
     **neighbor_args
 )
-
-# unintegrated for comparison metrics
-# if output_type != 'knn':  # assuming that there aren't any knn-based metrics that require PCA
-logging.info(f'Prepare unintegrated data from layer={unintegrated_layer}...')
-adata_raw = read_anndata(
-    input_file,
-    X=unintegrated_layer,
-    dask=True,
-    backed=True,
-)
-adata_raw.var = adata.var
-logging.info(f'Unintegrated data shape: {adata_raw.shape}') 
-
-if adata_raw.n_obs > PERSIST_MATRIX_THRESHOLD:
-    logging.info('Persist matrix...')
-    adata_raw = apply_layers(adata_raw, lambda x: x.persist(), layers='X')
-else:
-    dask_compute(adata_raw, layers='X')
-
-logging.info('Run PCA on unintegrated data...')
-sc.pp.pca(
-    adata_raw,
-    mask_var=new_var_column,
-    svd_solver='covariance_eigh',
-)
-
-# add raw PCA adata
-adata.obsm['X_pca_unintegrated'] = adata_raw.obsm['X_pca']
-del adata_raw.obsm['X_pca']
-adata = dask_compute(adata, layers='X_pca_unintegrated')
-adata.uns['pca_unintegrated'] = adata_raw.uns['pca']
-files_to_keep.append('obsm/X_pca_unintegrated')
-
-# add raw data for comparison
-adata.raw = adata_raw
 
 logging.info(f'Write to {output_file}...')
 logging.info(adata.__str__())
