@@ -61,13 +61,9 @@ logging.info('Subset to highly variable genes...')
 hvg_key = args.pop('mask_var', 'highly_variable')
 
 # prepare data for PCA
-adata_pca = adata # shallow copy
-
-if subset:
-    # deep copy
-    adata_pca = adata_pca.copy()
-    if input_file.endswith('.zarr'):
-        del adata.X
+adata_pca = adata.copy() # deep copy
+if input_file.endswith('.zarr'):
+    del adata.X
 
 # subsetting happens in place
 adata_pca, _ = subset_hvg(adata_pca, var_column=hvg_key, compute_dask=not dask)
