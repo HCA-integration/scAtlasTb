@@ -31,10 +31,10 @@ output_file = snakemake.output[0]
 params = snakemake.params
 unintegrated_layer = params.get('unintegrated_layer', 'X')
 raw_counts_layer = params.get('raw_counts_layer', unintegrated_layer)
+var_key = params.get('var_mask', 'highly_variable')
 gene_sets = params['gene_sets']
 n_random_permutations = params.get('n_permutations', 100)
 n_quantiles = params.get('n_quantiles', 2)
-var_key = 'metrics_features'
 MAX_OBS = int(params.get('MAX_OBS', 4e6))
 
 files_to_keep = ['obs', 'obsm']   # TODO: only overwrite specific obsm slots
@@ -99,6 +99,7 @@ if adata.n_obs > MAX_OBS:
 # subset to HVGs (used for control genes) + genes of interest
 logging.info(f'Subset to {adata.n_vars} genes for scoring')
 logging.debug(adata.__str__())
+assert var_key in adata.var.columns, f'var_key "{var_key}" not in adata.var columns: {adata.var.columns}'
 adata.var.loc[adata.var_names.isin(genes), var_key] = True
 adata = adata[:, adata.var[var_key]].copy()
 
