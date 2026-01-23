@@ -324,9 +324,10 @@ if gene_colors:
         Parallel(return_as='generator')(delayed(plot_color)(
             color,
             file_name=title,
-            output_dir=output_dir / 'genes',
+            output_dir=output_dir,
             title=wildcards_string,
-            verbose=False
+            verbose=False,
+            **params,
         ) for title, color in gene_colors.items()),
         desc="Plotting genes",
         total=len(gene_colors),
