@@ -15,6 +15,7 @@ mcfg = PreprocessingConfig(
         'assemble',
         'colors',
         'plot_centroids',
+        'plot_gene_chunk_size',
         'gene_id_column',
         'highly_variable_genes',
         'extra_hvgs',
