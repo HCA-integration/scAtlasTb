@@ -26,6 +26,8 @@ output_dir.mkdir(exist_ok=True)
 
 params = dict(snakemake.params.items())
 basis = params['basis']
+plot_centroids = params.pop('plot_centroids', [])
+
 wildcards_string = '\n'.join([f'{k}: {v}' for k, v in snakemake.wildcards.items()])
 logging.info(f'Wildcard string: {wildcards_string}')
 
@@ -59,12 +61,13 @@ if 'feature_name' in adata.var.columns:
 min_cells_per_category = params.pop('min_cells_per_category', 1e-4)
 if min_cells_per_category < 1:
     min_cells_per_category *= n_cells
-print('Remove categories with fewer than', min_cells_per_category, 'cells')
+logging.info(f'Remove categories with fewer than {min_cells_per_category:.1f} cells')
 
 # parse colors
 colors = params.pop('color', None)
 logging.info(f'Configured colors:\n{pformat(colors)}')
 colors = colors if isinstance(colors, list) else [colors]
+colors += plot_centroids
 
 # get gene colors
 gene_colors = [col for col in colors if col not in obs_columns]
@@ -128,7 +131,15 @@ if size is None:
 params['size'] = np.min([np.max([size, 0.4, default_size]), 200])
 
 
-def plot_color(color, file_name, output_dir, title='', verbose=True):
+def plot_color(
+    color,
+    file_name,
+    output_dir,
+    title='',
+    plot_centroids=False,
+    verbose=True,
+    **kwargs
+):
     palette = None
     if file_name is None:
         file_name = str(color)
@@ -163,7 +174,17 @@ def plot_color(color, file_name, output_dir, title='', verbose=True):
                     palette = 'coolwarm'
                 else:
                     palette = 'plasma'
-    
+
+    # centroid plotting setup (sctk-like numbering)
+    color = colors[0] if colors else None
+    plot_centroids = (
+        plot_centroids
+        and len(colors) == 1
+        and color in adata.obs.columns
+        and is_categorical_dtype(adata.obs[color])
+        and adata.obs[color].nunique() <= 102
+    )
+
     try:
         fig = sc.pl.embedding(
             adata,
@@ -171,17 +192,88 @@ def plot_color(color, file_name, output_dir, title='', verbose=True):
             show=False,
             return_fig=True,
             palette=palette,
-            **params
+            **kwargs,
         )
-        # set title
         suptitle_text = f'{title}\nn={n_cells}'
-        n_lines = suptitle_text.count('\n') + 1
         fig.suptitle(suptitle_text, fontsize=12)
 
-        legend = fig.get_axes()[0].get_legend()
+        # fix legend
+        ax = fig.get_axes()[0]
+        legend = ax.get_legend()
+
         if palette == 'turbo':
-            legend.remove()
-        elif legend:
+            if legend:
+                legend.remove()
+                legend = None
+        
+        elif legend and plot_centroids:
+            categories = [cat for cat in adata.obs[color].cat.categories if cat in adata.obs[color].unique()]
+            category_numbers = {
+                cat: idx + 1 if len(str(cat)) > 3 else cat
+                for idx, cat in enumerate(categories)
+            }
+            
+            # Compute centroids for each category
+            coords = adata.obsm[basis][:, :2]
+            centroids = pd.DataFrame(coords, index=adata.obs[color]) \
+                .groupby(level=0, dropna=False) \
+                .median() \
+                .reindex(categories)
+            
+            # Extract colors from legend handles
+            color_map = {
+                text.get_text(): handle.get_facecolor()[0] 
+                for handle, text in zip(legend.legend_handles, legend.get_texts())
+                if hasattr(handle, 'get_facecolor')
+            } if legend else {}
+            
+            # Plot category numbers at centroids with matching colors
+            fontsize = kwargs.get('legend_fontsize', 10)
+            for cat, row in centroids.iterrows():
+                bg_color = color_map.get(cat, 'white')
+                
+                # Convert color to RGB for luminance calculation
+                try:
+                    # Use matplotlib to convert any color format to RGBA
+                    r, g, b = mpl.colors.to_rgba(bg_color)[:3]
+                    luminance = 0.299 * r + 0.587 * g + 0.114 * b
+                    text_color = 'white' if luminance < 0.4 else 'black'
+                except (ValueError, TypeError):
+                    text_color = 'white'
+                
+                label_value = category_numbers[cat]
+                ax.text(
+                    row.iloc[0], row.iloc[1],
+                    s=str(label_value),
+                    fontsize=fontsize,
+                    fontweight="bold",
+                    ha="center",
+                    va="center",
+                    color=text_color,
+                    bbox=dict(
+                        boxstyle="circle",
+                        facecolor='none',
+                        alpha=0.4,
+                        edgecolor='none',
+                    )
+                ).set_path_effects([
+                    mpl.patheffects.Stroke(
+                        linewidth=1.5,
+                        foreground=color_map.get(cat, 'white')
+                    ),
+                    mpl.patheffects.Normal()
+                ])
+
+            # Add category numbers to legend labels
+            for text in legend.get_texts():
+                label = text.get_text()
+                if label in category_numbers:
+                    mapped = category_numbers[label]
+                    if isinstance(mapped, int):
+                        text.set_text(f"{mapped}: {label}")
+
+        if legend:
+            # adjust legend
             legend_bbox = legend.get_window_extent()
             fig_width, fig_height = fig.get_size_inches()
             fig_width = fig_width + (legend_bbox.width / fig.dpi)
@@ -191,8 +283,9 @@ def plot_color(color, file_name, output_dir, title='', verbose=True):
             logging.info(f'Plotting color "{file_name}" successful.')
     
     except Exception as e:
-        logging.error(f'Failed to plot {file_name}: {e}')
         traceback.print_exc()
+        logging.error(f'Failed to plot "{file_name}": {e}')
+        raise e
         plt.plot([])
     
     out_path = output_dir / f'{file_name}.png'
@@ -212,6 +305,8 @@ list(tqdm(
         file_name=color,
         output_dir=output_dir,
         title=wildcards_string,
+        plot_centroids=color in plot_centroids,
+        **params,
     ) for color in set(colors)),
     desc="Plotting colors",
     total=len(colors),
