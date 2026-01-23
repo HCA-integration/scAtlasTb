@@ -26,6 +26,7 @@ output_dir.mkdir(exist_ok=True)
 
 params = dict(snakemake.params.items())
 basis = params['basis']
+gene_chunk_size = params.pop('gene_chunk_size', 12)
 plot_centroids = params.pop('plot_centroids', [])
 
 wildcards_string = '\n'.join([f'{k}: {v}' for k, v in snakemake.wildcards.items()])
@@ -313,10 +314,9 @@ list(tqdm(
     miniters=1,
 ))
 
-chunk_size = 24
 gene_colors = {
-    f'genes_group={idx}': gene_colors[i:i + chunk_size]
-    for idx, i in enumerate(range(0, len(gene_colors), chunk_size))
+    f'genes_group={idx}': gene_colors[i:i + gene_chunk_size]
+    for idx, i in enumerate(range(0, len(gene_colors), gene_chunk_size))
 }
 if gene_colors:
     Path(output_dir / 'genes').mkdir(exist_ok=True)
