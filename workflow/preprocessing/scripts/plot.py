@@ -110,7 +110,9 @@ adata = remove_outliers(adata, 'min', factor=outlier_factor, rep=basis)
 # match gene patterns
 if gene_colors:
     logging.info(f'Subset to {len(gene_colors)} requested genes...')
-    adata = dask_compute(adata[:, adata.var_names.isin(gene_colors)].copy(), layers='X')
+    adata = adata[:, adata.var_names.isin(gene_colors)].copy()
+    logging.info(adata.__str__())
+    adata = dask_compute(adata, layers='X')
     print(adata.var, flush=True)
 else:
     del adata.X
@@ -319,7 +321,7 @@ gene_colors = {
     for idx, i in enumerate(range(0, len(gene_colors), gene_chunk_size))
 }
 if gene_colors:
-    Path(output_dir / 'genes').mkdir(exist_ok=True)
+    params['ncols'] = params.get('ncols', 4)
     list(tqdm(
         Parallel(return_as='generator')(delayed(plot_color)(
             color,
