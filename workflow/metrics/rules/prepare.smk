@@ -35,7 +35,7 @@ use rule pca from preprocessing as metrics_pca with:
                 mask_var=mcfg.get_from_parameters(wildcards, 'var_mask', default='highly_variable')
             )
         ),
-        layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'unintegrated', default=None),
+        layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'unintegrated', default='X'),
         subset=True,
     conda:
         get_env(config, 'scanpy')
