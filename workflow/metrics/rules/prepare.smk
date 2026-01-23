@@ -28,7 +28,7 @@ use rule pca from preprocessing as metrics_pca with:
     output:
         zarr=directory(mcfg.out_dir / 'prepare' / paramspace.wildcard_pattern / 'pca.zarr'),
     params:
-        pca_args=lambda wildcards: mcfg.get_from_parameters(
+        args=lambda wildcards: mcfg.get_from_parameters(
             wildcards,
             'pca',
             default=dict(
