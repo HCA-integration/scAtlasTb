@@ -46,7 +46,7 @@ use rule highly_variable_genes from preprocessing as preprocessing_highly_variab
         zarr=directory(mcfg.out_dir / 'preprocessed' / paramspace.wildcard_pattern / 'highly_variable_genes--{hvg_args}.zarr'),
     params:
         args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'hvg_args_dict', default={}),
-        dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=True),
+        dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=False),
     conda:
         lambda w: get_env(config, 'scanpy', gpu_env='rapids_singlecell', no_gpu=mcfg.get_profile(w) == 'cpu')
     threads:
@@ -67,7 +67,7 @@ use rule extra_hvgs from preprocessing as preprocessing_extra_hvgs with:
         args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'highly_variable_genes', default={}),
         extra_hvgs=lambda wildcards: mcfg.get_from_parameters(wildcards, 'extra_hvgs', default={}),
         overwrite_args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'overwrite_args_dict', default={}),
-        dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=True),
+        dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=False),
     conda:
         lambda w: get_env(config, 'scanpy', gpu_env='rapids_singlecell', no_gpu=mcfg.get_profile(w) == 'cpu')
     threads:

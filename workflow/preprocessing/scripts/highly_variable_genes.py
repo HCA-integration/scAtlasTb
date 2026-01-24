@@ -32,8 +32,8 @@ dask = snakemake.params.get('dask', True) # get global dask flag
 if isinstance(args, dict):
     dask = args.pop('dask', dask) # overwrite with hvg-specific dask flag
 
-logging.debug(f'args: {args}')
-logging.debug(f'dask: {dask}')
+logging.info(f'args: {args}')
+logging.info(f'dask: {dask}')
 
 logging.info(f'Read {input_file}...')
 kwargs = dict(
