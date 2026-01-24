@@ -31,7 +31,22 @@ def _build_suffixes(param_dict):
 
 
 def expected_hvg_columns(hvg_config):
-    """Expected 'highly_variable--...' columns from HVG config."""
+    """Expected 'highly_variable--...' columns from HVG config.
+
+    If hvg_config is False, HVG is treated as disabled and no columns are expected.
+    If hvg_config is None, empty, or has no recognized HVG keys, a default
+    'highly_variable' column is expected.
+    """
+    # Explicitly disable HVG expectation
+    if hvg_config is False:
+        return []
+
+    # If no usable HVG parameters are provided, expect the default column
+    if not isinstance(hvg_config, dict) or len(hvg_config) == 0 \
+            or not any(k in HVG_KEYS for k in hvg_config.keys()):
+        return ['highly_variable']
+
+    # Otherwise, build suffix-based column names from the provided parameters
     return ['highly_variable' + s for s in _build_suffixes(hvg_config)]
 
 
