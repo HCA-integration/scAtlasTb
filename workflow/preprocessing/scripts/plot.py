@@ -136,12 +136,15 @@ params['size'] = np.min([np.max([size, 0.4, default_size]), 200])
 
 
 def plot_color(
+    adata,
     color,
-    file_name,
-    output_dir,
-    title='',
+    basis,
+    n_cells=n_cells,
     plot_centroids=False,
     verbose=True,
+    file_name=None,
+    title='',
+    output_dir=output_dir,
     **kwargs
 ):
     palette = None
@@ -289,7 +292,6 @@ def plot_color(
     except Exception as e:
         traceback.print_exc()
         logging.error(f'Failed to plot "{file_name}": {e}')
-        raise e
         plt.plot([])
     
     out_path = output_dir / f'{file_name}.png'
@@ -299,19 +301,24 @@ def plot_color(
     except Exception as e:
         logging.error(f'Failed to save plot "{file_name}" to {out_path}: {e}')
         traceback.print_exc()
+    finally:
+        plt.close('all')  # Free memory from figure
 
 
 logging.info('Parameters:\n' + pformat(params))
 # Run plotting in parallel
 list(tqdm(
-    Parallel(return_as='generator')(delayed(plot_color)(
-        color,
-        file_name=color,
-        output_dir=output_dir,
-        title=wildcards_string,
+    Parallel(return_as='generator', backend='threading')(delayed(plot_color)(
+        adata=adata,
+        color=color,
+        basis=basis,
+        n_cells=n_cells,
         plot_centroids=color in plot_centroids,
         **params,
-    ) for color in set(colors)),
+        title=wildcards_string,
+        file_name=color,
+        output_dir=output_dir,
+    ) for color in colors),
     desc="Plotting colors",
     total=len(colors),
     miniters=1,
@@ -324,13 +331,16 @@ gene_colors = {
 if gene_colors:
     params['ncols'] = params.get('ncols', 4)
     list(tqdm(
-        Parallel(return_as='generator')(delayed(plot_color)(
-            color,
-            file_name=title,
-            output_dir=output_dir,
-            title=wildcards_string,
+        Parallel(return_as='generator', backend='threading')(delayed(plot_color)(
+            adata=adata,
+            color=color,
+            basis=basis,
+            n_cells=n_cells,
             verbose=False,
             **params,
+            title=wildcards_string,
+            file_name=title,
+            output_dir=output_dir,
         ) for title, color in gene_colors.items()),
         desc="Plotting genes",
         total=len(gene_colors),
