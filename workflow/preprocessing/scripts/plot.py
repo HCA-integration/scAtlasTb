@@ -140,14 +140,14 @@ def plot_color(
     file_name,
     output_dir,
     title='',
-    plot_centroids=False,
+    should_plot_centroids=False,
     verbose=True,
     **kwargs
 ):
     palette = None
     if file_name is None:
         file_name = str(color)
-    colors = color if isinstance(color, list) else [color]
+    color_list = color if isinstance(color, list) else [color]
 
     fig_params = dict(
         frameon=False,
@@ -159,13 +159,13 @@ def plot_color(
         format='png',
     )
     
-    if len(colors) > 4:
+    if len(color_list) > 4:
         fig_params = dict(frameon=False)
     sc.set_figure_params(**fig_params)
     mpl.rcParams['figure.constrained_layout.use'] = True
 
     # select palette according to obs column
-    for color in colors:
+    for color in color_list:
         if color in adata.obs.columns:
             color_vec = adata.obs[color]
             if is_categorical_dtype(color_vec):
@@ -180,10 +180,10 @@ def plot_color(
                     palette = 'plasma'
 
     # centroid plotting setup (sctk-like numbering)
-    color = colors[0] if colors else None
-    plot_centroids = (
-        plot_centroids
-        and len(colors) == 1
+    color = color_list[0] if color_list else None
+    plot_centroids_enabled = (
+        should_plot_centroids
+        and len(color_list) == 1
         and color in adata.obs.columns
         and is_categorical_dtype(adata.obs[color])
         and adata.obs[color].nunique() <= 102
@@ -192,7 +192,7 @@ def plot_color(
     try:
         fig = sc.pl.embedding(
             adata,
-            color=colors,
+            color=color_list,
             show=False,
             return_fig=True,
             palette=palette,
@@ -210,7 +210,7 @@ def plot_color(
                 legend.remove()
                 legend = None
         
-        elif legend and plot_centroids:
+        elif legend and plot_centroids_enabled:
             categories = [cat for cat in adata.obs[color].cat.categories if cat in adata.obs[color].unique()]
             category_numbers = {
                 cat: idx + 1 if len(str(cat)) > 3 else cat
@@ -309,7 +309,7 @@ list(tqdm(
         file_name=color,
         output_dir=output_dir,
         title=wildcards_string,
-        plot_centroids=color in plot_centroids,
+        should_plot_centroids=color in plot_centroids,
         **params,
     ) for color in set(colors)),
     desc="Plotting colors",
