@@ -29,7 +29,7 @@ def read_table(file, index_name, obs_names, usecols):
     kwargs = dict(
         usecols=usecols,
         comment='#',
-        na_values=['nan', 'NaN', 'NA', 'na', ''],
+        na_values=['nan', 'NaN', 'NA', 'na', '', 'None', None],
         keep_default_na=True,
         engine='c',
         dtype=str,
@@ -44,7 +44,11 @@ def read_table(file, index_name, obs_names, usecols):
         read_func = dd.read_table
     elif file.endswith('.parquet'):
         read_func = pd.read_parquet
-        kwargs = {}
+        kwargs = dict(
+            engine='pyarrow',
+            columns=usecols,
+            use_threads=True,
+        )
     else:
         raise ValueError(f'Unsupported file type: {file}')
     
@@ -96,6 +100,7 @@ kwargs = dict(dask=True, backed=True)
 if input_file.endswith(('.zarr', '.zarr/')):
     kwargs |= {x: x for x in files_to_keep}
 adata = read_anndata(input_file, **kwargs)
+logging.info(adata.__str__())
 
 # merge new columns
 if rename_columns:
@@ -122,19 +127,20 @@ if input_new_cols:
     index_col = snakemake.params.get('index_col', 'index')
     mapping_order = snakemake.params.get('mapping_order')
     old_index_name = adata.obs.index.name or 'index'
-    
+
     if index_col in adata.obs.columns:
         adata.obs[index_col] = adata.obs[index_col].astype(str)
         adata.obs = adata.obs.reset_index().set_index(index_col)
     else:
         adata.obs_names.name = index_col
     
+    logging.info(f'Read new columns from "{input_new_cols}" with index "{index_col}"...')
     label_mapping = read_table(
         file=input_new_cols,
         index_name=index_col,
         obs_names=adata.obs_names,
         usecols=mapping_order
-    )    
+    )
     logging.info(f'\n{pformat(label_mapping)}')
     
     logging.info(f'Mapping order: {pformat(mapping_order)}')
