@@ -11,6 +11,7 @@ from tqdm.dask import TqdmCallback
 from dask import array as da
 from dask import config as da_config
 da_config.set(num_workers=snakemake.threads)
+from pprint import pformat
 
 from utils.io import read_anndata, write_zarr_linked
 from utils.accessors import _filter_batch
@@ -24,14 +25,15 @@ if args is None:
     args = {}
 elif isinstance(args, dict):
     args.pop('subset', None) # don't support subsetting
-logging.info(str(args))
+
+logging.info(f'HVG args:\n{pformat(args)}')
 
 dask = snakemake.params.get('dask', True) # get global dask flag
 if isinstance(args, dict):
     dask = args.pop('dask', dask) # overwrite with hvg-specific dask flag
 
-logging.debug(f'args: {args}')
-logging.debug(f'dask: {dask}')
+logging.info(f'args: {args}')
+logging.info(f'dask: {dask}')
 
 logging.info(f'Read {input_file}...')
 kwargs = dict(
@@ -51,8 +53,20 @@ if 'preprocessing' not in adata.uns:
     adata.uns['preprocessing'] = {}
 adata.uns['preprocessing']['highly_variable_genes'] = args
 
+# Remove any previous highly_variable_genes columns
+for col in list(var.columns):
+    if col.startswith('highly_variable'):
+        var.drop(columns=col, inplace=True)
+
+# Determine HVG column name based on args (use parameter hash in filename as suffix)
+hvg_column_name = 'highly_variable'
+if isinstance(args, dict):
+    for key in sorted(args.keys()):
+        hvg_column_name += f'--{key}={args[key]}'
+
 if adata.n_obs == 0:
     logging.info('No data, write empty file...')
+    adata.var[hvg_column_name] = True
     adata.var['highly_variable'] = True
     adata.write_zarr(output_file)
     exit(0)
@@ -93,6 +107,9 @@ else:
         var[column] = default_value
         var[column] = var[column].astype(dtype)
         var.loc[adata.var_names, column] = adata.var[column]
+
+# rename highly_variable column
+var[hvg_column_name] = var['highly_variable']
 
 logging.info(f'Write to {output_file}...')
 files_to_keep = ['uns', 'var']

@@ -76,7 +76,7 @@ def expand_dict(_dict):
     return zip(wildcards, dict_list)
 
 
-def expand_dict_and_serialize(_dict: dict, do_not_expand: list = None):
+def expand_dict_and_serialize(_dict: dict, do_not_expand: list = None, hash_exclude: list = None):
     """
     Create a cross-product on a dictionary with literals and lists
     :param _dict: dictionary with lists and literals as values
@@ -87,6 +87,9 @@ def expand_dict_and_serialize(_dict: dict, do_not_expand: list = None):
     
     if do_not_expand is None:
         do_not_expand = []
+    
+    if hash_exclude is None:
+        hash_exclude = []
 
     df = pd.DataFrame(
         {
@@ -99,10 +102,15 @@ def expand_dict_and_serialize(_dict: dict, do_not_expand: list = None):
         df = df.explode(col)
     dict_list = df.apply(lambda row: dict(zip(df.columns, row)), axis=1)
 
-    wildcards = [
-        hashlib.blake2b(jsonpickle.encode(d).encode('utf-8'), digest_size=5).hexdigest()
-        for d in dict_list
-    ]
+    wildcards = []
+    for d in dict_list:
+        hash_dict = {k: v for k, v in d.items() if k not in hash_exclude}
+        wildcards.append(
+            hashlib.blake2b(
+                jsonpickle.encode(hash_dict).encode('utf-8'),
+                digest_size=5,
+            ).hexdigest()
+        )
 
     return zip(wildcards, dict_list)
 

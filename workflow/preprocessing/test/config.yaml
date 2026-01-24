@@ -9,7 +9,6 @@ defaults:
   preprocessing:
     neighbors:
       n_neighbors: 15
-      n_pcs: 50
   datasets:
     - large
     - all
@@ -25,6 +24,7 @@ DATASETS:
       preprocessing:
         blood: test/input/load_data/merged/organ/blood.zarr
         schulte: test/input/load_data/filtered/SchulteSchrepping2020.zarr
+        lee: test/input/load_data/filtered/Lee2020.zarr
     preprocessing:
       dask: true
       resources: gpu
@@ -32,10 +32,11 @@ DATASETS:
       raw_counts: X
       scale: true
       extra_hvgs:
+        dask: false
         overwrite_args:
           n_top_genes:
-            - 200
-            - 300
+            - 2000
+            - 3000
           batch_key: batch_condition
         union_over:
           - disease
@@ -54,7 +55,7 @@ DATASETS:
       highly_variable_genes:
         batch_key: dataset
         n_top_genes: 2000
-        dask: false
+        dask: true
       assemble:
         - counts
         - normalize
@@ -63,6 +64,8 @@ DATASETS:
         - pca
         - neighbors
       colors:
+        - batch
+        - dataset
         - cell_type
         - study
         - development_stage
@@ -77,7 +80,9 @@ DATASETS:
         target_sum: 10_000
       scale: true
       highly_variable_genes:
-        n_top_genes: 100
+        n_top_genes:
+          - 100
+          - 200
       assemble:
         - counts
         - normalize

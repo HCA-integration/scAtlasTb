@@ -43,10 +43,10 @@ use rule highly_variable_genes from preprocessing as preprocessing_highly_variab
     input:
         zarr=rules.filter_genes.output.zarr,
     output:
-        zarr=directory(mcfg.out_dir / 'preprocessed' / paramspace.wildcard_pattern / 'highly_variable_genes.zarr'),
+        zarr=directory(mcfg.out_dir / 'preprocessed' / paramspace.wildcard_pattern / 'highly_variable_genes--{hvg_args}.zarr'),
     params:
-        args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'highly_variable_genes', default={}),
-        dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=True),
+        args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'hvg_args_dict', default={}),
+        dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=False),
     conda:
         lambda w: get_env(config, 'scanpy', gpu_env='rapids_singlecell', no_gpu=mcfg.get_profile(w) == 'cpu')
     threads:
@@ -67,7 +67,7 @@ use rule extra_hvgs from preprocessing as preprocessing_extra_hvgs with:
         args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'highly_variable_genes', default={}),
         extra_hvgs=lambda wildcards: mcfg.get_from_parameters(wildcards, 'extra_hvgs', default={}),
         overwrite_args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'overwrite_args_dict', default={}),
-        dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=True),
+        dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=False),
     conda:
         lambda w: get_env(config, 'scanpy', gpu_env='rapids_singlecell', no_gpu=mcfg.get_profile(w) == 'cpu')
     threads:
@@ -81,7 +81,11 @@ use rule extra_hvgs from preprocessing as preprocessing_extra_hvgs with:
 
 use rule pca from preprocessing as preprocessing_pca with:
     input:
-        zarr=rules.preprocessing_highly_variable_genes.output.zarr,
+        zarr=lambda wildcards: mcfg.get_output_files(
+            rules.preprocessing_highly_variable_genes.output.zarr,
+            subset_dict=wildcards,
+            wildcard_names=['dataset', 'file_id', 'hvg_args'],
+        )[0],
     output:
         zarr=directory(mcfg.out_dir / 'preprocessed' / paramspace.wildcard_pattern / 'pca.zarr'),
     params:
@@ -140,11 +144,15 @@ def collect_files(wildcards):
     file_dict = {
         # 'counts': mcfg.get_input_file(**wildcards),
         'normalize': rules.preprocessing_normalize.output.zarr,
-        'highly_variable_genes': rules.preprocessing_highly_variable_genes.output.zarr,
+        'highly_variable_genes': mcfg.get_output_files(
+            rules.preprocessing_highly_variable_genes.output.zarr,
+            subset_dict=wildcards,
+            wildcard_names=['dataset', 'file_id', 'hvg_args'],
+        ),
         'extra_hvgs': mcfg.get_output_files(
             rules.preprocessing_extra_hvgs.output.zarr,
             subset_dict=wildcards,
-            all_params=True,
+            wildcard_names=['dataset', 'file_id', 'overwrite_args'],
         ),
         'pca': rules.preprocessing_pca.output.zarr,
         'neighbors': rules.preprocessing_neighbors.output.zarr,
