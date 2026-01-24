@@ -226,10 +226,10 @@ def plot_color(
             
             # Extract colors from legend handles
             color_map = {
-                text.get_text(): handle.get_facecolor()[0] 
+                text.get_text(): handle.get_facecolor()[0]
                 for handle, text in zip(legend.legend_handles, legend.get_texts())
                 if hasattr(handle, 'get_facecolor')
-            } if legend else {}
+            }
             
             # Plot category numbers at centroids with matching colors
             fontsize = kwargs.get('legend_fontsize', 10)
