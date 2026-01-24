@@ -144,10 +144,9 @@ def assemble_zarr(file, file_type, slot_map, in_dir_map, is_default=True):
         logging.info('add UMAP')
         update_slot_map |= {
             'obsm/X_umap': 'obsm/X_umap'
-        } 
-    
+        }
     else:
-        ValueError(f'Unknown file type {file_type}')
+        raise ValueError(f'Unknown file type {file_type}')
     
     slot_map |= update_slot_map
     in_dir_map |= {slot: file for slot in update_slot_map.values()}
@@ -205,9 +204,7 @@ for file_type, file in file_map:
     if adata is None: # read first file
         logging.info(f'Read first file {file}...')
         adata = read_anndata(file, obs='obs', var='var', verbose=False)
-        # from scipy import sparse
-        # if adata.X is None:
-        #     adata.X = sparse.csr_matrix(adata.shape, dtype=np.int8)
+
         if adata.n_obs == 0:
             logging.info('No data, write empty file...')
             write_zarr_linked(adata, in_dir=file, out_dir=output_file)
