@@ -10,6 +10,7 @@ This module provides a flexible preprocessing pipeline for single-cell datasets,
 5. Nearest neighbor graph construction
 6. UMAP dimensionality reduction
 7. Optional extra HVG selection and custom assembly
+8. UMAP/PCA plotting (colors, gene sets, centroids)
 
 Rules are defined in `rules/rules.smk` and orchestrated in `rules/assemble.smk`, which assembles outputs from each step into a single AnnData object. The pipeline supports parameterization via config and dynamic resource allocation (threads, memory, partition, GPU) for each rule.
 
@@ -255,7 +256,6 @@ DATASETS:
         - umap
 ```
 
-
 ## Assembled output and custom assembly
 
 
@@ -292,6 +292,54 @@ DATASETS:
         - neighbors
         - umap
 ```
+
+
+### UMAP/PCA Plots
+
+Generate publication-ready scatter plots for PCA and UMAP embeddings. You can plot categorical/numeric columns from `.obs` and visualize gene expression panels, including predefined gene sets.
+Plotting will happen by default when `preprocessing_all` is called.
+
+Plots are produced by rules in [workflow/preprocessing/rules/plots.smk](workflow/preprocessing/rules/plots.smk) and saved under your configured image directory (per dataset and step) in `pca/` and `umap/` folders.
+
+**Output**
+
+- `images/.../pca/*.png`: PCA scatter plots for requested colors
+- `images/.../umap/*.png`: UMAP scatter plots for requested colors and gene panels
+
+**Parameters**
+The plot configuration is independent of `assembly`.
+Even if no `pca` or `umap` are defined, the PCA and UMAP workflows will be triggered in order to create the plots.
+
+- `colors`: list of `.obs` columns and/or genes to plot. Entries not found in `.obs` are treated as genes or gene name patterns and matched against `.var_names` to create expression panels.
+- `plot_centroids`: list of categorical `.obs` columns for which to overlay category numbers at centroid positions (enabled for up to 102 categories). Legends are annotated to map numbers back to labels.
+- `plot_gene_chunk_size`: number of genes per panel when plotting many genes together (default: 12).
+
+**Config example**
+
+```yaml
+DATASETS:
+  dataset_name:
+    input:
+      ...
+    preprocessing:
+      # Plot settings
+      colors:
+        - batch
+        - dataset
+        - cell_type
+        - study
+        - development_stage
+        - CCR7
+        - PTPRC
+      plot_centroids:
+        - cell_type
+      plot_gene_chunk_size: 12
+```
+
+Notes on plotting genes:
+- Genes/patterns listed in `colors` are matched to `.var_names` (regexes will be evaluated).
+- When many genes are requested, they are grouped into panels of `plot_gene_chunk_size`, with `ncols` controlling the panel layout.
+
 
 ---
 

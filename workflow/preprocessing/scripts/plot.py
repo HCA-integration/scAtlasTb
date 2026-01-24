@@ -25,7 +25,10 @@ output_dir = Path(snakemake.output.plots)
 output_dir.mkdir(exist_ok=True)
 
 params = dict(snakemake.params.items())
-basis = params['basis']
+basis = params.pop('basis', 'X_umap')
+gene_chunk_size = params.pop('gene_chunk_size', 12)
+plot_centroids = params.pop('plot_centroids', [])
+
 wildcards_string = '\n'.join([f'{k}: {v}' for k, v in snakemake.wildcards.items()])
 logging.info(f'Wildcard string: {wildcards_string}')
 
@@ -59,12 +62,14 @@ if 'feature_name' in adata.var.columns:
 min_cells_per_category = params.pop('min_cells_per_category', 1e-4)
 if min_cells_per_category < 1:
     min_cells_per_category *= n_cells
-print('Remove categories with fewer than', min_cells_per_category, 'cells')
+logging.info(f'Remove categories with fewer than {min_cells_per_category:.1f} cells')
 
 # parse colors
 colors = params.pop('color', None)
 logging.info(f'Configured colors:\n{pformat(colors)}')
 colors = colors if isinstance(colors, list) else [colors]
+colors += plot_centroids
+colors = list(dict.fromkeys(colors))
 
 # get gene colors
 gene_colors = [col for col in colors if col not in obs_columns]
@@ -106,7 +111,9 @@ adata = remove_outliers(adata, 'min', factor=outlier_factor, rep=basis)
 # match gene patterns
 if gene_colors:
     logging.info(f'Subset to {len(gene_colors)} requested genes...')
-    adata = dask_compute(adata[:, adata.var_names.isin(gene_colors)].copy(), layers='X')
+    adata = adata[:, adata.var_names.isin(gene_colors)].copy()
+    logging.info(adata.__str__())
+    adata = dask_compute(adata, layers='X')
     print(adata.var, flush=True)
 else:
     del adata.X
@@ -128,7 +135,96 @@ if size is None:
 params['size'] = np.min([np.max([size, 0.4, default_size]), 200])
 
 
-def plot_color(color, file_name, output_dir, title='', verbose=True):
+def plot_centroids_on_embedding(ax, adata, color, basis, legend, category_numbers, legend_fontsize=10):
+    """
+    Plot category numbers at centroid positions on embedding.
+    
+    Args:
+        ax: Matplotlib axes object
+        adata: AnnData object
+        color: Column name in adata.obs for grouping
+        basis: Key in adata.obsm for coordinates
+        legend: Matplotlib legend object
+        category_numbers: Dict mapping categories to their numbers
+        legend_fontsize: Font size for category labels
+    """
+    categories = [cat for cat in adata.obs[color].cat.categories if cat in adata.obs[color].unique()]
+    
+    # Compute centroids for each category
+    coords = adata.obsm[basis][:, :2]
+    centroids = pd.DataFrame(coords, index=adata.obs[color]) \
+        .groupby(level=0, dropna=False) \
+        .median() \
+        .reindex(categories)
+    
+    # Extract colors from legend handles
+    color_map = {
+        text.get_text(): handle.get_facecolor()[0]
+        for handle, text in zip(legend.legend_handles, legend.get_texts())
+        if hasattr(handle, 'get_facecolor')
+    }
+    
+    # Plot category numbers at centroids with matching colors
+    for cat, row in centroids.iterrows():
+        bg_color = color_map.get(cat, 'white')
+        
+        # Convert color to RGB for luminance calculation
+        try:
+            # Use matplotlib to convert any color format to RGBA
+            r, g, b = mpl.colors.to_rgba(bg_color)[:3]
+            luminance = 0.299 * r + 0.587 * g + 0.114 * b
+            text_color = 'white' if luminance < 0.4 else 'black'
+        except (ValueError, TypeError):
+            text_color = 'white'
+        
+        label_value = category_numbers[cat]
+        ax.text(
+            row.iloc[0], row.iloc[1],
+            s=str(label_value),
+            fontsize=legend_fontsize,
+            fontweight="bold",
+            ha="center",
+            va="center",
+            color=text_color,
+            bbox=dict(
+                boxstyle="circle",
+                facecolor='none',
+                alpha=0.4,
+                edgecolor='none',
+            )
+        ).set_path_effects([
+            mpl.patheffects.Stroke(
+                linewidth=1.5,
+                foreground=color_map.get(cat, 'white')
+            ),
+            mpl.patheffects.Normal()
+        ])
+    
+    # Add category numbers to legend labels
+    for text in legend.get_texts():
+        label = text.get_text()
+        if label in category_numbers:
+            mapped = category_numbers[label]
+            if isinstance(mapped, int):
+                text.set_text(f"{mapped}: {label}")
+
+
+def plot_color(
+    adata,
+    color,
+    basis,
+    n_cells=None,
+    plot_centroids=False,
+    verbose=True,
+    file_name=None,
+    title='',
+    output_dir=Path(),
+    **kwargs
+):
+
+    if n_cells is None:
+        n_cells = adata.n_obs
+    
     palette = None
     if file_name is None:
         file_name = str(color)
@@ -163,25 +259,58 @@ def plot_color(color, file_name, output_dir, title='', verbose=True):
                     palette = 'coolwarm'
                 else:
                     palette = 'plasma'
-    
+
+    # centroid plotting setup (sctk-like numbering)
+    color = colors[0] if colors else None
+    plot_centroids = (
+        plot_centroids
+        and len(colors) == 1
+        and color in adata.obs.columns
+        and is_categorical_dtype(adata.obs[color])
+        and adata.obs[color].nunique() <= 102
+    )
+
     try:
         fig = sc.pl.embedding(
             adata,
+            basis=basis,
             color=colors,
             show=False,
             return_fig=True,
             palette=palette,
-            **params
+            **kwargs,
         )
-        # set title
         suptitle_text = f'{title}\nn={n_cells}'
-        n_lines = suptitle_text.count('\n') + 1
         fig.suptitle(suptitle_text, fontsize=12)
 
-        legend = fig.get_axes()[0].get_legend()
+        # fix legend
+        ax = fig.get_axes()[0]
+        legend = ax.get_legend()
+
         if palette == 'turbo':
-            legend.remove()
-        elif legend:
+            if legend:
+                legend.remove()
+                legend = None
+        
+        elif legend and plot_centroids:
+            categories = [cat for cat in adata.obs[color].cat.categories if cat in adata.obs[color].unique()]
+            category_numbers = {
+                cat: idx + 1 if len(str(cat)) > 3 else cat
+                for idx, cat in enumerate(categories)
+            }
+            fontsize = kwargs.get('legend_fontsize', 10)
+            plot_centroids_on_embedding(
+                ax=ax,
+                adata=adata,
+                color=color,
+                basis=basis,
+                legend=legend,
+                category_numbers=category_numbers,
+                legend_fontsize=fontsize,
+            )
+
+        if legend:
+            # adjust legend
             legend_bbox = legend.get_window_extent()
             fig_width, fig_height = fig.get_size_inches()
             fig_width = fig_width + (legend_bbox.width / fig.dpi)
@@ -191,8 +320,8 @@ def plot_color(color, file_name, output_dir, title='', verbose=True):
             logging.info(f'Plotting color "{file_name}" successful.')
     
     except Exception as e:
-        logging.error(f'Failed to plot {file_name}: {e}')
         traceback.print_exc()
+        logging.error(f'Failed to plot "{file_name}": {e}')
         plt.plot([])
     
     out_path = output_dir / f'{file_name}.png'
@@ -202,36 +331,46 @@ def plot_color(color, file_name, output_dir, title='', verbose=True):
     except Exception as e:
         logging.error(f'Failed to save plot "{file_name}" to {out_path}: {e}')
         traceback.print_exc()
+    finally:
+        plt.close('all')  # Free memory from figure
 
 
 logging.info('Parameters:\n' + pformat(params))
 # Run plotting in parallel
 list(tqdm(
-    Parallel(return_as='generator')(delayed(plot_color)(
-        color,
+    Parallel(return_as='generator', backend='threading')(delayed(plot_color)(
+        adata=adata,
+        color=color,
+        basis=basis,
+        n_cells=n_cells,
+        plot_centroids=color in plot_centroids,
+        **params,
+        title=wildcards_string,
         file_name=color,
         output_dir=output_dir,
-        title=wildcards_string,
-    ) for color in set(colors)),
+    ) for color in colors),
     desc="Plotting colors",
     total=len(colors),
     miniters=1,
 ))
 
-chunk_size = 24
 gene_colors = {
-    f'genes_group={idx}': gene_colors[i:i + chunk_size]
-    for idx, i in enumerate(range(0, len(gene_colors), chunk_size))
+    f'genes_group={idx}': gene_colors[i:i + gene_chunk_size]
+    for idx, i in enumerate(range(0, len(gene_colors), gene_chunk_size))
 }
 if gene_colors:
-    Path(output_dir / 'genes').mkdir(exist_ok=True)
+    params['ncols'] = params.get('ncols', 4)
     list(tqdm(
-        Parallel(return_as='generator')(delayed(plot_color)(
-            color,
-            file_name=title,
-            output_dir=output_dir / 'genes',
+        Parallel(return_as='generator', backend='threading')(delayed(plot_color)(
+            adata=adata,
+            color=color,
+            basis=basis,
+            n_cells=n_cells,
+            verbose=False,
+            **params,
             title=wildcards_string,
-            verbose=False
+            file_name=title,
+            output_dir=output_dir,
         ) for title, color in gene_colors.items()),
         desc="Plotting genes",
         total=len(gene_colors),
