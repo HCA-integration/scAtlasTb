@@ -9,12 +9,25 @@ logging.basicConfig(level=logging.INFO)
 
 from utils.misc import check_sparse_equal
 from utils.io import read_anndata
-from PreprocessingConfig import HVG_PARAMS as HVG_KEYS
+
+HVG_PARAMS = [
+    'n_top_genes',
+    'min_disp',
+    'max_disp',
+    'min_mean',
+    'max_mean',
+    'span',
+    'n_bins',
+    'flavor',
+    'batch_key'
+]
+
+
 def _build_suffixes(param_dict):
     """Return list of sorted key=value suffix strings for all combinations."""
     if not isinstance(param_dict, dict) or len(param_dict) == 0:
         return []
-    filtered = {k: v for k, v in param_dict.items() if k in HVG_KEYS}
+    filtered = {k: v for k, v in param_dict.items() if k in HVG_PARAMS}
     if not filtered:
         return []
     
@@ -43,7 +56,7 @@ def expected_hvg_columns(hvg_config):
 
     # If no usable HVG parameters are provided, expect the default column
     if not isinstance(hvg_config, dict) or len(hvg_config) == 0 \
-            or not any(k in HVG_KEYS for k in hvg_config.keys()):
+            or not any(k in HVG_PARAMS for k in hvg_config.keys()):
         return ['highly_variable']
 
     # Otherwise, build suffix-based column names from the provided parameters
