@@ -38,6 +38,7 @@ logging.info(f'Overwrite args:\n{pformat(overwrite_args)}')
 dask = snakemake.params.get('dask', True) # get global dask flag
 dask = args.pop('dask', dask) # overwrite with highly_variable-specific dask flag
 dask = extra_hvg_args.pop('dask', dask) # overwrite with extra_hvgs-specific dask flag
+logging.info(f'Dask enabled: {dask}')
 
 hvg_column_name = 'extra_hvgs'
 use_gpu = USE_GPU
