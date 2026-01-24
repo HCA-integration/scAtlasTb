@@ -2,9 +2,13 @@ def get_threads_for_plotting(wildcards, use_centroids=False):
     colors = mcfg.get_from_parameters(wildcards, 'colors', default=[])
     centroids = mcfg.get_from_parameters(wildcards, 'plot_centroids', default=[])
     
-    n_colors = len(colors)
     if use_centroids:
-        n_colors += len(centroids)
+        # When centroids are used, they are merged into the colors list and deduplicated
+        # in the plotting script. Reflect that here so threads match the actual workload.
+        merged_colors = list(dict.fromkeys(colors + centroids))
+        n_colors = len(merged_colors)
+    else:
+        n_colors = len(colors)
     
     return min(10, max(1, n_colors))
 
