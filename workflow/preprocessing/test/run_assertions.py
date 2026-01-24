@@ -9,14 +9,7 @@ logging.basicConfig(level=logging.INFO)
 
 from utils.misc import check_sparse_equal
 from utils.io import read_anndata
-
-# Parameters that define HVG combinations
-HVG_KEYS = [
-    'n_top_genes', 'min_disp', 'max_disp', 'min_mean', 'max_mean',
-    'span', 'n_bins', 'flavor', 'batch_key'
-]
-
-
+from PreprocessingConfig import HVG_PARAMS as HVG_KEYS
 def _build_suffixes(param_dict):
     """Return list of sorted key=value suffix strings for all combinations."""
     if not isinstance(param_dict, dict) or len(param_dict) == 0:

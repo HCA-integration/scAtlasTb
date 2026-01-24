@@ -39,14 +39,17 @@ def assemble_adata(file, file_type, adata, is_default=True):
             adata = adata[:, adata_pp.var_names]
         
         # Find the specific HVG column (should be highly_variable or highly_variable--)
-        hvg_col = next((col for col in var.columns if col.startswith('highly_variable--')), 'highly_variable')
+        hvg_col = next((col for col in adata_pp.var.columns if col.startswith('highly_variable--')), 'highly_variable')
         adata.var[hvg_col] = adata_pp.var[hvg_col]
         if is_default:
             adata.var['highly_variable'] = adata_pp.var[hvg_col]
 
     elif file_type == 'extra_hvgs':
         var = read_anndata(file, var='var', verbose=False).var
-        hvg_col = [col for col in var.columns if col.startswith('extra_hvgs')][0]
+        extra_hvg_cols = [col for col in var.columns if col.startswith('extra_hvgs')]
+        if not extra_hvg_cols:
+            raise ValueError("No columns starting with 'extra_hvgs' found in 'var' when processing file_type 'extra_hvgs'.")
+        hvg_col = extra_hvg_cols[0]
         adata.var[hvg_col] = var[hvg_col]
     
     elif file_type == 'pca':
@@ -69,7 +72,7 @@ def assemble_adata(file, file_type, adata, is_default=True):
         adata.obsm['X_umap'] = adata_pp.obsm['X_umap']
     
     else:
-        ValueError(f'Unknown file type {file_type}')
+        raise ValueError(f'Unknown file type {file_type}')
     
     adata.uns = deep_update(adata.uns, read_anndata(file, uns='uns', verbose=False).uns)
     return adata
@@ -111,13 +114,19 @@ def assemble_zarr(file, file_type, slot_map, in_dir_map, is_default=True):
         logging.info('add highly variable genes')
         var = read_anndata(file, var='var', verbose=False).var
         
-        hvg_col = [col for col in var.columns if col.startswith('extra_hvgs')][0]
+        hvg_cols = [col for col in var.columns if col.startswith('extra_hvgs')]
+        if not hvg_cols:
+            raise ValueError(
+                "No columns starting with 'extra_hvgs' found in 'var' for file "
+                f"{file} while processing file_type 'extra_hvgs'."
+            )
+        hvg_col = hvg_cols[0]
         update_slot_map |= {
             f'var/{hvg_col}': f'var/{hvg_col}',
             f'uns/preprocessing/{hvg_col}': f'uns/preprocessing/{hvg_col}',
         }
 
-        # additionaly pick default for 'extra_hvgs' slot
+        # additionally pick default for 'extra_hvgs' slot
         if is_default:
             update_slot_map |= {
                 'var/extra_hvgs': f'var/{hvg_col}',
@@ -220,7 +229,7 @@ for file_type, file in file_map:
     )
 
 logging.info(f'Write to {output_file}...')
-adata.uns = read_anndata(file, uns='uns', verbose=False).uns
+adata.uns = read_anndata(file_map[0][1], uns='uns', verbose=False).uns
 add_wildcards(adata, snakemake.wildcards, 'preprocessing')
 write_zarr_linked(
     adata=adata,
