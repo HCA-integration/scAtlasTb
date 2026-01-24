@@ -26,7 +26,40 @@ class PreprocessingConfig(ModuleConfig):
         :param kwargs: parameters for ModuleConfig
         """
         super().__init__(**kwargs)
+        self.set_highly_variable_genes()
         self.set_extra_hvgs()
+
+    
+    def set_highly_variable_genes(self):
+        """Create multiple HVG configs from parameter combinations."""
+        wildcards_df = self.parameters.wildcards_df
+        records = []
+        for dataset, dataset_dict in self.parameters.dataset_config.items():
+            hvg_config = wildcards_df.query('dataset == @dataset')['highly_variable_genes'].iloc[0]
+            if hvg_config is None or not isinstance(hvg_config, dict):
+                records.append((dataset, 'None', None))
+            else:
+                _dict = {
+                    k: v for k, v in hvg_config.items()
+                    if k in self.HVG_PARAMS
+                }
+                if _dict:  # only expand if there are parameters
+                    records.extend(
+                        (dataset, *rec) for rec in
+                        expand_dict_and_serialize(_dict)
+                    )
+                else:
+                    records.append((dataset, 'None', None))
+            
+        hvg_df = pd.DataFrame(
+            records,
+            columns=['dataset', 'hvg_args', 'hvg_args_dict']
+        )
+        
+        wildcards_df = unique_dataframe(
+            wildcards_df.merge(hvg_df, on='dataset', how='left')
+        )
+        self.update_parameters(wildcards_df=wildcards_df)
 
     
     def set_extra_hvgs(self):
