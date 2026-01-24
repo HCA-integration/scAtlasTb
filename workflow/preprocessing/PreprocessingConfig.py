@@ -44,14 +44,10 @@ class PreprocessingConfig(ModuleConfig):
         elif config is None or not isinstance(config, dict):
             return [('None', None)] if allow_none_dict else []
         else:
-            _dict = {
-                k: v for k, v in config.items()
-                if k in self.HVG_PARAMS
-            }
-            if _dict:  # only expand if there are parameters
-                return list(expand_dict_and_serialize(_dict))
-            else:
-                return [('None', None)]
+            if config:
+                hash_exclude = [x for x in config.keys() if x not in self.HVG_PARAMS]
+                return list(expand_dict_and_serialize(config, hash_exclude=hash_exclude))
+            return [('None', None)]
     
     def _update_wildcards_with_records(self, records, columns):
         """
@@ -69,10 +65,9 @@ class PreprocessingConfig(ModuleConfig):
     
     def set_highly_variable_genes(self):
         """Create multiple HVG configs from parameter combinations."""
-        wildcards_df = self.parameters.wildcards_df
         records = []
         for dataset in self.get_datasets():
-            hvg_config = wildcards_df.query('dataset == @dataset')['highly_variable_genes'].iloc[0]
+            hvg_config = self.get_for_dataset(dataset, [self.module_name, 'highly_variable_genes'])
             processed = self._process_hvg_config(hvg_config)
             records.extend((dataset, *rec) for rec in processed)
         
@@ -83,10 +78,10 @@ class PreprocessingConfig(ModuleConfig):
 
     
     def set_extra_hvgs(self):
-        wildcards_df = self.parameters.wildcards_df
+        """Create multiple extra HVG configs from parameter combinations."""
         records = []
         for dataset in self.get_datasets():
-            ehvg_config = wildcards_df.query('dataset == @dataset')['extra_hvgs'].iloc[0]
+            ehvg_config = self.get_for_dataset(dataset, [self.module_name, 'extra_hvgs'])
             overwrite_args = ehvg_config.get('overwrite_args') if isinstance(ehvg_config, dict) else None
             processed = self._process_hvg_config(overwrite_args, allow_none_dict=True)
             records.extend((dataset, *rec) for rec in processed)
