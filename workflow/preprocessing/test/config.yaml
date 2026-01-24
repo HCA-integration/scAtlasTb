@@ -32,6 +32,7 @@ DATASETS:
       raw_counts: X
       scale: true
       extra_hvgs:
+        dask: false
         overwrite_args:
           n_top_genes:
             - 2000
@@ -54,7 +55,7 @@ DATASETS:
       highly_variable_genes:
         batch_key: dataset
         n_top_genes: 2000
-        dask: false
+        dask: true
       assemble:
         - counts
         - normalize
