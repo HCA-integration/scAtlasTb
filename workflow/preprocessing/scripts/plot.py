@@ -69,7 +69,7 @@ colors = params.pop('color', None)
 logging.info(f'Configured colors:\n{pformat(colors)}')
 colors = colors if isinstance(colors, list) else [colors]
 colors += plot_centroids
-colors = list(set(colors))
+colors = list(dict.fromkeys(colors))
 
 # get gene colors
 gene_colors = [col for col in colors if col not in obs_columns]
