@@ -36,21 +36,10 @@ def assemble_adata(file, file_type, adata, backed=True):
         # subset if adata has been subsetted by HVG
         if any(adata.var_names != adata_pp.var_names):
             adata = adata[:, adata_pp.var_names]
-        hvg_column_map = {
-            'highly_variable': False,
-            'means': 0,
-            'dispersions': 0,
-            'dispersions_norm': 0,
-            'highly_variable_nbatches': 0,
-            'highly_variable_intersection': False,
-        }
-        hvg_columns = [
-            column
-            for column in hvg_column_map
-            if column in adata_pp.var.columns
-        ]
-        adata.var[hvg_columns] = adata_pp.var[hvg_columns]
-        adata.var = adata.var.fillna(hvg_column_map)
+        # keep only the primary HVG indicator, drop any other HVG-related columns
+        hvg_cols = [col for col in adata.var.columns if col.startswith('highly_variable')]
+        for col in hvg_cols:
+            adata.var[col] = adata_pp.var[col]
     elif file_type == 'extra_hvgs':
         var = read_anndata(file, var='var').var
         hvg_col = [col for col in var.columns if col.startswith('extra_hvgs')][0]
@@ -91,12 +80,26 @@ def assemble_zarr(file, file_type, slot_map, in_dir_map):
             'uns/preprocessing/log-transformed': 'uns/preprocessing/log-transformed',
             'uns/preprocessing/normalization': 'uns/preprocessing/normalization',
         }
+    
     elif file_type == 'highly_variable_genes':
         logging.info('add highly variable genes')
+        var = read_anndata(file, var='var').var
+
+        # map each highly variable gene column
+        hvg_cols = [col for col in var.columns if col.startswith('highly_variable')]
+        for col in hvg_cols:
+            update_slot_map = {
+                f'var/{col}': f'var/{col}',
+                f'uns/preprocessing/{col}': f'uns/preprocessing/highly_variable_genes',
+            }
+        
+        # additionally pick default for 'highly_variable' slot
+        col = hvg_cols[0] 
         update_slot_map = {
-            'var/highly_variable': 'var/highly_variable',
-            'uns/preprocessing/highly_variable_genes': 'uns/preprocessing/highly_variable_genes',
+            'var/highly_variable': f'var/{col}',
+            'uns/preprocessing/highly_variable': f'uns/preprocessing/highly_variable_genes',
         }
+    
     elif file_type == 'extra_hvgs':
         logging.info('add highly variable genes')
         var = read_anndata(file, var='var').var
@@ -105,6 +108,7 @@ def assemble_zarr(file, file_type, slot_map, in_dir_map):
             f'var/{hvg_col}': f'var/{hvg_col}',
             f'uns/preprocessing/{hvg_col}': f'uns/preprocessing/{hvg_col}',
         }
+    
     elif file_type == 'pca':
         logging.info('add PCA')
         update_slot_map = {
@@ -112,6 +116,7 @@ def assemble_zarr(file, file_type, slot_map, in_dir_map):
             'uns/pca': 'uns/pca',
             'varm/PCs': 'varm/PCs',
         }
+    
     elif file_type == 'neighbors':
         logging.info('add neighbors')
         update_slot_map = {
@@ -119,15 +124,19 @@ def assemble_zarr(file, file_type, slot_map, in_dir_map):
             'obsp/distances': 'obsp/distances',
             'uns/neighbors': 'uns/neighbors',
         }
+    
     elif file_type == 'umap':
         logging.info('add UMAP')
         update_slot_map = {
             'obsm/X_umap': 'obsm/X_umap'
         } 
+    
     else:
         ValueError(f'Unknown file type {file_type}')
+    
     slot_map |= update_slot_map
     in_dir_map |= {slot: file for slot in update_slot_map.values()}
+    
     return slot_map, in_dir_map
 
 
@@ -145,6 +154,27 @@ for file_type, file in snakemake.input.items():
     else:
         file_map.extend((file_type, f) for f in file)
 
+# Mapping of file extensions to processing functions
+def process_file(file_type, file, adata, slot_map, in_dir_map, backed):
+    """Process file based on its extension."""
+    if file.endswith('.h5ad'):
+        return assemble_adata(
+            file=file,
+            file_type=file_type,
+            adata=adata,
+            backed=backed
+        ), slot_map, in_dir_map
+    elif file.endswith('.zarr') or file.endswith('.zarr/'):
+        slot_map, in_dir_map = assemble_zarr(
+            file=file,
+            file_type=file_type,
+            slot_map=slot_map,
+            in_dir_map=in_dir_map,
+        )
+        return adata, slot_map, in_dir_map
+    else:
+        raise ValueError(f'Unknown file format: {file}')
+
 for file_type, file in file_map:
     if adata is None: # read first file
         logging.info(f'Read first file {file}...')
@@ -157,25 +187,10 @@ for file_type, file in file_map:
             write_zarr_linked(adata, in_dir=file, out_dir=output_file)
             exit(0)
 
-    if file.endswith('.h5ad'):
-        adata = assemble_adata(
-            file=file,
-            file_type=file_type,
-            adata=adata,
-            backed=backed
-        )
-    elif file.endswith('.zarr'):
-        # if file_type in ['counts']: #, 'highly_variable_genes']:
-        #     adata = assemble_adata(file, file_type, adata, backed=backed)
-        slot_map, in_dir_map = assemble_zarr(
-            file=file,
-            file_type=file_type,
-            slot_map=slot_map,
-            in_dir_map=in_dir_map,
-        )
-    else:
-        ValueError(f'Unknown file type {file}')
+    adata, slot_map, in_dir_map = process_file(file_type, file, adata, slot_map, in_dir_map, backed)
 
+print(slot_map)
+print(adata)
 
 logging.info(f'Write to {output_file}...')
 adata.uns = read_anndata(file, uns='uns', verbose=False).uns
