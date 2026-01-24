@@ -53,6 +53,11 @@ if 'preprocessing' not in adata.uns:
     adata.uns['preprocessing'] = {}
 adata.uns['preprocessing']['highly_variable_genes'] = args
 
+# Remove any previous highly_variable_genes columns
+for col in list(var.columns):
+    if col.startswith('highly_variable'):
+        var.drop(columns=col, inplace=True)
+
 # Determine HVG column name based on args (use parameter hash in filename as suffix)
 hvg_column_name = 'highly_variable'
 if args:
