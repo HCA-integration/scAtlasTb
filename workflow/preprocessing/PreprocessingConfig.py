@@ -30,67 +30,70 @@ class PreprocessingConfig(ModuleConfig):
         self.set_extra_hvgs()
 
     
+    def _process_hvg_config(self, config, allow_none_dict=True):
+        """
+        Process HVG config and filter by HVG_PARAMS.
+        
+        :param config: HVG configuration (dict, None, False, etc.)
+        :param allow_none_dict: whether to allow None or non-dict to return ('None', None)
+        :return: tuple of (serialized_string, config_dict) or list of tuples if expandable
+        """
+        # Preserve False value (no HVG)
+        if config is False:
+            return [('False', False)]
+        elif config is None or not isinstance(config, dict):
+            return [('None', None)] if allow_none_dict else []
+        else:
+            _dict = {
+                k: v for k, v in config.items()
+                if k in self.HVG_PARAMS
+            }
+            if _dict:  # only expand if there are parameters
+                return list(expand_dict_and_serialize(_dict))
+            else:
+                return [('None', None)]
+    
+    def _update_wildcards_with_records(self, records, columns):
+        """
+        Helper to create DataFrame from records and update parameters.
+        
+        :param records: list of tuples with dataset and config data
+        :param columns: column names for DataFrame
+        """
+        df = pd.DataFrame(records, columns=columns)
+        wildcards_df = unique_dataframe(
+            self.parameters.wildcards_df.merge(df, on='dataset', how='left')
+        )
+        self.update_parameters(wildcards_df=wildcards_df)
+
+    
     def set_highly_variable_genes(self):
         """Create multiple HVG configs from parameter combinations."""
         wildcards_df = self.parameters.wildcards_df
         records = []
-        for dataset, dataset_dict in self.parameters.dataset_config.items():
+        for dataset in self.get_datasets():
             hvg_config = wildcards_df.query('dataset == @dataset')['highly_variable_genes'].iloc[0]
-            
-            # Preserve False value (no HVG)
-            if hvg_config is False:
-                records.append((dataset, 'False', False))
-            elif hvg_config is None or not isinstance(hvg_config, dict):
-                records.append((dataset, 'None', None))
-            else:
-                _dict = {
-                    k: v for k, v in hvg_config.items()
-                    if k in self.HVG_PARAMS
-                }
-                if _dict:  # only expand if there are parameters
-                    records.extend(
-                        (dataset, *rec) for rec in
-                        expand_dict_and_serialize(_dict)
-                    )
-                else:
-                    records.append((dataset, 'None', None))
-            
-        hvg_df = pd.DataFrame(
+            processed = self._process_hvg_config(hvg_config)
+            records.extend((dataset, *rec) for rec in processed)
+        
+        self._update_wildcards_with_records(
             records,
             columns=['dataset', 'hvg_args', 'hvg_args_dict']
         )
-        
-        wildcards_df = unique_dataframe(
-            wildcards_df.merge(hvg_df, on='dataset', how='left')
-        )
-        self.update_parameters(wildcards_df=wildcards_df)
 
     
     def set_extra_hvgs(self):
         wildcards_df = self.parameters.wildcards_df
         records = []
-        for dataset, dataset_dict in self.parameters.dataset_config.items():
+        for dataset in self.get_datasets():
             ehvg_config = wildcards_df.query('dataset == @dataset')['extra_hvgs'].iloc[0]
-            if ehvg_config is None or not isinstance(ehvg_config.get('overwrite_args'), dict):
-                records.append((dataset, 'None', None))
-            else:
-                _dict = {
-                    k: v for k, v in ehvg_config['overwrite_args'].items()
-                    if k in self.HVG_PARAMS
-                }
-                records.extend(
-                    (dataset, *rec) for rec in
-                    expand_dict_and_serialize(_dict)
-                )
-            
-        extra_hvgs_df = pd.DataFrame(
+            overwrite_args = ehvg_config.get('overwrite_args') if isinstance(ehvg_config, dict) else None
+            processed = self._process_hvg_config(overwrite_args, allow_none_dict=True)
+            records.extend((dataset, *rec) for rec in processed)
+        
+        self._update_wildcards_with_records(
             records,
             columns=['dataset', 'overwrite_args', 'overwrite_args_dict']
         )
-        
-        wildcards_df = unique_dataframe(
-            wildcards_df.merge(extra_hvgs_df, on='dataset', how='left')
-        )
-        self.update_parameters(wildcards_df=wildcards_df)
                 
             
