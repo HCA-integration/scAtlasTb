@@ -14,25 +14,8 @@ use rule plots from preprocessing as clustering_plot_umap with:
     params:
         basis='X_umap',
         color=lambda wildcards: mcfg.get_from_parameters(wildcards, 'umap_colors', default=[]),
+        plot_centroids=get_cluster_keys,
         # outlier_factor=10,
-    resources:
-        mem_mb=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='mem_mb',attempt=attempt, factor=1),
-        partition=mcfg.get_resource(profile='cpu',resource_key='partition'),
-        qos=mcfg.get_resource(profile='cpu',resource_key='qos'),
-
-
-use rule plots from preprocessing as clustering_plot_umap_clusters with:
-    input:
-        zarr=rules.clustering_merge.output.zarr,
-    output:
-        plots=directory(mcfg.image_dir / 'dataset~{dataset}' / 'file_id~{file_id}' / 'umap_clusters')
-    threads: 1
-    params:
-        basis='X_umap',
-        color=get_cluster_keys,
-        legend_loc='on data',
-        # outlier_factor=10,
-    retries: 0
     resources:
         mem_mb=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='mem_mb',attempt=attempt, factor=1),
         partition=mcfg.get_resource(profile='cpu',resource_key='partition'),
@@ -71,7 +54,6 @@ use rule plot_evaluation from clustering as clustering_plot_evaluation with:
 
 rule plots_all:
     input:
-        mcfg.get_output_files(rules.clustering_plot_umap_clusters.output),
         mcfg.get_output_files(rules.clustering_plot_umap.output),
     localrule: True
 
