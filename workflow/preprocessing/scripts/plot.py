@@ -213,14 +213,18 @@ def plot_color(
     adata,
     color,
     basis,
-    n_cells=n_cells,
+    n_cells=None,
     plot_centroids=False,
     verbose=True,
     file_name=None,
     title='',
-    output_dir=output_dir,
+    output_dir=Path(),
     **kwargs
 ):
+
+    if n_cells is None:
+        n_cells = adata.n_obs
+    
     palette = None
     if file_name is None:
         file_name = str(color)
