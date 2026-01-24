@@ -18,12 +18,14 @@ from utils.misc import ensure_sparse
 input_file = snakemake.input[0]
 output_file = snakemake.output[0]
 layer = snakemake.params.get('raw_counts', 'X')
+if not layer:
+    layer = 'X'
 gene_id_column = snakemake.params.get('gene_id_column')
 args = snakemake.params.get('args', {})
 dask = snakemake.params.get('dask', True) # get global dask flag
 dask = args.pop('dask', dask) # overwrite with normalize-specific dask flag
 
-logging.info(f'Read {input_file}...')
+logging.info(f'Read {input_file} with X={layer}...')
 adata = read_anndata(
     input_file,
     X=layer,
