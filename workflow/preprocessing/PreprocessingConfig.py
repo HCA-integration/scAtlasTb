@@ -36,7 +36,11 @@ class PreprocessingConfig(ModuleConfig):
         records = []
         for dataset, dataset_dict in self.parameters.dataset_config.items():
             hvg_config = wildcards_df.query('dataset == @dataset')['highly_variable_genes'].iloc[0]
-            if hvg_config is None or not isinstance(hvg_config, dict):
+            
+            # Preserve False value (no HVG)
+            if hvg_config is False:
+                records.append((dataset, 'False', False))
+            elif hvg_config is None or not isinstance(hvg_config, dict):
                 records.append((dataset, 'None', None))
             else:
                 _dict = {
