@@ -26,7 +26,16 @@ config_kwargs = {
         config_params=['covariates', 'permute_covariates', 'n_permutations', 'sample'],
     ),
     'preprocessing': dict(
-        config_params=['assemble', 'extra_hvgs'],
+        config_params=[
+            'assemble',
+            'normalize',
+            'highly_variable_genes',
+            'extra_hvgs',
+            'scale',
+            'pca',
+            'neighbors',
+            'umap',
+        ],
     ),
     'sample_representation': dict(
         parameters=workflow.source_path('sample_representation/params.tsv'),
