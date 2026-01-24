@@ -84,7 +84,7 @@ use rule pca from preprocessing as preprocessing_pca with:
         zarr=lambda wildcards: mcfg.get_output_files(
             rules.preprocessing_highly_variable_genes.output.zarr,
             subset_dict=wildcards,
-            all_params=True,
+            wildcard_names=['dataset', 'file_id', 'hvg_args'],
         )[0],
     output:
         zarr=directory(mcfg.out_dir / 'preprocessed' / paramspace.wildcard_pattern / 'pca.zarr'),
