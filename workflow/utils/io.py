@@ -451,6 +451,9 @@ def write_zarr(adata, file, compute=False):
             matrix = matrix.map_blocks(lambda x: x.tocsr(), dtype=matrix.dtype)
         return matrix
     
+    if adata.is_view:
+        adata = adata.copy()
+
     adata.X = sparse_coo_to_csr(adata.X)
     for layer in adata.layers:
         adata.layers[layer] = sparse_coo_to_csr(adata.layers[layer])
