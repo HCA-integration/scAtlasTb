@@ -14,7 +14,7 @@ sample_key = snakemake.params.get('sample_key')
 per_sample = snakemake.params.get('per_sample')
 random_state = snakemake.params.get('seed', 42)
 
-files_to_keep = ['uns']
+files_to_keep = ['obs', 'uns']
 
 logging.info(f'Read {input_file}...')
 adata = read_anndata(

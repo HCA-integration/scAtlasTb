@@ -129,8 +129,12 @@ def plot_violin(
     :param fig_height_min: Minimum height of the figure
     :param fig_height_factor: Factor to multiply the number of categories with to determine the height of the figure
     """
-    total_counts = df[category_key].astype(str) \
-            .value_counts(dropna=False).sort_values(ascending=True)
+    # prepare data
+    df = df[[category_key, covariate_key]].copy()
+    df[category_key] = df[category_key].astype(str)
+    
+    # get stats
+    total_counts = df[category_key].value_counts().sort_values(ascending=True)
     clusters = total_counts.index.values
 
     grouped_data = [
@@ -138,6 +142,7 @@ def plot_violin(
         for cluster in clusters
     ]
     
+    # build plot
     num_categories = len(grouped_data)
     fig_height = max(fig_height_min, num_categories * fig_height_factor)
     plt.figure(figsize=(fig_width, fig_height))
