@@ -25,7 +25,7 @@ output_dir = Path(snakemake.output.plots)
 output_dir.mkdir(exist_ok=True)
 
 params = dict(snakemake.params.items())
-basis = params['basis']
+basis = params.pop('basis', 'X_umap')
 gene_chunk_size = params.pop('gene_chunk_size', 12)
 plot_centroids = params.pop('plot_centroids', [])
 
@@ -269,6 +269,7 @@ def plot_color(
     try:
         fig = sc.pl.embedding(
             adata,
+            basis=basis,
             color=colors,
             show=False,
             return_fig=True,
@@ -295,12 +296,12 @@ def plot_color(
             }
             fontsize = kwargs.get('legend_fontsize', 10)
             plot_centroids_on_embedding(
-                ax,
-                adata,
-                color,
-                basis,
-                legend,
-                category_numbers,
+                ax=ax,
+                adata=adata,
+                color=color,
+                basis=basis,
+                legend=legend,
+                category_numbers=category_numbers,
                 legend_fontsize=fontsize,
             )
 
