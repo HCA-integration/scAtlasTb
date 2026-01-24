@@ -26,7 +26,7 @@ input_file = snakemake.input[0]
 output_file = snakemake.output[0]
 args = snakemake.params.get('args', {})
 extra_hvg_args = snakemake.params.get('extra_hvgs', {})
-overwrite_args = snakemake.params.get('overwrite_args')
+overwrite_args = snakemake.params.get('overwrite_args', {})
 union_over = extra_hvg_args.get('union_over')
 extra_genes = extra_hvg_args.get('extra_genes', [])
 remove_genes = extra_hvg_args.get('remove_genes', [])
@@ -47,7 +47,7 @@ if args is None:
     args = {}
 elif isinstance(args, dict):
     args.pop('subset', None) # don't support subsetting
-if overwrite_args:
+if isinstance(overwrite_args, dict):
     args |= overwrite_args
     for key in sorted(overwrite_args.keys()):
         hvg_column_name += f'--{key}={overwrite_args[key]}'

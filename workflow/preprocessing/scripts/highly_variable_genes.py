@@ -60,7 +60,7 @@ for col in list(var.columns):
 
 # Determine HVG column name based on args (use parameter hash in filename as suffix)
 hvg_column_name = 'highly_variable'
-if args:
+if isinstance(args, dict):
     for key in sorted(args.keys()):
         hvg_column_name += f'--{key}={args[key]}'
 
