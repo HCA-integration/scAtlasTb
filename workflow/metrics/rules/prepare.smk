@@ -28,14 +28,14 @@ use rule pca from preprocessing as metrics_pca with:
     output:
         zarr=directory(mcfg.out_dir / 'prepare' / paramspace.wildcard_pattern / 'pca.zarr'),
     params:
-        pca_args=lambda wildcards: mcfg.get_from_parameters(
+        args=lambda wildcards: mcfg.get_from_parameters(
             wildcards,
             'pca',
             default=dict(
                 mask_var=mcfg.get_from_parameters(wildcards, 'var_mask', default='highly_variable')
             )
         ),
-        layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'unintegrated', default=None),
+        layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'unintegrated', default='X'),
         subset=True,
     conda:
         get_env(config, 'scanpy')
