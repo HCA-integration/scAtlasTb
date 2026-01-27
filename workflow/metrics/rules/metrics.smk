@@ -12,7 +12,7 @@ def get_metric_input(wildcards):
         files['zarr'] = rules.metrics_cluster_collect.output.zarr
     if mcfg.get_from_parameters(wildcards, 'use_gene_set', default=False):
         files['zarr'] = rules.score_genes.output.zarr
-    if mcfg.get_from_parameters(wildcards, 'comparison'):
+    if mcfg.get_from_parameters(wildcards, 'comparison', default=False):
         files['raw'] = rules.metrics_pca.output.zarr
     return files
 

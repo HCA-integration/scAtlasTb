@@ -97,8 +97,9 @@ force_neighbors = (
 )
 
 # set HVGs
-if var_key is None:
+if var_key is None or var_key not in adata.var.columns:
     logging.info(f'"{var_key}" not in adata var, setting all to True\n{pformat(adata.var.columns)}')
+    var_key = "highly_variable"
     adata.var[var_key] = True
 logging.info(f'Set "{var_key}" in adata.var: {adata.var[var_key].sum()} HVGs')
 
