@@ -97,10 +97,17 @@ force_neighbors = (
 )
 
 # set HVGs
-if var_key is None or var_key not in adata.var.columns:
-    logging.info(f'"{var_key}" not in adata var, setting all to True\n{pformat(adata.var.columns)}')
+if var_key is None:
     var_key = "highly_variable"
+    logging.info(
+        f'var_key set to None, assuming no feature selection desired and setting new "{var_key}" to True'
+        f'\n{pformat(adata.var.columns)}'
+    )
     adata.var[var_key] = True
+else:
+    assert var_key in adata.var.columns, \
+        f'"{var_key}" not in adata var columns: {adata.var.columns.tolist()}'
+
 logging.info(f'Set "{var_key}" in adata.var: {adata.var[var_key].sum()} HVGs')
 
 logging.info('Compute PCA...')
