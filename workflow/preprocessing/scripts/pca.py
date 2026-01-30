@@ -18,15 +18,18 @@ from utils.processing import sc, USE_GPU
 
 input_file = snakemake.input[0]
 output_file = snakemake.output[0]
+layer = snakemake.params.get('layer', 'X')
 scale = snakemake.params.get('scale', False)
 args = snakemake.params.get('args', {})
 dask = snakemake.params.get('dask', True) # get global dask flag
 dask = args.pop('dask', dask) # overwrite with pca-specific dask flag
+subset = snakemake.params.get('subset', False)
+subset_mask = None
 
 logging.info(f'Read "{input_file}"...')
 adata = read_anndata(
     input_file,
-    X='X',
+    X=layer,
     var='var',
     obs='obs',
     uns='uns',
@@ -56,9 +59,14 @@ if adata.n_obs == 0:
 
 logging.info('Subset to highly variable genes...')
 hvg_key = args.pop('mask_var', 'highly_variable')
-var = adata.var.copy()
-adata_pca, _ = subset_hvg(adata, var_column=hvg_key, compute_dask=not dask)
-adata = ad.AnnData(obs=adata.obs, var=var)
+
+# prepare data for PCA
+adata_pca = adata.copy() # deep copy
+if input_file.endswith('.zarr'):
+    del adata.X
+
+# subsetting happens in place
+adata_pca, _ = subset_hvg(adata_pca, var_column=hvg_key, compute_dask=not dask)
 
 if USE_GPU:
     sc.get.anndata_to_GPU(adata_pca)
@@ -73,15 +81,20 @@ sc.pp.pca(adata_pca, **args)
 adata.obsm['X_pca'] = adata_pca.obsm['X_pca']
 adata.uns['pca'] = adata_pca.uns['pca']
 
-# Map all entries in varm back to all genes
-for key, varm in adata_pca.varm.items():
-    full_arr = np.full(
-        (adata.n_vars, varm.shape[1]),
-        np.nan,
-        dtype=varm.dtype
-    )
-    full_arr[adata.var_names.isin(adata_pca.var_names)] = varm
-    adata.varm[key] = full_arr
+if subset:
+    subset_mask = (None, adata.var_names.isin(adata_pca.var_names))
+    adata = adata[:, subset_mask[1]].copy()
+    adata.varm = adata_pca.varm
+else:
+    # Map all entries in varm back to all genes
+    for key, varm in adata_pca.varm.items():
+        full_arr = np.full(
+            (adata.n_vars, varm.shape[1]),
+            np.nan,
+            dtype=varm.dtype
+        )
+        full_arr[adata.var_names.isin(adata_pca.var_names)] = varm
+        adata.varm[key] = full_arr
 
 del adata_pca
 
@@ -92,5 +105,7 @@ write_zarr_linked(
     adata,
     input_file,
     output_file,
-    files_to_keep=['obsm', 'uns', 'varm']
+    subset_mask=subset_mask,
+    files_to_keep=['obsm', 'uns', 'varm'],
+    slot_map={'X': layer},
 )

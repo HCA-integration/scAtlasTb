@@ -33,8 +33,8 @@ recompute_neighbors = params.get('recompute_neighbors', False)
 
 PERSIST_MATRIX_THRESHOLD = params.get('PERSIST_MATRIX_THRESHOLD', 5e5)
 
-files_to_keep = ['raw', 'uns', 'var']
-slot_map = {'raw/X': unintegrated_layer}
+files_to_keep = ['uns', 'var']
+slot_map = {}
 
 # determine output types
 output_type = read_anndata(
@@ -97,23 +97,24 @@ force_neighbors = (
 )
 
 # set HVGs
-new_var_column = 'metrics_features'
-if var_key in adata.var.columns.values:
-    adata.var[new_var_column] = adata.var[var_key]
+if var_key is None:
+    var_key = "highly_variable"
+    logging.info(
+        f'var_key set to None, assuming no feature selection desired and setting new "{var_key}" to True'
+        f'\n{pformat(adata.var.columns)}'
+    )
+    adata.var[var_key] = True
 else:
-    logging.info(f'"{var_key}" not in adata var, setting all to True\n{pformat(adata.var.columns)}')
-    adata.var[new_var_column] = True
-logging.info(f'Set "{new_var_column}" from "{var_key}" in adata.var: {adata.var[new_var_column].sum()} HVGs')
+    assert var_key in adata.var.columns, \
+        f'"{var_key}" not in adata var columns: {adata.var.columns.tolist()}'
 
-# logging.info('Filter all zero genes...')
-# all_zero_genes = _filter_genes(adata, min_cells=1)
-# adata.var[new_var_column] = adata.var[new_var_column] & ~adata.var_names.isin(all_zero_genes)
+logging.info(f'Set "{var_key}" in adata.var: {adata.var[var_key].sum()} HVGs')
 
 logging.info('Compute PCA...')
 if output_type == 'full':
     sc.pp.pca(
         adata,
-        mask_var=new_var_column,
+        mask_var=var_key,
         svd_solver='covariance_eigh',
     )
     adata = dask_compute(adata, layers='X_pca')
@@ -136,41 +137,6 @@ compute_neighbors(
     check_n_neighbors=False,
     **neighbor_args
 )
-
-# unintegrated for comparison metrics
-# if output_type != 'knn':  # assuming that there aren't any knn-based metrics that require PCA
-logging.info(f'Prepare unintegrated data from layer={unintegrated_layer}...')
-adata_raw = read_anndata(
-    input_file,
-    X=unintegrated_layer,
-    dask=True,
-    backed=True,
-)
-adata_raw.var = adata.var
-logging.info(f'Unintegrated data shape: {adata_raw.shape}') 
-
-if adata_raw.n_obs > PERSIST_MATRIX_THRESHOLD:
-    logging.info('Persist matrix...')
-    adata_raw = apply_layers(adata_raw, lambda x: x.persist(), layers='X')
-else:
-    dask_compute(adata_raw, layers='X')
-
-logging.info('Run PCA on unintegrated data...')
-sc.pp.pca(
-    adata_raw,
-    mask_var=new_var_column,
-    svd_solver='covariance_eigh',
-)
-
-# add raw PCA adata
-adata.obsm['X_pca_unintegrated'] = adata_raw.obsm['X_pca']
-del adata_raw.obsm['X_pca']
-adata = dask_compute(adata, layers='X_pca_unintegrated')
-adata.uns['pca_unintegrated'] = adata_raw.uns['pca']
-files_to_keep.append('obsm/X_pca_unintegrated')
-
-# add raw data for comparison
-adata.raw = adata_raw
 
 logging.info(f'Write to {output_file}...')
 logging.info(adata.__str__())

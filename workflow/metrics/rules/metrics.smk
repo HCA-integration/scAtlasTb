@@ -7,11 +7,14 @@ class MetricNotDefinedError(RuntimeError):
 
 
 def get_metric_input(wildcards):
+    files = dict(zarr=rules.prepare.output.zarr)
     if mcfg.get_from_parameters(wildcards, 'needs_clustering', default=False):
-        return rules.metrics_cluster_collect.output.zarr
+        files['zarr'] = rules.metrics_cluster_collect.output.zarr
     if mcfg.get_from_parameters(wildcards, 'use_gene_set', default=False):
-        return rules.score_genes.output.zarr
-    return rules.prepare.output.zarr
+        files['zarr'] = rules.score_genes.output.zarr
+    if mcfg.get_from_parameters(wildcards, 'comparison', default=False):
+        files['raw'] = rules.metrics_pca.output.zarr
+    return files
 
 
 def get_mem_mb(wildcards, attempt):
@@ -40,7 +43,7 @@ rule run:
        resources: gpu={resources.gpu} mem_mb={resources.mem_mb}
        """
     input:
-        zarr=get_metric_input,
+        unpack(get_metric_input)
     output:
         metric=mcfg.out_dir / paramspace.wildcard_pattern / 'label={label}--batch={batch}' / 'metric={metric}.tsv'
     benchmark:
@@ -49,8 +52,7 @@ rule run:
         metric_type=lambda wildcards: mcfg.get_from_parameters(wildcards, 'metric_type', default=MetricNotDefinedError(wildcards)),
         allowed_output_types=lambda wildcards: mcfg.get_from_parameters(wildcards, 'allowed_output_types', default=MetricNotDefinedError(wildcards)),
         input_type=lambda wildcards: mcfg.get_from_parameters(wildcards, 'input_type', default=MetricNotDefinedError(wildcards)),
-        comparison=lambda wildcards: mcfg.get_from_parameters(wildcards, 'comparison', default=False),
-        cluster_key=lambda wildcards: mcfg.get_from_parameters(wildcards, 'cluster_algorithm', default='leiden'),
+        cluster_key=lambda wildcards: mcfg.get_from_parameters(wildcards, 'clustering', default={}).get('algorithm', 'leiden'),
         use_covariate=lambda wildcards: mcfg.get_from_parameters(wildcards, 'use_covariate', default=False),
         use_gene_set=lambda wildcards: mcfg.get_from_parameters(wildcards, 'use_gene_set', default=False),
         covariates=lambda wildcards: mcfg.get_from_parameters(wildcards, 'covariate', default=[]),

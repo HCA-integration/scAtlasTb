@@ -32,15 +32,16 @@ mcfg = MetricsConfig(
         'corrected',
         'raw_counts',
         'var_mask',
+        'pca',
         'recompute_neighbors',
-        'overwrite_file_id',
+        'neighbors',
         'clustering',
-        'cluster_algorithm',
         'covariates',
         'gene_sets',
         'n_permutations',
         'n_quantiles',
         'weight_batch',
+        'overwrite_file_id',
     ],
     # wildcard_names=['label', 'batch'],
     rename_config_params={
@@ -66,6 +67,10 @@ wildcard_constraints:
     lineage_key='((?![/]).)*',
     lineage_specific='((?![/]).)*',
 
+
+module preprocessing:
+    snakefile: "../../preprocessing/rules/rules.smk"
+    config: config
 
 module clustering:
     snakefile: "../../clustering/rules/rules.smk"

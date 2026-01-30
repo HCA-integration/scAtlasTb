@@ -33,13 +33,13 @@ def pcr_comparison(adata, output_type, batch_key, label_key, adata_raw, n_thread
     )
 
 
-def pcr_y(adata, output_type, batch_key, label_key, adata_raw, var_key='metrics_features', **kwargs):
+def pcr_y(adata, output_type, batch_key, label_key, adata_raw, **kwargs):
     import scib_metrics
 
     if output_type == 'knn':
         return np.nan
     
-    adata_raw = dask_compute(adata_raw[:, adata_raw.var[var_key]].copy())
+    adata_raw = dask_compute(adata_raw, layers='X')
     X_pre = adata_raw.X
     X_post = adata.obsm['X_emb'] if output_type == 'embed' else adata.X
     X_pre, X_post = [X if isinstance(X, np.ndarray) else X.todense() for X in [X_pre, X_post]]
@@ -58,7 +58,6 @@ def cell_cycle(
     batch_key,
     label_key,
     adata_raw,
-    var_key='metrics_features',
     n_threads=1,
     **kwargs
 ):
@@ -89,7 +88,7 @@ def cell_cycle(
     adata.obsm['X_emb'] = adata.obsm[embed]
 
     # TODO: ensure that cell cycle genes are preserved
-    adata_raw = dask_compute(adata_raw[:, adata_raw.var[var_key]].copy())
+    adata_raw = dask_compute(adata_raw, layers='X')
 
     # compute cell cycle score per batch
     for batch in adata_raw.obs[batch_key].unique():

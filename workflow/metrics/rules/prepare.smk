@@ -5,12 +5,12 @@ rule prepare:
         zarr=directory(mcfg.out_dir / 'prepare' / paramspace.wildcard_pattern / 'prepare.zarr'),
     params:
         # labels=lambda wildcards: mcfg.get_from_parameters(wildcards, 'label', single_value=False),
-        neighbor_args=lambda wildcards: mcfg.get_for_dataset(wildcards.dataset, ['preprocessing', 'neighbors'], default={}),
+        neighbor_args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'neighbors', default={}),
+        recompute_neighbors=lambda wildcards: mcfg.get_from_parameters(wildcards, 'recompute_neighbors', default=False),
         unintegrated_layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'unintegrated', default='X'),
         corrected_layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'corrected', default='X'),
         var_mask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'var_mask', default='highly_variable'),
         output_type=lambda wildcards: mcfg.get_from_parameters(wildcards, 'output_type', default='embed'),
-        recompute_neighbors=lambda wildcards: mcfg.get_from_parameters(wildcards, 'recompute_neighbors', default=False),
     conda:
         get_env(config, 'scanpy', gpu_env='rapids_singlecell')
     resources:
@@ -18,14 +18,42 @@ rule prepare:
         qos=lambda w: mcfg.get_resource(resource_key='qos', profile='gpu'),
         gpu=lambda w: mcfg.get_resource(resource_key='gpu', profile='gpu'),
         mem_mb=lambda w, attempt: mcfg.get_resource(resource_key='mem_mb', profile='gpu', attempt=attempt),
-        time="1-00:00:00",
     script:
         '../scripts/prepare.py'
 
 
+use rule pca from preprocessing as metrics_pca with:
+    input:
+        lambda wildcards: mcfg.get_input_file(**wildcards),
+    output:
+        zarr=directory(mcfg.out_dir / 'prepare' / paramspace.wildcard_pattern / 'pca.zarr'),
+    params:
+        args=lambda wildcards: mcfg.get_from_parameters(
+            wildcards,
+            'pca',
+            default=dict(
+                mask_var=mcfg.get_from_parameters(wildcards, 'var_mask', default='highly_variable')
+            )
+        ),
+        layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'unintegrated', default='X'),
+        subset=True,
+    conda:
+        lambda w: get_env(config, 'scanpy', gpu_env='rapids_singlecell')
+    resources:
+        partition=lambda w: mcfg.get_resource(resource_key='partition', profile='gpu'),
+        qos=lambda w: mcfg.get_resource(resource_key='qos', profile='gpu'),
+        gpu=lambda w: mcfg.get_resource(resource_key='gpu', profile='gpu'),
+        mem_mb=lambda w, attempt: mcfg.get_resource(resource_key='mem_mb', profile='gpu', attempt=attempt),
+
+
 rule prepare_all:
     input:
-        mcfg.get_output_files(rules.prepare.output)
+        prepare=mcfg.get_output_files(rules.prepare.output),
+        pca=[
+            mcfg.get_output_files(rules.metrics_pca.output, subset_dict=dict(dataset=dataset))
+            for dataset in mcfg.get_datasets()
+            if sum(mcfg.get_from_parameters(dict(dataset=dataset), 'comparison', single_value=False)) > 0
+        ],
     localrule: True
 
 
@@ -93,6 +121,7 @@ rule score_genes:
     params:
         unintegrated_layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'unintegrated', default='X'),
         raw_counts_layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'raw_counts', default=None),
+        var_mask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'var_mask', default='highly_variable'),
         gene_sets=lambda wildcards: mcfg.get_gene_sets(wildcards.dataset),
         n_permutations=lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_permutations', default=20),
         n_quantiles=lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_quantiles', default=5),
