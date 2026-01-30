@@ -38,7 +38,7 @@ use rule pca from preprocessing as metrics_pca with:
         layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'unintegrated', default='X'),
         subset=True,
     conda:
-        get_env(config, 'scanpy')
+        lambda w: get_env(config, 'scanpy', gpu_env='rapids_singlecell')
     resources:
         partition=lambda w: mcfg.get_resource(resource_key='partition', profile='gpu'),
         qos=lambda w: mcfg.get_resource(resource_key='qos', profile='gpu'),
