@@ -16,8 +16,12 @@ mcfg = ModuleConfig(
         'batch',
         'chunk_size',
         'methods',
+        'use_gpu',
     ],
-    rename_config_params={'batch': 'batch_key'}
+    rename_config_params={'batch': 'batch_key'},
+    dtypes={
+        'use_gpu': bool,
+    },
 )
 params = mcfg.get_paramspace()
 
