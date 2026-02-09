@@ -18,7 +18,8 @@ rule autoqc:
     conda:
         get_env(config, 'qc')
     resources:
-        mem_mb=mcfg.get_resource(profile='cpu',resource_key='mem_mb')
+        partition=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='partition', attempt=attempt),
+        mem_mb=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='mem_mb', attempt=attempt, factor=2),
     script:
         '../scripts/autoqc.py'
 
