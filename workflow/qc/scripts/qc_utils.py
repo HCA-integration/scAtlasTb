@@ -166,6 +166,9 @@ def plot_qc_joint(
     if not y_threshold:
         y_threshold=(0, np.inf)
 
+    log_x = 1 if log_x is None else log_x
+    log_y = 1 if log_y is None else log_y
+
     def log1p_base(_x, base):
         return np.log1p(_x) / np.log(base)
 
@@ -200,12 +203,12 @@ def plot_qc_joint(
     )
     
     # main plot
-    g.plot_joint(
-        main_plot_function,
-        data=df.sample(frac=1),
-        hue=hue,
-        **kwargs,
-    )
+    if hue is not None and hue in df.columns and not pd.api.types.is_numeric_dtype(df[hue]):
+        hue_counts = df[hue].value_counts(dropna=False)
+        # common -> rare (rarest last)
+        df = df.assign(_hue_freq=df[hue].map(hue_counts)).sort_values('_hue_freq', ascending=False)
+    
+    g.plot_joint(main_plot_function, data=df, hue=hue, **kwargs)
     
     # marginal hist plot
     g.plot_marginals(
@@ -222,9 +225,10 @@ def plot_qc_joint(
     # workaround for patchworklib
     g._figsize = g.fig.get_size_inches()
 
-    # handles, labels = g.ax_joint.get_legend_handles_labels()
-    markerscale = (80 / kwargs.get('s', 20)) ** 0.5
-    g.ax_joint.legend(markerscale=markerscale)
+    if hue is not None:
+        # handles, labels = g.ax_joint.get_legend_handles_labels()
+        markerscale = (80 / kwargs.get('s', 20)) ** 0.5
+        g.ax_joint.legend(markerscale=markerscale)
 
     # x threshold
     for t, t_def in zip(x_threshold, (0, np.inf)):
