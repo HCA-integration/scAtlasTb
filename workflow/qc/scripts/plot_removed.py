@@ -66,116 +66,134 @@ plt.close()
 
 
 def plot_composition(df, group_key, plot_dir):
-    n_groups = df[group_key].nunique()
-    if n_groups > 100:
-        logging.info(f'Group {group_key} has too many unique values, skipping...')
-        return
+    n_hues = df[group_key].nunique()
 
-    grouped_frac = get_fraction_removed(df, group_key=group_key, key='qc_status')
-    order = grouped_frac.sort_values('fraction_removed', ascending=False).index
-    df[group_key] = pd.Categorical(df[group_key], categories=order)
-
-    f, (ax1, ax2) = plt.subplots(1, 2, sharey=True, figsize=(14, 5 * (1 + n_groups/50)))
-
+    # Get counts by group and QC status
     counts = df.groupby([group_key, 'qc_status'], observed=False).size().unstack(fill_value=0)
-    bottom = pd.Series(0, index=counts.index)
-    bars_per_group = {idx: [] for idx in counts.index}
-
-    # stacked barplot for QC status
-    for status in counts.columns:
-        widths = counts[status]
-        bars = ax1.barh(
-            counts.index,
+    
+    # Sort by fraction failed (descending) for consistent ordering
+    fraction_failed = (counts.get('failed', 0) / counts.sum(axis=1)).sort_values(ascending=False)
+    order = fraction_failed.index
+    counts_ordered = counts.loc[order]
+    
+    # Calculate proportions and totals
+    proportions = counts_ordered.div(counts_ordered.sum(axis=1), axis=0) * 100
+    total_counts = counts_ordered.sum(axis=1)
+    
+    # Create JointGrid-like figure with space for legend
+    from matplotlib.gridspec import GridSpec
+    # Calculate dynamic height based on number of categories with better scaling
+    # Use 0.3 inches per category with a minimum of 6 inches
+    fig_height = max(6, n_hues * 0.3)
+    fig = plt.figure(figsize=(11, fig_height))
+    gs = GridSpec(
+        nrows=1,
+        ncols=3,
+        width_ratios=[0.85, 0.1, 0.05],
+        wspace=0.1,
+        hspace=0,
+        top=0.95,
+        bottom=0.02
+    )
+    
+    ax_main = fig.add_subplot(gs[0, 0])
+    ax_margin = fig.add_subplot(gs[0, 1], sharey=ax_main)
+    
+    # Main plot: Relative abundance stacked barplot
+    bottom = pd.Series(0, index=proportions.index)
+    bars_per_group = {idx: [] for idx in proportions.index}
+    
+    for status in proportions.columns:
+        widths = proportions[status]
+        bars = ax_main.barh(
+            proportions.index,
             widths,
             left=bottom,
             edgecolor='white',
-            linewidth=0,
+            linewidth=0.5,
             label=status,
             alpha=0.9,
         )
         bottom += widths
-        for idx, bar in zip(counts.index, bars):
-            bars_per_group[idx].append(bar)
-
-    ax1.legend(
-        title="QC Status",
-        loc="best",
-        frameon=False,
-    )
+        for idx, bar in zip(proportions.index, bars):
+            bars_per_group[idx].append((bar, status))
     
-    sns.barplot(
-        data=grouped_frac,
-        x='fraction_removed',
-        y=group_key,
-        order=order,
-        ax=ax2,
-        alpha=0.9,
-    )
-    if n_groups < 50:
-        for container in ax2.containers:
-            ax2.bar_label(container)
+    ax_main.set_xlabel('% Cells')
+    ax_main.set_ylabel(group_key)
+    ax_main.set_xlim([0, 100])
     
-    for pos in ['right', 'top']: 
-        ax1.spines[pos].set_visible(False)
-        ax2.spines[pos].set_visible(False)
-    f.suptitle(f'Cells that passed QC\n{dataset}')
-    f.tight_layout()
-    f.canvas.draw()
-
-    # Add labels per bar for ax1 plot
-    fontsize = 9
+    # Add detailed labels for main plot
+    fontsize = 8
     fontweight = 'bold'
-    renderer = ax1.figure.canvas.get_renderer()
-    for idx, bars in bars_per_group.items(): # iterate groups
-        bbox = ax1.get_window_extent()
-        x_min, x_max = ax1.get_xlim()
-        offset = counts.sum(1).max() / 100
+    renderer = fig.canvas.get_renderer()
+    for idx, bar_status_pairs in bars_per_group.items():
+        bbox = ax_main.get_window_extent()
+        x_min, x_max = ax_main.get_xlim()
+        offset = proportions.sum(1).max() / 100
         
-        total_width = sum(bar.get_width() for bar in bars)
-        outside_x = total_width + offset
-        y_pos = bars[0].get_y() + bars[0].get_height() / 2
+        y_pos = bar_status_pairs[0][0].get_y() + bar_status_pairs[0][0].get_height() / 2
 
-        for bar in bars: # iterate bar in stack
-            label_text = str(int(bar.get_width()))
+        for bar, status in bar_status_pairs:
+            count_value = counts_ordered.loc[idx, status]
+            label_text = str(int(count_value))
 
-            # Get text width in pixels
-            temp_text = ax1.text(0, 0, label_text, fontsize=fontsize, fontweight=fontweight)
+            temp_text = ax_main.text(0, 0, label_text, fontsize=fontsize, fontweight=fontweight)
             text_width_px = temp_text.get_window_extent(renderer=renderer).width
             temp_text.remove()
 
-            # Convert bar edges to pixel coordinates
-            left_px = ax1.transData.transform((bar.get_x(), 0))[0]
-            right_px = ax1.transData.transform((bar.get_x() + bar.get_width(), 0))[0]
+            left_px = ax_main.transData.transform((bar.get_x(), 0))[0]
+            right_px = ax_main.transData.transform((bar.get_x() + bar.get_width(), 0))[0]
             bar_width_px = right_px - left_px
 
+            # Place label inside bar if it fits, otherwise outside
             if bar_width_px >= text_width_px + 3:
-                # Inside white label at right edge of the bar
-                ax1.text(
-                    bar.get_x() + bar.get_width() - offset,
-                    y_pos,
-                    label_text,
-                    va='center',
-                    ha='right',
-                    fontsize=fontsize,
-                    fontweight=fontweight,
-                    color='white',
-                )
+                x_pos = bar.get_x() + bar.get_width() / 2
+                color = 'white'
+                ha = 'center'
             else:
-                # Outside label in bar's own color at end of full stack
-                ax1.text(
-                    outside_x + offset,
-                    y_pos,
-                    label_text,
-                    va='center',
-                    ha='left',
-                    fontsize=fontsize,
-                    fontweight=fontweight,
-                    color=bar.get_facecolor(),
-                )
-                # add spacing for next bar in group
-                outside_x += (text_width_px * (x_max - x_min) / bbox.width) + offset
-
-    f.savefig(plot_dir / f'by={group_key}.png', bbox_inches='tight')
+                x_pos = bar.get_x() + bar.get_width() + proportions.sum(1).max() / 100
+                color = bar.get_facecolor()
+                ha = 'left'
+            
+            ax_main.text(
+                x_pos,
+                y_pos,
+                label_text,
+                va='center',
+                ha=ha,
+                fontsize=fontsize,
+                fontweight=fontweight,
+                color=color,
+            )
+    
+    # Margin plot: Total cell counts as histogram with annotations
+    bars = ax_margin.barh(
+        total_counts.index,
+        total_counts.values,
+        edgecolor='white',
+        linewidth=0.5,
+        alpha=0.9,
+        color='#555555',  # Dark gray
+    )
+    
+    ax_margin.tick_params(axis='y', labelleft=False, left=False)
+    ax_margin.tick_params(axis='x', labelbottom=True, labelsize=8, rotation=270)
+    ax_margin.set_xlabel('# Cells', fontsize=9, labelpad=10)
+    ax_margin.locator_params(axis='x', nbins=5)
+    ax_margin.ticklabel_format(axis='x', style='plain')
+    
+    # Format axes
+    for pos in ['right', 'top']:
+        ax_main.spines[pos].set_visible(False)
+        ax_margin.spines[pos].set_visible(False)
+    
+    # Add legend at figure level in the reserved space
+    handles, labels = ax_main.get_legend_handles_labels()
+    fig.legend(handles, labels, title='QC Status', loc='center left', bbox_to_anchor=(0.88, 0.5), frameon=False, fontsize=9)
+    
+    fig.suptitle(f'Cells that passed QC\n{dataset=}, {file_id=}', fontsize=12, y=0.98)
+    fig.tight_layout()
+    fig.savefig(plot_dir / f'by={group_key}.png', bbox_inches='tight', dpi=100)
     plt.close()
 
 
@@ -196,22 +214,22 @@ results = Parallel(n_jobs=threads)(
         adata.obs,
         group_key=g,
         plot_dir=output_plots
-    ) for g in tqdm(groups)
+    ) for g in tqdm(hues)
 )
 
 # log any errors
-errors = [(g, r) for g, r in zip(groups, results) if r is not None]
+errors = [(g, r) for g, r in zip(hues, results) if r is not None]
 if errors:
     logging.error(f"{len(errors)} group(s) failed during plotting.")
     for g, e in errors:
         logging.error(f"Group {g} failed: {e}")
 
 logging.info('Plot violin plots per QC metric...')
-n_cols = len(threshold_keys)
+n_cols = len(scautoqc_metrics)
 fig, axes = plt.subplots(1, n_cols, figsize=(4 * n_cols, 6))
 plt.grid(False)
 
-for i, qc_metric in enumerate(threshold_keys):
+for i, qc_metric in enumerate(scautoqc_metrics):
     sns.violinplot(
         data=adata.obs,
         x='qc_status',
