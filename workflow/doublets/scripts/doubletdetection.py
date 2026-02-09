@@ -59,6 +59,7 @@ with open(batches_txt, 'r') as f:
 
 if batch_key is not None:
     adata = adata[adata.obs[batch_key].isin(batches), :].copy()
+    adata = dask_compute(adata, layers='X')
     logging.info(f'Subset to {adata.n_obs} cells with specified batches.')
 
 logging.info('Run doubletdetection...')
