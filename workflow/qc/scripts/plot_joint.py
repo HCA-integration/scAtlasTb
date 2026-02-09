@@ -16,7 +16,7 @@ sns.set_theme(style='white')
 sc.set_figure_params(frameon=False, fontsize=10, dpi_save=200, vector_friendly=True)
 
 from utils.io import read_anndata
-from qc_utils import parse_parameters, get_thresholds, plot_qc_joint
+from qc_utils import parse_parameters, get_thresholds, plot_qc_joint, QC_FLAGS
 
 
 input_zarr = snakemake.input.zarr
@@ -34,7 +34,9 @@ file_id = snakemake.wildcards.file_id
 threads = snakemake.threads
 dataset, hues = parse_parameters(adata, snakemake.params, filter_hues=True)
 scautoqc_metrics = snakemake.params.get('scautoqc_metrics', [])
-hues = list(set(hues+scautoqc_metrics+['qc_status']))
+hues = list(dict.fromkeys(hues + QC_FLAGS + ['qc_status']))
+
+logging.info(f'{hues=}')
 
 
 # if no cells filtered out, save empty plots
@@ -178,11 +180,13 @@ coordinates = [
     ('n_genes', 'percent_mito', 2, 1),
     ('n_genes', 'percent_ribo', 2, 1),
     ('n_genes', 'percent_hb', 2, 1),
+    ('n_genes', 'scrublet_score', 2, 1),
+    ('n_counts', 'scrublet_score', 10, 1),
 ]
 # filter to configured metrics
 coordinates = [
     c for c in coordinates if
-    all(x in scautoqc_metrics for x in c[:2])
+    all(x in adata.obs.columns for x in c[:2])
 ]
 
 # # subset to max of 300k cells due to high computational cost
