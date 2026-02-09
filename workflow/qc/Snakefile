@@ -22,7 +22,8 @@ mcfg = ModuleConfig(
         'scautoqc_gaussian_kwargs',
         'thresholds',
         'alternative_thresholds',
-        'thresholds_file'
+        'thresholds_file',
+        'plot_params',
     ],
 )
 wildcards_df = mcfg.get_wildcards(as_df=True, all_params=True)

@@ -39,8 +39,10 @@ if adata.obs.shape[0] == 0:
 
 # get parameters
 file_id = snakemake.wildcards.file_id
-dataset, groups = parse_parameters(adata, snakemake.params, filter_hues=True)
-threshold_keys = ['n_counts', 'n_genes', 'percent_mito'] 
+dataset, hues = parse_parameters(adata, snakemake.params, filter_hues=True)
+scautoqc_metrics = snakemake.params.get('scautoqc_metrics', [])
+
+logging.info(f'{hues=}')
 
 logging.info('Plot removed cells...')
 plt.figure(figsize=(4, 5))

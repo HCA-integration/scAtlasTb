@@ -16,7 +16,11 @@ def parse_parameters(adata: ad.AnnData, params: dict, filter_hues: bool = False)
         hues = [hues]
     hues = [hue for hue in hues if hue in adata.obs.columns]
     if filter_hues:
-        hues = {hue for hue in hues if adata.obs[hue].nunique() > 1}
+        max_groups = params.get('max_groups', 100)
+        hues = {
+            hue for hue in hues
+            if 1 < adata.obs[hue].nunique() < max_groups
+        }
         hues = list(hues)
     if len(hues) == 0:
         hues = [None]
