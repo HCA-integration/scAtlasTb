@@ -42,10 +42,11 @@ adata = read_anndata(input_zarr, obs='obs')
 output_dir = Path(output_dir)
 output_dir.mkdir(exist_ok=True, parents=True)
 
-if batch_key not in adata.obs.columns:
+if batch_key is None or batch_key == 'None':
     logging.info(f'No batch key found in obs columns, setting dummy batch.')
     Path(output_dir / 'no_batch.txt').write_text('no_batch')
 else:
+    assert batch_key in adata.obs.columns, f'Batch key {batch_key} not found in obs columns.'
     groups = group_batches(adata, batch_key, chunk_size=chunk_size)
     value_counts = adata.obs[batch_key].value_counts(dropna=False)
     for i, group in enumerate(groups):
