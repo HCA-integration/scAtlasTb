@@ -4,6 +4,18 @@ import pandas as pd
 import anndata as ad
 
 
+QC_FLAGS = [
+    'n_counts',
+    'n_genes',
+    'percent_mito',
+    'n_counts_mito',
+    'percent_ribo',
+    'n_counts_ribo',
+    'percent_hb',
+    'n_counts_hb',
+]
+
+
 def parse_parameters(adata: ad.AnnData, params: dict, filter_hues: bool = False):
     dataset = params.get('dataset', 'None')
     hues = params.get('hue', [])
