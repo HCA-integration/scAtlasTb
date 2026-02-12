@@ -43,7 +43,7 @@ output_dir = Path(output_dir)
 output_dir.mkdir(exist_ok=True, parents=True)
 
 if batch_key is None or batch_key == 'None':
-    logging.info(f'No batch key found in obs columns, setting dummy batch.')
+    logging.info('No batch key specified (batch_key is None/"None"), using dummy batch.')
     Path(output_dir / 'no_batch.txt').write_text('no_batch')
 else:
     assert batch_key in adata.obs.columns, f'Batch key {batch_key} not found in obs columns.'
