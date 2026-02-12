@@ -12,7 +12,7 @@ from joblib import Parallel, delayed
 logging.basicConfig(level=logging.INFO)
 
 from utils.io import read_anndata
-from qc_utils import parse_parameters
+from qc_utils import parse_parameters, QC_FLAGS
 
 
 def get_fraction_removed(df, group_key, key='qc_status'):
@@ -40,7 +40,7 @@ if adata.obs.shape[0] == 0:
 # get parameters
 file_id = snakemake.wildcards.file_id
 dataset, hues = parse_parameters(adata, snakemake.params, filter_hues=True)
-scautoqc_metrics = snakemake.params.get('scautoqc_metrics', [])
+scautoqc_metrics = snakemake.params.get('scautoqc_metrics', QC_FLAGS)
 
 logging.info(f'{hues=}')
 
@@ -125,12 +125,10 @@ def plot_composition(df, group_key, plot_dir):
     # Add detailed labels for main plot
     fontsize = 8
     fontweight = 'bold'
+    # Ensure the figure is drawn before querying the renderer/text extents
+    fig.canvas.draw()
     renderer = fig.canvas.get_renderer()
     for idx, bar_status_pairs in bars_per_group.items():
-        bbox = ax_main.get_window_extent()
-        x_min, x_max = ax_main.get_xlim()
-        offset = proportions.sum(1).max() / 100
-        
         y_pos = bar_status_pairs[0][0].get_y() + bar_status_pairs[0][0].get_height() / 2
 
         for bar, status in bar_status_pairs:
@@ -167,7 +165,7 @@ def plot_composition(df, group_key, plot_dir):
             )
     
     # Margin plot: Total cell counts as histogram with annotations
-    bars = ax_margin.barh(
+    ax_margin.barh(
         total_counts.index,
         total_counts.values,
         edgecolor='white',

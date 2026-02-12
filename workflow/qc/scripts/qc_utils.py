@@ -34,8 +34,7 @@ def parse_parameters(adata: ad.AnnData, params: dict, filter_hues: bool = False)
             if 1 < adata.obs[hue].nunique() < max_groups
         }
         hues = list(hues)
-    if len(hues) == 0:
-        hues = [None]
+    assert len(hues) > 0, 'No valid hue columns provided for plotting'
 
     return dataset, hues
 

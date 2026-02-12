@@ -260,12 +260,14 @@ for x, y, log_x, log_y in coordinates:
     logging.info('Plotting density...')
     _plot_density_with_retry(density_data)
     plt.tight_layout()
-    plt.savefig(density_png, bbox_inches='tight')   
+    plt.savefig(density_png, bbox_inches='tight')
+    plt.close('all')
 
     logging.info('Plotting density for log scale...')
     _plot_density_with_retry(density_data, log_x=log_x, log_y=log_y)
     plt.tight_layout()
     plt.savefig(density_log_png, bbox_inches='tight')
+    plt.close('all')
 
     density_img = mpimg.imread(density_png)
     density_log_img = mpimg.imread(density_log_png)
