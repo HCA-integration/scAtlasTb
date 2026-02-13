@@ -23,11 +23,11 @@ def get_fraction_removed(df, group_key, key='qc_status'):
 
 
 input_zarr = snakemake.input.zarr
-output_plots = snakemake.output.plots
-threads = snakemake.threads
-
-output_plots = Path(output_plots)
+output_plots = Path(snakemake.output.plots)
 output_plots.mkdir(parents=True, exist_ok=True)
+
+threads = snakemake.threads
+dpi = snakemake.params.get('dpi', 150)
 
 logging.info(f'Read {input_zarr}...')
 adata = read_anndata(input_zarr, obs='obs', uns='uns')
@@ -61,7 +61,7 @@ plt.xlabel('Cell QC Status')
 plt.ylabel('Count')
 plt.title(f'Counts of cells QC\'d\n{dataset}')
 plt.tight_layout()
-plt.savefig(output_plots / 'cells_passed_all.png', bbox_inches='tight')
+plt.savefig(output_plots / 'cells_passed_all.png', bbox_inches='tight', dpi=dpi)
 plt.close()
 
 
@@ -191,7 +191,7 @@ def plot_composition(df, group_key, plot_dir):
     
     fig.suptitle(f'Cells that passed QC\n{dataset=}, {file_id=}', fontsize=12, y=0.98)
     fig.tight_layout()
-    fig.savefig(plot_dir / f'by={group_key}.png', bbox_inches='tight', dpi=100)
+    fig.savefig(plot_dir / f'by={group_key}.png', bbox_inches='tight', dpi=dpi)
     plt.close()
 
 
@@ -250,4 +250,4 @@ for i, qc_metric in enumerate(scautoqc_metrics):
 
 plt.suptitle(f'Cells that passed QC\n{dataset}', fontsize=12)
 fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-plt.savefig(output_plots / 'per_metric_violin.png', bbox_inches='tight')
+plt.savefig(output_plots / 'per_metric_violin.png', bbox_inches='tight', dpi=dpi)

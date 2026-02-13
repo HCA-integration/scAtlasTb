@@ -9,6 +9,7 @@ rule plot_joint:
         thresholds=lambda wildcards: mcfg.get_from_parameters(wildcards, 'thresholds', default={}),
         scautoqc_metrics=lambda wildcards: mcfg.get_from_parameters(wildcards, 'scautoqc_metrics', default=['n_counts', 'n_genes', 'percent_mito']),
         max_groups=lambda wildcards: mcfg.get_from_parameters(wildcards, 'plot_params', default={}).get('max_groups', 100),
+        dpi=lambda wildcards: mcfg.get_from_parameters(wildcards, 'plot_params', default={}).get('dpi', 200),
     threads:
         lambda wildcards: max(1, min(10, len(mcfg.get_from_parameters(wildcards, 'hue', default=[]))))
     conda:
@@ -28,6 +29,7 @@ rule plot_removed:
         thresholds=lambda wildcards: mcfg.get_from_parameters(wildcards, 'thresholds', default={}),
         scautoqc_metrics=lambda wildcards: mcfg.get_from_parameters(wildcards, 'scautoqc_metrics', default=['n_counts', 'n_genes', 'percent_mito']),
         max_groups=lambda wildcards: mcfg.get_from_parameters(wildcards, 'plot_params', default={}).get('max_groups', 100),
+        dpi=lambda wildcards: mcfg.get_from_parameters(wildcards, 'plot_params', default={}).get('dpi', 200),
     threads:
         lambda wildcards: max(1, min(10, len(mcfg.get_from_parameters(wildcards, 'hue', default=[]))))
     conda:

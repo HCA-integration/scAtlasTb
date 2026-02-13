@@ -27,10 +27,9 @@ from qc_utils import parse_parameters, get_thresholds, plot_qc_joint, QC_FLAGS
 
 
 input_zarr = snakemake.input.zarr
-output_joint = snakemake.output.joint
-
-output_joint = Path(output_joint)
+output_joint = Path(snakemake.output.joint)
 output_joint.mkdir(parents=True, exist_ok=True)
+dpi = snakemake.params.get('dpi', 150)
 
 logging.info(f'Read {input_zarr}...')
 adata = read_anndata(input_zarr, obs='obs', uns='uns')
@@ -59,7 +58,7 @@ def _render_figure_to_image(fig):
     return image
 
 
-def create_figure(df, png_file, density_img, joint_title, **kwargs):
+def create_figure(df, png_file, density_img, joint_title, dpi, **kwargs):
     g = plot_qc_joint(df, **kwargs)
 
     handles, labels = g.ax_joint.get_legend_handles_labels()
@@ -89,7 +88,7 @@ def create_figure(df, png_file, density_img, joint_title, **kwargs):
         ax.set_axis_off()
     f.suptitle(joint_title, fontsize=16)
     f.subplots_adjust(top=0.9, wspace=0.05)
-    f.savefig(png_file, bbox_inches='tight')
+    f.savefig(png_file, bbox_inches='tight', dpi=dpi)
     plt.close(f)
 
 
@@ -151,6 +150,7 @@ def call_plot(x, y, log_x, log_y, hue, scatter_plot_kwargs, density_img, density
         x_threshold=thresholds.get(x),
         y_threshold=thresholds.get(y),
         title='',
+        dpi=dpi,
         **plot_kwargs,
     )
 
@@ -172,6 +172,7 @@ def call_plot(x, y, log_x, log_y, hue, scatter_plot_kwargs, density_img, density
         x_threshold=thresholds.get(x),
         y_threshold=thresholds.get(y),
         title='',
+        dpi=dpi,
         **plot_kwargs,
     )
 
@@ -274,13 +275,13 @@ for x, y, log_x, log_y in coordinates:
     logging.info('Plotting density...')
     _plot_density_with_retry(density_data, x, y, thresholds)
     plt.tight_layout()
-    plt.savefig(density_png, bbox_inches='tight')
+    plt.savefig(density_png, bbox_inches='tight', dpi=dpi // 2)
     plt.close('all')
 
     logging.info('Plotting density for log scale...')
     _plot_density_with_retry(density_data, x, y, thresholds, log_x=log_x, log_y=log_y)
     plt.tight_layout()
-    plt.savefig(density_log_png, bbox_inches='tight')
+    plt.savefig(density_log_png, bbox_inches='tight', dpi=dpi // 2)
     plt.close('all')
 
     density_img = mpimg.imread(density_png)
