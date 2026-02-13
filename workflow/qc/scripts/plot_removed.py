@@ -225,6 +225,7 @@ if errors:
 logging.info('Plot violin plots per QC metric...')
 n_cols = len(scautoqc_metrics)
 fig, axes = plt.subplots(1, n_cols, figsize=(4 * n_cols, 6))
+axes = np.atleast_1d(axes)
 plt.grid(False)
 
 for i, qc_metric in enumerate(scautoqc_metrics):
