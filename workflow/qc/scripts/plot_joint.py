@@ -94,13 +94,22 @@ def create_figure(df, png_file, density_img, joint_title, **kwargs):
 
 def call_plot(x, y, log_x, log_y, hue, scatter_plot_kwargs, density_img, density_log_img):
     # logging.info(f'Joint QC plots for hue={hue}...') 
-    joint_title = f'Joint QC for\n{dataset}\nmargin hue: {hue}'
-       
-    plot_path = output_joint / f'hue={hue}'
+    
+    # Handle None hue case
+    if hue is None:
+        joint_title = f'Joint QC for\n{dataset}'
+        plot_path = output_joint / 'main'
+    else:
+        joint_title = f'Joint QC for\n{dataset}\nmargin hue: {hue}'
+        plot_path = output_joint / f'hue={hue}'
+    
     plot_path.mkdir(exist_ok=True)
 
     # determine plotting parameters
-    if is_numeric_dtype(adata.obs[hue]):
+    if hue is None:
+        palette = None
+        legend = False
+    elif is_numeric_dtype(adata.obs[hue]):
         palette = 'plasma'
         legend = 'brief'
     else:
@@ -207,7 +216,11 @@ coordinates = [
 ]
 
 # reduce obs to required columns only
-required_columns = sorted({*hues, *[c for coords in coordinates for c in coords[:2]]})
+required_columns = [
+    col for col in
+    {*hues, *[c for coords in coordinates for c in coords[:2]]}
+    if col in adata.obs.columns
+]
 adata.obs = adata.obs[required_columns].copy()
 
 # subset to max of 300k cells due to high computational cost

@@ -206,17 +206,20 @@ def safe_call_plot(*args, **kwargs):
         traceback.print_exc()
         return e
 
+# Filter out None hue before creating composition plots
+hues_for_composition = [h for h in hues if h is not None]
+
 # run in parallel using joblib; results is a list of return values (None or Exception)
 results = Parallel(n_jobs=threads)(
     delayed(safe_call_plot)(
         adata.obs,
         group_key=g,
         plot_dir=output_plots
-    ) for g in tqdm(hues)
+    ) for g in tqdm(hues_for_composition)
 )
 
 # log any errors
-errors = [(g, r) for g, r in zip(hues, results) if r is not None]
+errors = [(g, r) for g, r in zip(hues_for_composition, results) if r is not None]
 if errors:
     logging.error(f"{len(errors)} group(s) failed during plotting.")
     for g, e in errors:
@@ -246,5 +249,5 @@ for i, qc_metric in enumerate(scautoqc_metrics):
         axes[i].spines[pos].set_visible(False) 
 
 plt.suptitle(f'Cells that passed QC\n{dataset}', fontsize=12)
-plt.tight_layout()
+fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 plt.savefig(output_plots / 'per_metric_violin.png', bbox_inches='tight')

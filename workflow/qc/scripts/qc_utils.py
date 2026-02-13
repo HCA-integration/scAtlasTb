@@ -39,7 +39,8 @@ def parse_parameters(adata: ad.AnnData, params: dict, filter_hues: bool = False)
             )
         }
         hues = list(hues)
-    assert len(hues) > 0, 'No valid hue columns provided for plotting'
+    if len(hues) == 0:
+        hues = [None]
 
     return dataset, hues
 
@@ -232,7 +233,10 @@ def plot_qc_joint(
     if hue is not None:
         # handles, labels = g.ax_joint.get_legend_handles_labels()
         markerscale = (80 / kwargs.get('s', 20)) ** 0.5
-        g.ax_joint.legend(markerscale=markerscale)
+        if hue is not None and kwargs.get("legend", True):
+            handles, labels = g.ax_joint.get_legend_handles_labels()
+            if handles:
+                g.ax_joint.legend(markerscale=markerscale)
 
     # x threshold
     for t, t_def in zip(x_threshold, (0, np.inf)):
