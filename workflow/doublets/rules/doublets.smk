@@ -51,7 +51,7 @@ rule scrublet:
             'qc',
             gpu_env='rapids_singlecell',
             no_gpu=not mcfg.get_from_parameters(wildcards, 'use_gpu', default=False)
-        ),
+        )
     resources:
         partition=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='partition', attempt=attempt),
         qos=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='qos', attempt=attempt),
