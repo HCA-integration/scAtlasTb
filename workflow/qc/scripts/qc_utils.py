@@ -233,7 +233,7 @@ def plot_qc_joint(
     if hue is not None:
         # handles, labels = g.ax_joint.get_legend_handles_labels()
         markerscale = (80 / kwargs.get('s', 20)) ** 0.5
-        if hue is not None and kwargs.get("legend", True):
+        if kwargs.get("legend", True):
             handles, labels = g.ax_joint.get_legend_handles_labels()
             if handles:
                 g.ax_joint.legend(markerscale=markerscale)
