@@ -142,6 +142,7 @@ def plot_qc_joint(
     marginal_hue=None,
     x_threshold=None,
     y_threshold=None,
+    threshold_color='red',
     title='',
     return_df=False,
     marginal_kwargs: dict=None,
@@ -206,49 +207,64 @@ def plot_qc_joint(
         xlim=(0, df[x].max()),
         ylim=(0, df[y].max()),
     )
+
+    # x threshold
+    for t, t_def in zip(x_threshold, (0, np.inf)):
+        if t != t_def:
+            g.ax_joint.axvline(x=t, color=threshold_color)
+            g.ax_marg_x.axvline(x=t, color=threshold_color)
+
+    # y threshold
+    for t, t_def in zip(y_threshold, (0, np.inf)):
+        if t != t_def:
+            g.ax_joint.axhline(y=t, color=threshold_color)
+            g.ax_marg_y.axhline(y=t, color=threshold_color)
     
     # main plot
-    if hue is not None and hue in df.columns and not pd.api.types.is_numeric_dtype(df[hue]):
-        hue_counts = df[hue].value_counts(dropna=False)
-        # common -> rare (rarest last)
-        df = df.assign(_hue_freq=df[hue].map(hue_counts)).sort_values('_hue_freq', ascending=False)
+    if hue in df.columns and pd.api.types.is_categorical_dtype(df[hue]):
+        # sort so smaller groups are plotted on top of larger groups
+        hue_order = df[hue].value_counts(ascending=False).index
+    else:
+        hue_order = None
     
-    g.plot_joint(main_plot_function, data=df, hue=hue, **kwargs)
+    g.plot_joint(
+        main_plot_function,
+        data=df,
+        hue=hue,
+        hue_order=hue_order,
+        **kwargs
+    )
     
     # marginal hist plot
     g.plot_marginals(
         sns.histplot,
         data=df,
         hue=marginal_hue,
+        hue_order=hue_order if use_marg_hue else None,
         element='step' if use_marg_hue else 'bars',
         fill=False,
         bins=100,
         **marginal_kwargs,
     )
 
-    g.fig.suptitle(title, fontsize=12)
+    # Hide shared axes ticks
+    g.ax_marg_x.tick_params(axis='x', bottom=False, labelbottom=False)
+    g.ax_marg_y.tick_params(axis='y', left=False, labelleft=False)
+
+    g.fig.suptitle(title, fontsize=14)
     # workaround for patchworklib
     g._figsize = g.fig.get_size_inches()
 
     if hue is not None:
         # handles, labels = g.ax_joint.get_legend_handles_labels()
-        markerscale = (80 / kwargs.get('s', 20)) ** 0.5
+        markerscale = (60 / kwargs.get('s', 20)) ** 0.5
         if kwargs.get("legend", True):
             handles, labels = g.ax_joint.get_legend_handles_labels()
             if handles:
-                g.ax_joint.legend(markerscale=markerscale)
-
-    # x threshold
-    for t, t_def in zip(x_threshold, (0, np.inf)):
-        if t != t_def:
-            g.ax_joint.axvline(x=t, color='red')
-            g.ax_marg_x.axvline(x=t, color='red')
-
-    # y threshold
-    for t, t_def in zip(y_threshold, (0, np.inf)):
-        if t != t_def:
-            g.ax_joint.axhline(y=t, color='red')
-            g.ax_marg_y.axhline(y=t, color='red')
+                g.ax_joint.legend(
+                    markerscale=markerscale,
+                    fontsize=g.ax_joint.xaxis.label.get_size(),
+                )
 
     if return_df:
         return g, df

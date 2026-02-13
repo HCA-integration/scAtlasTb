@@ -19,8 +19,8 @@ warnings.filterwarnings(
     message=r'.*pkg_resources is deprecated as an API.*',
     category=UserWarning,
 )
-sns.set_theme(style='white')
-sc.set_figure_params(frameon=False, fontsize=10, dpi_save=200, vector_friendly=True)
+sns.set_theme(style='ticks')
+sns.set_context('paper', font_scale=1.2)
 
 from utils.io import read_anndata
 from qc_utils import parse_parameters, get_thresholds, plot_qc_joint, QC_FLAGS
@@ -73,12 +73,13 @@ def create_figure(df, png_file, density_img, joint_title, **kwargs):
     axes[0].imshow(joint_img)
     axes[1].imshow(density_img)
 
-    markerscale = (80 / kwargs.get('s', 20)) ** 0.5
+    markerscale = (60 / kwargs.get('s', 20)) ** 0.5
     if handles and labels:
         axes[0].legend(
             handles=handles,
             labels=labels,
             markerscale=markerscale,
+            fontsize=g.ax_joint.xaxis.label.get_size(),
             loc='center right',
             bbox_to_anchor=(0, 0.5),
             borderaxespad=0.5,
