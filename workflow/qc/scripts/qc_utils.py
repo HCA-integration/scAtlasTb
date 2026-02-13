@@ -31,7 +31,12 @@ def parse_parameters(adata: ad.AnnData, params: dict, filter_hues: bool = False)
         max_groups = params.get('max_groups', 100)
         hues = {
             hue for hue in hues
-            if 1 < adata.obs[hue].nunique() < max_groups
+            if (
+                # Keep numeric columns regardless of unique value count (for continuous colormaps)
+                pd.api.types.is_numeric_dtype(adata.obs[hue])
+                # For categorical/non-numeric, apply max_groups filter
+                or 1 < adata.obs[hue].nunique() < max_groups
+            )
         }
         hues = list(hues)
     assert len(hues) > 0, 'No valid hue columns provided for plotting'
