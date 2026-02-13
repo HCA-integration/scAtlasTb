@@ -227,7 +227,7 @@ adata.obs = adata.obs[required_columns].copy()
 density_data = adata.obs.sample(n=int(min(300_000, adata.n_obs)), random_state=42)
 # density_data = adata.obs
 
-def _plot_density_with_retry(df, log_x=None, log_y=None):
+def _plot_density_with_retry(df, x, y, thresholds, log_x=None, log_y=None):
     density_kwargs = dict(kde_plot_kwargs)
     try:
         plot_qc_joint(
@@ -271,13 +271,13 @@ for x, y, log_x, log_y in coordinates:
     density_log_png = output_joint / f'log_{x}_vs_{y}_density.png'
     
     logging.info('Plotting density...')
-    _plot_density_with_retry(density_data)
+    _plot_density_with_retry(density_data, x, y, thresholds)
     plt.tight_layout()
     plt.savefig(density_png, bbox_inches='tight')
     plt.close('all')
 
     logging.info('Plotting density for log scale...')
-    _plot_density_with_retry(density_data, log_x=log_x, log_y=log_y)
+    _plot_density_with_retry(density_data, x, y, thresholds, log_x=log_x, log_y=log_y)
     plt.tight_layout()
     plt.savefig(density_log_png, bbox_inches='tight')
     plt.close('all')
