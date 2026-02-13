@@ -35,7 +35,7 @@ def parse_parameters(adata: ad.AnnData, params: dict, filter_hues: bool = False)
                 # Keep numeric columns regardless of unique value count (for continuous colormaps)
                 pd.api.types.is_numeric_dtype(adata.obs[hue])
                 # For categorical/non-numeric, apply max_groups filter
-                or 1 < adata.obs[hue].nunique() < max_groups
+                or (1 < adata.obs[hue].nunique() < max_groups)
             )
         }
         hues = list(hues)
