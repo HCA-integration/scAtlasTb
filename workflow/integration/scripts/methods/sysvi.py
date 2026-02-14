@@ -7,7 +7,7 @@ from scvi.external import SysVI
 from pathlib import Path
 from pprint import pformat
 from math import ceil
-from lightning.pytorch.callbacks import TQDMProgressBar
+from pytorch_lightning.callbacks import TQDMProgressBar
 import logging
 logging.basicConfig(level=logging.INFO)
 
