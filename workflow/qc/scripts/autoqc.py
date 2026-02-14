@@ -10,22 +10,13 @@ import dask
 dask.config.set(scheduler="single-threaded")
 
 from utils.io import read_anndata, write_zarr_linked
+from qc_utils import QC_FLAGS
 
 input_file = snakemake.input[0]
 output_file = snakemake.output[0]
 layer = snakemake.params['layer']
 metrics_params_file = snakemake.input.get('metrics_params')
 gaussian_kwargs = snakemake.params.get('gaussian_kwargs', {})
-QC_FLAGS = [
-    'n_counts',
-    'n_genes',
-    'percent_mito',
-    'n_counts_mito',
-    'percent_ribo',
-    'n_counts_ribo',
-    'percent_hb',
-    'n_counts_hb',
-]
 
 files_to_keep = ['obs', 'uns']
 

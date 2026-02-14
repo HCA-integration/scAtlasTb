@@ -10,8 +10,9 @@ DATASETS:
         Lee2020: test/input/load_data/harmonize_metadata/Lee2020.zarr
     doublets:
       counts: X
-      batch: donor
+      batch: donor_id
       chunk_size: 10_000
+  
   test:
     input:
       doublets:

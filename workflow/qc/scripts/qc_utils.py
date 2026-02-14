@@ -4,6 +4,18 @@ import pandas as pd
 import anndata as ad
 
 
+QC_FLAGS = [
+    'n_counts',
+    'n_genes',
+    'percent_mito',
+    'n_counts_mito',
+    'percent_ribo',
+    'n_counts_ribo',
+    'percent_hb',
+    'n_counts_hb',
+]
+
+
 def parse_parameters(adata: ad.AnnData, params: dict, filter_hues: bool = False):
     dataset = params.get('dataset', 'None')
     hues = params.get('hue', [])
@@ -16,7 +28,16 @@ def parse_parameters(adata: ad.AnnData, params: dict, filter_hues: bool = False)
         hues = [hues]
     hues = [hue for hue in hues if hue in adata.obs.columns]
     if filter_hues:
-        hues = {hue for hue in hues if adata.obs[hue].nunique() > 1}
+        max_groups = params.get('max_groups', 100)
+        hues = {
+            hue for hue in hues
+            if (
+                # Keep numeric columns regardless of unique value count (for continuous colormaps)
+                pd.api.types.is_numeric_dtype(adata.obs[hue])
+                # For categorical/non-numeric, apply max_groups filter
+                or (1 < adata.obs[hue].nunique() < max_groups)
+            )
+        }
         hues = list(hues)
     if len(hues) == 0:
         hues = [None]
@@ -121,6 +142,7 @@ def plot_qc_joint(
     marginal_hue=None,
     x_threshold=None,
     y_threshold=None,
+    threshold_color='red',
     title='',
     return_df=False,
     marginal_kwargs: dict=None,
@@ -149,6 +171,9 @@ def plot_qc_joint(
         x_threshold=(0, np.inf)
     if not y_threshold:
         y_threshold=(0, np.inf)
+
+    log_x = 1 if log_x is None else log_x
+    log_y = 1 if log_y is None else log_y
 
     def log1p_base(_x, base):
         return np.log1p(_x) / np.log(base)
@@ -182,13 +207,32 @@ def plot_qc_joint(
         xlim=(0, df[x].max()),
         ylim=(0, df[y].max()),
     )
+
+    # x threshold
+    for t, t_def in zip(x_threshold, (0, np.inf)):
+        if t != t_def:
+            g.ax_joint.axvline(x=t, color=threshold_color)
+            g.ax_marg_x.axvline(x=t, color=threshold_color)
+
+    # y threshold
+    for t, t_def in zip(y_threshold, (0, np.inf)):
+        if t != t_def:
+            g.ax_joint.axhline(y=t, color=threshold_color)
+            g.ax_marg_y.axhline(y=t, color=threshold_color)
     
     # main plot
+    if hue in df.columns and pd.api.types.is_categorical_dtype(df[hue]):
+        # sort so smaller groups are plotted on top of larger groups
+        hue_order = df[hue].value_counts(ascending=False).index
+    else:
+        hue_order = None
+    
     g.plot_joint(
         main_plot_function,
-        data=df.sample(frac=1),
+        data=df,
         hue=hue,
-        **kwargs,
+        hue_order=hue_order,
+        **kwargs
     )
     
     # marginal hist plot
@@ -196,31 +240,31 @@ def plot_qc_joint(
         sns.histplot,
         data=df,
         hue=marginal_hue,
+        hue_order=hue_order if use_marg_hue else None,
         element='step' if use_marg_hue else 'bars',
         fill=False,
         bins=100,
         **marginal_kwargs,
     )
 
-    g.fig.suptitle(title, fontsize=12)
+    # Hide shared axes ticks
+    g.ax_marg_x.tick_params(axis='x', bottom=False, labelbottom=False)
+    g.ax_marg_y.tick_params(axis='y', left=False, labelleft=False)
+
+    g.fig.suptitle(title, fontsize=14)
     # workaround for patchworklib
     g._figsize = g.fig.get_size_inches()
 
-    # handles, labels = g.ax_joint.get_legend_handles_labels()
-    markerscale = (80 / kwargs.get('s', 20)) ** 0.5
-    g.ax_joint.legend(markerscale=markerscale)
-
-    # x threshold
-    for t, t_def in zip(x_threshold, (0, np.inf)):
-        if t != t_def:
-            g.ax_joint.axvline(x=t, color='red')
-            g.ax_marg_x.axvline(x=t, color='red')
-
-    # y threshold
-    for t, t_def in zip(y_threshold, (0, np.inf)):
-        if t != t_def:
-            g.ax_joint.axhline(y=t, color='red')
-            g.ax_marg_y.axhline(y=t, color='red')
+    if hue is not None:
+        # handles, labels = g.ax_joint.get_legend_handles_labels()
+        markerscale = (60 / kwargs.get('s', 20)) ** 0.5
+        if kwargs.get("legend", True):
+            handles, labels = g.ax_joint.get_legend_handles_labels()
+            if handles:
+                g.ax_joint.legend(
+                    markerscale=markerscale,
+                    fontsize=g.ax_joint.xaxis.label.get_size(),
+                )
 
     if return_df:
         return g, df

@@ -39,6 +39,9 @@ DATASETS:
         - development_stage
         - cell_type
       thresholds_file: test/input/user_thresholds.tsv
+      plot_params:
+        max_groups: 50
+        dpi: 300
 
   test:
     input:
