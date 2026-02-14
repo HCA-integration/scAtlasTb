@@ -15,8 +15,6 @@ from utils.processing import assert_neighbors, sc, _filter_genes
 input_file = snakemake.input[0]
 output_file = snakemake.output[0]
 params = snakemake.params
-batch_keys = params.batches
-label_keys = params.labels
 norm_count_layer = params.get('norm_counts', 'X')
 raw_count_layer = params.get('raw_counts', 'X')
 var_mask = snakemake.wildcards.var_mask
