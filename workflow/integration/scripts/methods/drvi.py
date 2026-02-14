@@ -121,10 +121,14 @@ embed = ad.AnnData(X=adata.obsm["X_emb"], obs=adata.obs)
 drvi.utils.tl.set_latent_dimension_stats(model, embed)
 
 drvi.utils.pl.plot_latent_dimension_stats(embed, ncols=2)
-plt.savefig(Path(output_plot_dir) / 'latent_dimension_stats.png')
+fig = plt.gcf()
+fig.savefig(Path(output_plot_dir) / 'latent_dimension_stats.png')
+plt.close(fig)
 
 drvi.utils.pl.plot_latent_dimension_stats(embed, ncols=2, remove_vanished=True)
-plt.savefig(Path(output_plot_dir) / 'latent_dimension_stats_no_vanished.png')
+fig = plt.gcf()
+fig.savefig(Path(output_plot_dir) / 'latent_dimension_stats_no_vanished.png')
+plt.close(fig)
 
 logging.info(f'Write {output_file}...')
 logging.info(adata.__str__())
