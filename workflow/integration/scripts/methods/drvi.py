@@ -2,6 +2,8 @@ import torch
 import drvi
 from pathlib import Path
 from pprint import pformat
+from matplotlib import pyplot as plt
+import anndata as ad
 import logging
 logging.basicConfig(level=logging.INFO)
 
@@ -93,6 +95,13 @@ model = drvi.model.DRVI(adata, **model_params)
 logging.info(f'Train DRVI with parameters:\n{pformat(train_params)}')
 model.train(**train_params)
 
+logging.info('Plot model history...')
+plot_model_history(
+    model=model,
+    output_dir=output_plot_dir,
+    model_name="DRVI",
+)
+
 logging.info('Save model...')
 model.save(output_model, overwrite=True)
 
@@ -107,11 +116,15 @@ add_metadata(
     model_history=set_model_history_dtypes(model.history)
 )
 
-plot_model_history(
-    model=model,
-    output_dir=output_plot_dir,
-    model_name="DRVI",
-)
+# plot DRVI latent space
+embed = ad.AnnData(X=adata.obsm["X_emb"], obs=adata.obs)
+drvi.utils.tl.set_latent_dimension_stats(model, embed)
+
+drvi.utils.pl.plot_latent_dimension_stats(embed, ncols=2)
+plt.savefig(Path(output_plot_dir) / 'latent_dimension_stats.png')
+
+drvi.utils.pl.plot_latent_dimension_stats(embed, ncols=2, remove_vanished=True)
+plt.savefig(Path(output_plot_dir) / 'latent_dimension_stats_no_vanished.png')
 
 logging.info(f'Write {output_file}...')
 logging.info(adata.__str__())
