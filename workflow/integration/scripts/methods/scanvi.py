@@ -125,8 +125,24 @@ try:
         **train_scanvi,
     )
 except Exception as e:
-    logging.warning(f"Training failed: {e}. Attempting to load best checkpoint...")
-    model = scvi.model.SCANVI.load(output_model, adata)
+    logging.warning(f"Training failed: {e}. Attempting to load best checkpoint if available...")
+    checkpoint_path = Path(output_model)
+    if checkpoint_path.exists():
+        try:
+            model = scvi.model.SCANVI.load(checkpoint_path, adata)
+            logging.info(f"Successfully loaded SCANVI checkpoint from {checkpoint_path} after training failure.")
+        except Exception as load_err:
+            logging.error(
+                f"Failed to load SCANVI checkpoint from {checkpoint_path} after training error: {load_err}"
+            )
+            raise RuntimeError(
+                f"Training failed and loading SCANVI checkpoint from {checkpoint_path} also failed."
+            ) from e
+    else:
+        logging.error(
+            f"Training failed and no SCANVI checkpoint was found at {checkpoint_path}; re-raising original error."
+        )
+        raise
 
 plot_model_history(
     model=model,
