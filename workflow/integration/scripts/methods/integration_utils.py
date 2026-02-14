@@ -273,7 +273,7 @@ def plot_model_history(
     metrics = sorted(m for m in logs if logs[m])
 
     if not metrics:
-        print("No metrics found to plot.")
+        print("No metrics found to plot.", flush=True)
         return
 
     grouped = defaultdict(list)
