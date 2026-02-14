@@ -1,6 +1,6 @@
 from pytorch_lightning.callbacks import Callback
 from collections import defaultdict
-import numpy as np
+
 
 
 SCPOLI_MODEL_PARAMS = [
@@ -59,7 +59,6 @@ class ScArchesLossLogger(Callback):
     def on_train_epoch_end(self, trainer, pl_module):
         print(f"Epoch {trainer.current_epoch} ended. Logging metrics...", flush=True)
         metrics = trainer.callback_metrics
-        print(f"Metrics at epoch end: {metrics}", flush=True)
 
         for key, value in metrics.items():
             if value is None:

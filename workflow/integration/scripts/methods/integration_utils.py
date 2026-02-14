@@ -283,7 +283,6 @@ def plot_model_history(
 
     for group_name, group_metrics in grouped.items():
         n_metrics = len(group_metrics)
-        print(f"Plotting {n_metrics} '{group_name}' metrics...", flush=True)
         nrows, ncols = best_grid(n_metrics)
         print(f"Using grid of {nrows} rows and {ncols} columns.", flush=True)
         fig, axes = plt.subplots(nrows, ncols, figsize=fig_size(nrows, ncols), squeeze=False)
