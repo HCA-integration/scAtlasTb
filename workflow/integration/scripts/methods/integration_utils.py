@@ -251,15 +251,18 @@ def plot_model_history(
         return "other"
 
     def best_grid(n_metrics, max_cols=6):
-        candidates = range(1, min(max_cols, n_metrics) + 1)
-        def score(cols):
+        """Find most square grid layout for n_metrics plots."""
+        best_rows, best_cols = 1, 1
+        best_score = float('inf')
+        
+        for cols in range(1, min(max_cols, n_metrics) + 1):
             rows = math.ceil(n_metrics / cols)
-            empty = rows * cols - n_metrics
-            imbalance = abs(rows - cols)
-            return (empty, imbalance)
-        ncols = min(candidates, key=score)
-        nrows = math.ceil(n_metrics / ncols)
-        return nrows, ncols
+            score = abs(rows - cols) * 10 + (rows * cols - n_metrics)
+            if score < best_score:
+                best_score = score
+                best_rows, best_cols = rows, cols
+        
+        return best_rows, best_cols
 
     def fig_size(nrows, ncols, min_figsize=(5, 5)):
         width = max(min_figsize[0], ncols * figsize_per_subplot[0])
@@ -276,10 +279,13 @@ def plot_model_history(
     grouped = defaultdict(list)
     for metric in metrics:
         grouped[classify_metric(metric)].append(metric)
+    print(grouped, flush=True)
 
     for group_name, group_metrics in grouped.items():
         n_metrics = len(group_metrics)
+        print(f"Plotting {n_metrics} '{group_name}' metrics...", flush=True)
         nrows, ncols = best_grid(n_metrics)
+        print(f"Using grid of {nrows} rows and {ncols} columns.", flush=True)
         fig, axes = plt.subplots(nrows, ncols, figsize=fig_size(nrows, ncols), squeeze=False)
         axes_flat = axes.ravel()
 
