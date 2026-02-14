@@ -1,7 +1,10 @@
-from utils.misc import ensure_sparse
-from utils.annotate import add_wildcards
+import warnings
 import numpy as np
 from scipy import sparse
+
+from utils.misc import ensure_sparse
+from utils.annotate import add_wildcards
+
 
 PCA_PARAMS = [
     'n_comps',
@@ -169,16 +172,139 @@ def set_model_history_dtypes(model_history, dtype='float32'):
     }
 
 
-def plot_model_history(title, train, validation, output_path):
-    from matplotlib import pyplot as plt
-    plt.plot(train, label='train')
-    plt.plot(validation, label='validation')
-    plt.title(f'Training loss: {title}')
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.legend()
-    plt.savefig(output_path)
-    plt.close()
+def standardize_training_logs(model):
+    """
+    Return standardized logs in format:
+
+    {
+        metric_name: {
+            "train": [...],
+            "validation": [...],
+            "other": [...]
+        }
+    }
+    """
+    source = getattr(model, "history", None) or getattr(getattr(model, "trainer", None), "logs", None)
+
+    if not source:
+        warnings.warn("Model contains neither history nor logs.")
+        return {}
+
+    standardized = {}
+
+    def parse_key(key):
+        if key.endswith("_train"):
+            return key[:-6], "train"
+        if key.endswith("_validation"):
+            return key[:-11], "validation"
+        if key.startswith("train_"):
+            return key[6:], "train"
+        if key.startswith("val_"):
+            return key[4:], "validation"
+        if key in ("loss", "epoch_loss"):
+            return "loss", "train"
+        if key in ("val_loss", "validation_loss"):
+            return "loss", "validation"
+        return key, "train"
+
+    for key, values in source.items():
+        metric, split = parse_key(key)
+
+        values = values.values if hasattr(values, "values") else values
+        existing = standardized.get(metric, {}).get(split, None)
+        if existing is not None:
+            if existing is values or np.array_equal(existing, values):
+                continue
+            warnings.warn(f"Duplicate metric '{metric}' for split '{split}'. Keeping first.")
+            continue
+
+        standardized.setdefault(metric, {})[split] = values
+
+    return standardized
+
+
+def plot_model_history(
+    model,
+    output_dir,
+    model_name="Model",
+    prefix='',
+    figsize_per_subplot=(4, 3),
+    lw=1.5,
+):
+    """
+    Plot standardized model training metrics grouped by metric type.
+    Each metric gets its own subplot and its own ylim (automatic scaling).
+    One figure per group.
+    """
+    import matplotlib.pyplot as plt
+    import math
+    from collections import defaultdict
+
+    def classify_metric(metric_name):
+        name = metric_name.lower()
+        if any(x in name for x in ["accuracy", "f1"]):
+            return "accuracy"
+        if "calibration" in name:
+            return "calibration"
+        if any(x in name for x in ["loss", "elbo", "kl", "mse"]):
+            return "loss"
+        return "other"
+
+    def best_grid(n_metrics, max_cols=6):
+        candidates = range(1, min(max_cols, n_metrics) + 1)
+        def score(cols):
+            rows = math.ceil(n_metrics / cols)
+            empty = rows * cols - n_metrics
+            imbalance = abs(rows - cols)
+            return (empty, imbalance)
+        ncols = min(candidates, key=score)
+        nrows = math.ceil(n_metrics / ncols)
+        return nrows, ncols
+
+    def fig_size(nrows, ncols, min_figsize=(5, 5)):
+        width = max(min_figsize[0], ncols * figsize_per_subplot[0])
+        height = max(min_figsize[1], nrows * figsize_per_subplot[1])
+        return (width, height)
+
+    logs = standardize_training_logs(model)
+    metrics = sorted(m for m in logs if logs[m])
+
+    if not metrics:
+        print("No metrics found to plot.")
+        return
+
+    grouped = defaultdict(list)
+    for metric in metrics:
+        grouped[classify_metric(metric)].append(metric)
+
+    for group_name, group_metrics in grouped.items():
+        n_metrics = len(group_metrics)
+        nrows, ncols = best_grid(n_metrics)
+        fig, axes = plt.subplots(nrows, ncols, figsize=fig_size(nrows, ncols), squeeze=False)
+        axes_flat = axes.ravel()
+
+        for ax, metric in zip(axes_flat, group_metrics):
+            for split in logs[metric]:
+                ax.plot(logs[metric][split], label=split, linewidth=lw)
+
+            title = metric.replace("_", " ").title()
+            ax.set_title(title)
+            ax.set_xlabel("Epoch")
+            ax.set_ylabel(title)
+            ax.autoscale(enable=True, axis="y")
+            ax.grid(False)
+            ax.legend()
+
+        for ax in axes_flat[n_metrics:]:
+            fig.delaxes(ax)
+
+        fig.suptitle(f"{model_name} — {group_name.capitalize()} Metrics", fontsize=16)
+        fig.tight_layout(rect=[0, 0, 1, 0.96])
+
+        output_path = f"{output_dir}/{prefix}training_metrics_{group_name}.png"
+        plt.savefig(output_path)
+        plt.close()
+        print(f"Saved: {output_path}")
 
 
 def check_output(adata, output_type):
