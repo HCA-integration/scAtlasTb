@@ -1,3 +1,6 @@
+import logging
+logging.basicConfig(level=logging.INFO)
+
 import torch
 from scarches.models.scpoli import scPoli
 from pprint import pformat
@@ -5,8 +8,10 @@ from pathlib import Path
 
 from integration_utils import add_metadata, get_hyperparams, remove_slots, \
     set_model_history_dtypes, plot_model_history, clean_categorical_column
+from scArches_utils import SCPOLI_MODEL_PARAMS
 from utils.io import read_anndata, write_zarr_linked
 from utils.accessors import subset_hvg
+
 
 input_file = snakemake.input[0]
 output_file = snakemake.output[0]
@@ -26,32 +31,7 @@ torch.set_num_threads(snakemake.threads)
 
 model_params, train_params = get_hyperparams(
     hyperparams=params.get('hyperparams', {}),
-    model_params=[
-        'share_metadata',
-        'obs_metadata',
-        'condition_keys',
-        'conditions',
-        'conditions_combined',
-        'inject_condition',
-        'cell_type_keys',
-        'cell_types',
-        'unknown_ct_names',
-        'labeled_indices',
-        'prototypes_labeled',
-        'prototypes_unlabeled',
-        'hidden_layer_sizes',
-        'latent_dim',
-        'embedding_dims',
-        'embedding_max_norm',
-        'dr_rate',
-        'use_mmd',
-        'mmd_on',
-        'mmd_boundary',
-        'recon_loss',
-        'beta',
-        'use_bn',
-        'use_ln',
-    ],
+    model_params=SCPOLI_MODEL_PARAMS,
 )
 
 # set default model parameters
@@ -61,21 +41,20 @@ model_params = dict(
     unknown_ct_names=['NA'],
 ) | model_params
 
-# set default pretrain epochs if not configured
-if 'n_epoch' in train_params and 'pretrain_epochs' not in train_params:
-    train_params |= {'pretrain_epochs': int(0.8 * model_params.get('n_epochs'))}
-    
-print(
+# set defaults for training parameters
+train_params.setdefault('check_val_every_n_epoch', 1) # needed to be able to plot loss curve
+train_params.setdefault('pretrain_epochs', int(0.8 * train_params.get('n_epochs', 0)))
+
+logging.info(
     f'model parameters:\n{pformat(model_params)}\n'
     f'training parameters:\n{pformat(train_params)}',
-    flush=True
 )
 
 
 # check GPU
-print(f'GPU available: {torch.cuda.is_available()}', flush=True)
+logging.info(f'GPU available: {torch.cuda.is_available()}')
 
-print(f'Read {input_file}...', flush=True)
+logging.info(f'Read {input_file}...')
 adata = read_anndata(
     input_file,
     X='layers/counts',
@@ -104,13 +83,20 @@ adata, _ = subset_hvg(adata, var_column='integration_features')
 # prepare data for model
 adata.X = adata.X.astype('float32')
 
-print(f'Set up scPoli with parameters:\n{pformat(model_params)}', flush=True)
+logging.info(f'Set up scPoli with parameters:\n{pformat(model_params)}')
 model = scPoli(adata=adata, **model_params)
 
-print(f'Train scPoli with parameters:\n{pformat(train_params)}', flush=True)
+logging.info(f'Train scPoli with parameters:\n{pformat(train_params)}')
 model.train(**train_params)
 
-print('Save model...', flush=True)
+logging.info('Plot model history...')
+plot_model_history(
+    model=model,
+    output_dir=output_plot_dir,
+    model_name="scPoli",
+)
+
+logging.info('Save model...')
 model.save(output_model, overwrite=True)
 
 # prepare output adata
@@ -124,15 +110,8 @@ add_metadata(
     model_history=dict(model.trainer.logs)
 )
 
-plot_model_history(
-    title='loss',
-    train=model.trainer.logs['epoch_loss'],
-    validation=model.trainer.logs['val_loss'],
-    output_path=f'{output_plot_dir}/loss.png'
-)
-
-print(adata.__str__(), flush=True)
-print(f'Write {output_file}...', flush=True)
+logging.info(f'Write {output_file}...')
+logging.info(adata.__str__())
 write_zarr_linked(
     adata,
     input_file,

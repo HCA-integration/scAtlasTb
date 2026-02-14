@@ -8,6 +8,7 @@ from scarches.dataset.trvae.data_handling import remove_sparsity
 
 from integration_utils import add_metadata, get_hyperparams, remove_slots, \
     set_model_history_dtypes, plot_model_history, clean_categorical_column
+from scArches_utils import SCGEN_MODEL_PARAMS
 from utils.io import read_anndata, write_zarr_linked
 from utils.accessors import subset_hvg
 
@@ -27,12 +28,12 @@ torch.set_num_threads(snakemake.threads)
 
 model_params, train_params = get_hyperparams(
     hyperparams=params.get('hyperparams', {}),
-    model_params=[
-        'hidden_layer_sizes',
-        'z_dimension',
-        'dr_rate',
-    ],
+    model_params=SCGEN_MODEL_PARAMS,
 )
+
+# set defaults for training parameters
+train_params.setdefault('check_val_every_n_epoch', 1) # needed to be able to plot loss curve
+
 logging.info(
     f'model parameters:\n{pformat(model_params)}\n'
     f'training parameters:\n{pformat(train_params)}'
@@ -72,10 +73,16 @@ model = sca.models.scgen(
 logging.info(f'Train scGEN with parameters:\n{pformat(train_params)}')
 model.train(**train_params)
 
+logging.info('Plot model history...')
+plot_model_history(
+    model=model,
+    output_dir=output_plot_dir,
+    model_name="scGEN",
+)
+
 logging.info('Save model...')
 model.save(output_model, overwrite=True)
 
-logging.info(adata.__str__())
 corrected_adata = model.batch_removal(
     adata,
     batch_key=batch_key,
@@ -94,15 +101,8 @@ add_metadata(
     model_history=dict(model.trainer.logs)
 )
 
-plot_model_history(
-    title='loss',
-    train=model.trainer.logs['epoch_loss'],
-    validation=model.trainer.logs['val_loss'],
-    output_path=f'{output_plot_dir}/loss.png'
-)
-
-logging.info(adata.__str__())
 logging.info(f'Write {output_file}...')
+logging.info(adata.__str__())
 write_zarr_linked(
     adata,
     input_file,
