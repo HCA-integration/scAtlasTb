@@ -30,6 +30,16 @@ SCPOLI_MODEL_PARAMS = [
     'use_ln',
 ]
 
+SCPOLI_EARLY_STOPPING = {
+    "early_stopping_metric": "val_prototype_loss",
+    "mode": "min",
+    "threshold": 0,
+    "patience": 20,
+    "reduce_lr": True,
+    "lr_patience": 13,
+    "lr_factor": 0.1,
+}
+
 SCGEN_MODEL_PARAMS = [
     'hidden_layer_sizes',
     'z_dimension',

@@ -8,7 +8,7 @@ from pathlib import Path
 
 from integration_utils import add_metadata, get_hyperparams, remove_slots, \
     set_model_history_dtypes, plot_model_history, clean_categorical_column
-from scArches_utils import SCPOLI_MODEL_PARAMS
+from scArches_utils import SCPOLI_MODEL_PARAMS, SCPOLI_EARLY_STOPPING
 from utils.io import read_anndata, write_zarr_linked
 from utils.accessors import subset_hvg
 
@@ -43,6 +43,7 @@ model_params = dict(
 
 # set defaults for training parameters
 train_params.setdefault('check_val_every_n_epoch', 1) # needed to be able to plot loss curve
+train_params.setdefault('early_stopping_kwargs', SCPOLI_EARLY_STOPPING)
 train_params.setdefault('pretrain_epochs', int(0.8 * train_params.get('n_epochs', 0)))
 
 logging.info(
