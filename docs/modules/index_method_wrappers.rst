@@ -8,7 +8,10 @@ Method wrappers
    label_transfer
    integration
    metrics
-   sample_representation
-   cell_type_prediction
+   batch_analysis
+   clustering
+   celltype_prediction
    doublets
+   marker_genes
    qc
+   reference_mapping
