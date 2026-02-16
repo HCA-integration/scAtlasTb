@@ -10,6 +10,13 @@ from pathlib import Path
 import logging
 logging.basicConfig(level=logging.INFO)
 
+# Monkey-patch torch.load to use CPU when CUDA unavailable
+if not torch.cuda.is_available():
+    _original_torch_load = torch.load
+    torch.load = lambda *args, **kwargs: _original_torch_load(
+        *args, **{**kwargs, "map_location": torch.device("cpu")}
+    )
+
 
 def _read_model_name_from_registry(model_path) -> str:
     """Read registry with information about the model, return the model name"""
