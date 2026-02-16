@@ -1,7 +1,12 @@
+import warnings
+warnings.filterwarnings("ignore", message="Can't initialize NVML")
+
 import torch
 import scvi
 from pathlib import Path
 from pprint import pformat
+from math import ceil
+from lightning.pytorch.callbacks import TQDMProgressBar
 import logging
 logging.basicConfig(level=logging.INFO)
 
@@ -22,19 +27,25 @@ batch_key = wildcards.batch
 
 torch.set_float32_matmul_precision('medium')
 scvi.settings.seed = params.get('seed', 0)
-scvi.settings.progress_bar_style = 'tqdm'
+# scvi.settings.progress_bar_style = 'tqdm'
 scvi.settings.num_threads = snakemake.threads
 
 model_params, train_params = get_hyperparams(
     hyperparams=params.get('hyperparams', {}),
     model_params=SCVI_MODEL_PARAMS,
 )
+
+# parse categorical and continuous covariate keys
 categorical_covariate_keys = model_params.pop('categorical_covariate_keys', [])
 if isinstance(categorical_covariate_keys, str):
     categorical_covariate_keys = [categorical_covariate_keys]
 continuous_covariate_keys = model_params.pop('continuous_covariate_keys', [])
 if isinstance(continuous_covariate_keys, str):
     continuous_covariate_keys = [continuous_covariate_keys]
+
+# set defaults for training parameters
+train_params.setdefault('check_val_every_n_epoch', 1) # needed to be able to plot loss curves
+
 logging.info(
     f'model parameters:\n{pformat(model_params)}\n'
     f'training parameters:\n{pformat(train_params)}'
@@ -74,7 +85,13 @@ logging.info(f'Set up scVI with parameters:\n{pformat(model_params)}')
 model = scvi.model.SCVI(adata, **model_params)
 
 logging.info(f'Train scVI with parameters:\n{pformat(train_params)}')
-model.train(**train_params)
+batch_size = train_params.get("batch_size", 128)
+steps_per_epoch = ceil(adata.n_obs / batch_size)
+model.train(
+    **train_params,
+    # simple_progress_bar=True,
+    # callbacks=[TQDMProgressBar(refresh_rate=steps_per_epoch)],
+)
 
 logging.info('Save model...')
 model.save(output_model, overwrite=True)
@@ -90,18 +107,11 @@ add_metadata(
     model_history=set_model_history_dtypes(model.history)
 )
 
-for loss in ['reconstruction_loss', 'elbo', 'kl_local']:
-    train_key = f'{loss}_train'
-    validation_key = f'{loss}_validation'
-    if train_key not in model.history or validation_key not in model.history:
-        continue
-    plot_model_history(
-        title=loss,
-        train=model.history[train_key][train_key],
-        validation=model.history[validation_key][validation_key],
-        output_path=f'{output_plot_dir}/{loss}.png'
-    )
-
+plot_model_history(
+    model=model,
+    output_dir=output_plot_dir,
+    model_name="scVI",
+)
 
 logging.info(f'Write {output_file}...')
 logging.info(adata.__str__())

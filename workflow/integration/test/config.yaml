@@ -81,7 +81,7 @@ DATASETS:
 
   preprocessed:
     input:
-      integration: test/input/preprocessing/dataset~all/file_id~pbmc/preprocessed.zarr
+      integration: test/input/preprocessing/dataset~all/file_id~pbmc.zarr
     integration:
       label: bulk_labels
       batch: batch
@@ -167,9 +167,11 @@ DATASETS:
       methods:
         scvi:
           n_hidden: 128
-          dispersion:
-            - gene
-            - gene-batch
+          dispersion: gene
+          categorical_covariate_keys:
+            -
+            - [batch_2]
+            - [batch_2, phase]
           use_observed_lib_size: true
           max_epochs: 20
           early_stopping: true
@@ -192,17 +194,14 @@ DATASETS:
           max_epochs: 20
           early_stopping: true
         scanvi:
-          max_epochs: 20
-          early_stopping: true
-          categorical_covariate_keys:
-            -
-            -
-              - batch_2
-            -
-              - batch_2
-              - phase
+          n_hidden: 128
+          dispersion: gene
           continuous_covariate_keys:
             - percent_mito
+          max_epochs: 20
+          early_stopping: true
+          scanvi_max_epochs: 10
+          scanvi_early_stopping: true
       umap_colors:
         - bulk_labels
         - phase
@@ -241,8 +240,12 @@ DATASETS:
             - [128, 128]
           decoder_dims:
             - [128, 128]
+          plan_kwargs:
+          - n_epochs_kl_warmup: 10
           max_epochs: 20
-          early_stopping: true
+          early_stopping:
+            - false
+            - true
       umap_colors:
         - bulk_labels
         - phase

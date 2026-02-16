@@ -1,8 +1,13 @@
+import warnings
+warnings.filterwarnings("ignore", message="Can't initialize NVML")
+
 import torch
 import scvi
 from scvi.external import SysVI
 from pathlib import Path
 from pprint import pformat
+from math import ceil
+from pytorch_lightning.callbacks import TQDMProgressBar
 import logging
 logging.basicConfig(level=logging.INFO)
 
@@ -46,6 +51,7 @@ if train_params.pop('early_stopping', False):
         val_check_interval=train_params.get('val_check_interval', 1.0),
     )
 
+# parse categorical and continuous covariate keys
 categorical_covariate_keys = model_params.pop('categorical_covariate_keys', [])
 if isinstance(categorical_covariate_keys, str):
     categorical_covariate_keys = [categorical_covariate_keys]
@@ -53,6 +59,7 @@ continuous_covariate_keys = model_params.pop('continuous_covariate_keys', [])
 if isinstance(continuous_covariate_keys, str):
     continuous_covariate_keys = [continuous_covariate_keys]
 
+# set system key
 try:
     system_key = model_params.pop('system_key')
 except KeyError:
@@ -64,6 +71,9 @@ except KeyError:
 # ensure that batch_key is included in categorical_covariate_keys
 if batch_key not in categorical_covariate_keys:
     categorical_covariate_keys.append(batch_key)
+
+# set defaults for training parameters
+train_params.setdefault('check_val_every_n_epoch', 1) # needed to be able to plot loss curves
 
 logging.info(
     'Parsed parameters:\n'
@@ -105,7 +115,13 @@ logging.info(f'Set up SysVI with parameters:\n{pformat(model_params)}')
 model = SysVI(adata, **model_params)
 
 logging.info(f'Train SysVI with parameters:\n{pformat(train_params)}')
-model.train(**train_params)
+batch_size = train_params.get("batch_size", 128)
+steps_per_epoch = ceil(adata.n_obs / batch_size)
+model.train(
+    **train_params,
+    simple_progress_bar=False,
+    callbacks=[TQDMProgressBar(refresh_rate=steps_per_epoch)],
+)
 
 logging.info('Save model...')
 model.save(output_model, overwrite=True)
@@ -121,18 +137,11 @@ add_metadata(
     model_history=set_model_history_dtypes(model.history)
 )
 
-for loss in ['loss', 'reconstruction_loss', 'kl_local', 'z_distance_cycle']:
-    train_key = f'{loss}_train'
-    validation_key = f'{loss}_validation'
-    if train_key not in model.history or validation_key not in model.history:
-        continue
-    plot_model_history(
-        title=loss,
-        train=model.history[train_key][train_key],
-        validation=model.history[validation_key][validation_key],
-        output_path=f'{output_plot_dir}/{loss}.png'
-    )
-
+plot_model_history(
+    model=model,
+    output_dir=output_plot_dir,
+    model_name="SysVI",
+)
 
 logging.info(f'Write {output_file}...')
 logging.info(adata.__str__())

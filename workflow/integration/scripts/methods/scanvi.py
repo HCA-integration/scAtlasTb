@@ -1,3 +1,6 @@
+import warnings
+warnings.filterwarnings("ignore", message="Can't initialize NVML")
+
 import torch
 import scvi
 from pprint import pformat
@@ -12,9 +15,10 @@ from utils.accessors import subset_hvg
 
 input_file = snakemake.input[0]
 output_file = snakemake.output[0]
-output_model = snakemake.output.model
-output_plot_dir = snakemake.output.plots
-Path(output_plot_dir).mkdir(parents=True, exist_ok=True)
+output_model = Path(snakemake.output.model)
+output_plot_dir = Path(snakemake.output.plots)
+output_model.mkdir(parents=True, exist_ok=True)
+output_plot_dir.mkdir(parents=True, exist_ok=True)
 
 wildcards = snakemake.wildcards
 params = snakemake.params
@@ -36,9 +40,17 @@ if isinstance(categorical_covariate_keys, str):
 continuous_covariate_keys = model_params.pop('continuous_covariate_keys', [])
 if isinstance(continuous_covariate_keys, str):
     continuous_covariate_keys = [continuous_covariate_keys]
+
+train_scvi = {k: v for k, v in train_params.items() if not k.startswith('scanvi_')}
+train_scanvi = {k.replace('scanvi_', ''): v for k, v in train_params.items() if k.startswith('scanvi_')}
+
+train_scvi.setdefault('check_val_every_n_epoch', 1)
+train_scanvi.setdefault('check_val_every_n_epoch', 1)
+
 logging.info(
-    f'model parameters:\n{pformat(model_params)}\n'
-    f'training parameters:\n{pformat(train_params)}'
+    f'model parameters:\n{pformat(model_params)}'
+    f'\nscvi train parameters:\n{pformat(train_scvi)}'
+    f'\nscanvi train parameters:\n{pformat(train_scanvi)}'
 )
 
 # check GPU
@@ -79,45 +91,65 @@ model = scvi.model.SCVI(
     **model_params
 )
 
-logging.info(f'Train scVI with parameters:\n{pformat(train_params)}')
-model.train(**train_params)
+logging.info(f'Train scVI with parameters:\n{pformat(train_scvi)}')
+model.train(**train_scvi)
 
-for loss in ['reconstruction_loss', 'elbo', 'kl_local']:
-    train_key = f'{loss}_train'
-    validation_key = f'{loss}_validation'
-    title = f'scVI {loss}'
-    if train_key not in model.history or validation_key not in model.history:
-        continue
-    plot_model_history(
-        title=title,
-        train=model.history[train_key][train_key],
-        validation=model.history[validation_key][validation_key],
-        output_path=f'{output_plot_dir}/{title}.png'
-    )
+plot_model_history(
+    model=model,
+    output_dir=output_plot_dir,
+    model_name="scVI",
+    prefix='scvi_',
+)
 
 logging.info(f'Set up scANVI on top of scVI with parameters:\n{pformat(model_params)}')
 model = scvi.model.SCANVI.from_scvi_model(
     model,
     labels_key=label_key,
     unlabeled_category='nan',
-    **model_params
 )
 
-logging.info(f'Train scANVI with parameters:\n{pformat(train_params)}')
-model.train(**train_params)
-
-for loss in ['reconstruction_loss', 'elbo', 'kl_local']:
-    train_key = f'{loss}_train'
-    validation_key = f'{loss}_validation'
-    title = f'scANVI {loss}'
-    if train_key not in model.history or validation_key not in model.history:
-        continue
-    plot_model_history(
-        title=title,
-        train=model.history[train_key][train_key],
-        validation=model.history[validation_key][validation_key],
-        output_path=f'{output_plot_dir}/{title}.png'
+logging.info(f'Train scANVI with parameters:\n{pformat(train_scanvi)}')
+# batch_size = train_scanvi.get("batch_size", 128)
+# steps_per_epoch = ceil(adata.n_obs / batch_size)
+try:
+    model.train(
+        callbacks=[
+            scvi.train.SaveCheckpoint(
+                dirpath=output_model.parent,
+                filename=output_model.name,
+                monitor="elbo_validation",
+                load_best_on_end=True,
+                check_nan_gradients=True,
+            )
+        ],
+        **train_scanvi,
     )
+except Exception as e:
+    logging.warning(f"Training failed: {e}. Attempting to load best checkpoint if available...")
+    checkpoint_path = Path(output_model)
+    if checkpoint_path.exists():
+        try:
+            model = scvi.model.SCANVI.load(checkpoint_path, adata)
+            logging.info(f"Successfully loaded SCANVI checkpoint from {checkpoint_path} after training failure.")
+        except Exception as load_err:
+            logging.error(
+                f"Failed to load SCANVI checkpoint from {checkpoint_path} after training error: {load_err}"
+            )
+            raise RuntimeError(
+                f"Training failed and loading SCANVI checkpoint from {checkpoint_path} also failed."
+            ) from e
+    else:
+        logging.error(
+            f"Training failed and no SCANVI checkpoint was found at {checkpoint_path}; re-raising original error."
+        )
+        raise
+
+plot_model_history(
+    model=model,
+    output_dir=output_plot_dir,
+    model_name="scANVI",
+    prefix='scanvi_',
+)
 
 logging.info('Save model...')
 model.save(output_model, overwrite=True)

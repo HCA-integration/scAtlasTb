@@ -1,10 +1,28 @@
+attempt_to_cpu = 2
+
+def get_threads(wildcards, attempt):
+    use_gpu = mcfg.get_profile(wildcards) == 'gpu'
+    if use_gpu and attempt <= attempt_to_cpu:
+        return 1
+    return max(
+        1,
+        mcfg.get_from_parameters(
+            wildcards,
+            'threads',
+            exclude=['output_type'],
+            default=1
+        )
+    )
+
+
 rule prepare:
     message:
         """
         Prepare: Prepare dataset={wildcards.dataset} with file_id={wildcards.file_id} and var_mask={wildcards.var_mask}
         input: {input}
         output: {output}
-        params: batches={params.batches} norm_counts={params.norm_counts} raw_counts={params.raw_counts} save_subset={params.save_subset}
+        params: norm_counts={params.norm_counts} raw_counts={params.raw_counts} save_subset={params.save_subset}
+        threads: {threads}
         """
     input:
         anndata=lambda wildcards: mcfg.get_input_file(wildcards.dataset, wildcards.file_id)
@@ -14,12 +32,14 @@ rule prepare:
         norm_counts=lambda wildcards: mcfg.get_from_parameters(wildcards, 'norm_counts', exclude=['output_type']),
         raw_counts=lambda wildcards: mcfg.get_from_parameters(wildcards, 'raw_counts', exclude=['output_type']),
         save_subset=lambda wildcards: mcfg.get_from_parameters(wildcards, 'save_subset', exclude=['output_type']),
-        batches=lambda wildcards: mcfg.get_from_parameters(wildcards, 'batch', exclude=['output_type'], single_value=False),
-        labels=lambda wildcards: mcfg.get_from_parameters(wildcards, 'label', exclude=['output_type'], single_value=False),
     conda:
-        get_env(config, 'scanpy', gpu_env='rapids_singlecell', no_gpu=True)
+        get_env(config, 'scanpy')
     threads:
-        lambda wildcards: max(1, mcfg.get_from_parameters(wildcards, 'threads', exclude=['output_type'], default=1)),
+        lambda wildcards: mcfg.get_for_dataset(
+            dataset=wildcards.dataset,
+            query=[mcfg.module_name, 'threads'],
+            default=1
+        )
     resources:
         partition=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='partition',attempt=attempt),
         qos=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='qos',attempt=attempt),
@@ -45,13 +65,14 @@ use rule run_method from integration as integration_run_method with:
        output: {output}
        wildcards: {wildcards}
        resources: gpu={resources.gpu} mem_mb={resources.mem_mb} partition={resources.partition} qos={resources.qos}
+       threads: {threads}
        """
     input:
         zarr=rules.prepare.output.zarr,
     output:
         zarr=directory(out_dir / integration_run_pattern / 'adata.zarr'),
         model=touch(directory(out_dir / integration_run_pattern / 'model')),
-        plots=touch(directory(image_dir / integration_run_pattern)),
+        plots=touch(directory(out_dir / integration_run_pattern / 'plots')),
     benchmark:
         out_dir / integration_run_pattern / 'benchmark.tsv'
     params:
@@ -62,12 +83,12 @@ use rule run_method from integration as integration_run_method with:
         seed=lambda wildcards: mcfg.get_from_parameters(wildcards, 'seed', exclude=['output_type'], default=0),
         env=lambda wildcards: mcfg.get_from_parameters(wildcards, 'env', exclude=['output_type']),
     threads:
-        lambda wildcards: max(1, mcfg.get_from_parameters(wildcards, 'threads', exclude=['output_type'], default=1)),
+        lambda wildcards, attempt: get_threads(wildcards, attempt)
     resources:
-        partition=lambda w, attempt: mcfg.get_resource(resource_key='partition', profile=mcfg.get_profile(w), attempt=attempt, attempt_to_cpu=3),
-        qos=lambda w, attempt: mcfg.get_resource(resource_key='qos', profile=mcfg.get_profile(w), attempt=attempt, attempt_to_cpu=3),
-        mem_mb=lambda w, attempt: mcfg.get_resource(resource_key='mem_mb', profile=mcfg.get_profile(w), attempt=attempt, attempt_to_cpu=2, factor=3),
-        gpu=lambda w, attempt: mcfg.get_resource(resource_key='gpu', profile=mcfg.get_profile(w), attempt=attempt, attempt_to_cpu=3),
+        partition=lambda w, attempt: mcfg.get_resource(resource_key='partition', profile=mcfg.get_profile(w), attempt=attempt, attempt_to_cpu=attempt_to_cpu),
+        qos=lambda w, attempt: mcfg.get_resource(resource_key='qos', profile=mcfg.get_profile(w), attempt=attempt, attempt_to_cpu=attempt_to_cpu),
+        mem_mb=lambda w, attempt: mcfg.get_resource(resource_key='mem_mb', profile=mcfg.get_profile(w), attempt=attempt, attempt_to_cpu=attempt_to_cpu, factor=3),
+        gpu=lambda w, attempt: mcfg.get_resource(resource_key='gpu', profile=mcfg.get_profile(w), attempt=attempt, attempt_to_cpu=attempt_to_cpu),
         time="2-00:00:00",
 
 

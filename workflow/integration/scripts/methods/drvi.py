@@ -2,6 +2,8 @@ import torch
 import drvi
 from pathlib import Path
 from pprint import pformat
+from matplotlib import pyplot as plt
+import anndata as ad
 import logging
 logging.basicConfig(level=logging.INFO)
 
@@ -29,12 +31,22 @@ model_params, train_params = get_hyperparams(
     hyperparams=params.get('hyperparams', {}),
     model_params=DRVI_MODEL_PARAMS,
 )
+
+# parse categorical and continuous covariate keys
 categorical_covariate_keys = model_params.pop('categorical_covariate_keys', [])
 if isinstance(categorical_covariate_keys, str):
     categorical_covariate_keys = [categorical_covariate_keys]
 continuous_covariate_keys = model_params.pop('continuous_covariate_keys', [])
 if isinstance(continuous_covariate_keys, str):
     continuous_covariate_keys = [continuous_covariate_keys]
+
+# set defaults for training parameters
+default_plan_kwargs = {
+    "n_epochs_kl_warmup": train_params.get('max_epochs', 400),
+}
+train_params.setdefault('plan_kwargs', default_plan_kwargs)
+train_params.setdefault('check_val_every_n_epoch', 1)
+
 logging.info(
     f'model parameters:\n{pformat(model_params)}\n'
     f'training parameters:\n{pformat(train_params)}'
@@ -80,11 +92,15 @@ model_params |= dict(categorical_covariates=categorical_covariate_keys)
 logging.info(f'Set up DRVI with parameters:\n{pformat(model_params)}')
 model = drvi.model.DRVI(adata, **model_params)
 
-# train_params |= dict(plan_kwargs={
-#     "n_epochs_kl_warmup": train_params.get('max_epochs', 400),
-# })
 logging.info(f'Train DRVI with parameters:\n{pformat(train_params)}')
 model.train(**train_params)
+
+logging.info('Plot model history...')
+plot_model_history(
+    model=model,
+    output_dir=output_plot_dir,
+    model_name="DRVI",
+)
 
 logging.info('Save model...')
 model.save(output_model, overwrite=True)
@@ -100,18 +116,19 @@ add_metadata(
     model_history=set_model_history_dtypes(model.history)
 )
 
-for loss in ['reconstruction_loss', 'elbo', 'kl_local']:
-    train_key = f'{loss}_train'
-    validation_key = f'{loss}_validation'
-    if train_key not in model.history or validation_key not in model.history:
-        continue
-    plot_model_history(
-        title=loss,
-        train=model.history[train_key][train_key],
-        validation=model.history[validation_key][validation_key],
-        output_path=f'{output_plot_dir}/{loss}.png'
-    )
+# plot DRVI latent space
+embed = ad.AnnData(X=adata.obsm["X_emb"], obs=adata.obs)
+drvi.utils.tl.set_latent_dimension_stats(model, embed)
 
+drvi.utils.pl.plot_latent_dimension_stats(embed, ncols=2)
+fig = plt.gcf()
+fig.savefig(Path(output_plot_dir) / 'latent_dimension_stats.png')
+plt.close(fig)
+
+drvi.utils.pl.plot_latent_dimension_stats(embed, ncols=2, remove_vanished=True)
+fig = plt.gcf()
+fig.savefig(Path(output_plot_dir) / 'latent_dimension_stats_no_vanished.png')
+plt.close(fig)
 
 logging.info(f'Write {output_file}...')
 logging.info(adata.__str__())
