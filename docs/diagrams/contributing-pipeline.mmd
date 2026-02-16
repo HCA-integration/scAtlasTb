@@ -1,0 +1,18 @@
+graph TB
+    A1[Install Requirements] --> A2[Create/Select Module Directory]
+    A2 --> A3[Define Module Structure]
+    A3 --> A4[Implement Module Logic]
+    A4 --> A5{Testing Module?}
+    A5 -->|Yes| A6[Ensure pbmc68k.h5ad exists in data/]
+    A6 --> A7[Run generate_data.py if needed]
+    A7 --> A8[Execute test script:<br/>bash workflow/MODULE/test/run_test.sh]
+    A5 -->|No| A9[Run single module:<br/>snakemake --configfile CONFIG]
+    A8 --> A10[Verify Results]
+    A9 --> A10
+    A10 --> A11{Results OK?}
+    A11 -->|No| A4
+    A11 -->|Yes| A12[Create Pull Request]
+
+    style A1 fill:#e1f5ff
+    style A12 fill:#c8e6c9
+    style A10 fill:#fff9c4
