@@ -10,6 +10,7 @@ dependencies:
   - hdf5=1.14.2
   - dask
   - sparse
+  - pandas<3
   - pip
   - pip:
     - torch

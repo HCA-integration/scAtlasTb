@@ -9,6 +9,7 @@ dependencies:
   - cuda-version>12.1
   - cuda-nvcc>12.1
   - zarr<3
+  - pandas<3
   - dask
   - dask-ml
   - sparse
