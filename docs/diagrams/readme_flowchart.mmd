@@ -1,0 +1,27 @@
+graph TB
+    B1[Define Dataset in config.yaml] --> B2[Specify Input Files]
+    B2 --> B3[Configure Module: preprocessing]
+    
+    B3 --> B4[preprocessing: normalize]
+    B4 --> B5[preprocessing: highly_variable_genes<br/>n_top_genes: 2000]
+    B5 --> B6[preprocessing: pca<br/>n_comps: 50]
+    B6 --> B7[preprocessing: assemble]
+    
+    B7 --> B8[Configure Module: integration]
+    B8 --> B9[integration: prepare<br/>raw_counts, norm_counts, batch]
+    B9 --> B10[integration: run methods<br/>unintegrated, scanorama, scvi]
+    B10 --> B11[integration: postprocess<br/>per method]
+    B11 --> B12[integration: compute_umap<br/>per method]
+    B12 --> B13[integration: plot_umap<br/>per method]
+    
+    B13 --> B14[Configure Module: metrics]
+    B14 --> B15[metrics: benchmark<br/>nmi, graph_connectivity]
+    B15 --> B16[metrics: barplot visualization]
+    
+    B16 --> B17[Execute Pipeline:<br/>snakemake --configfile config.yaml<br/>--snakefile workflow/Snakefile<br/>--use-conda]
+    
+    B17 --> B18[Output Results to output_dir]
+
+    style B1 fill:#e1f5ff
+    style B18 fill:#c8e6c9
+    style B17 fill:#fff9c4
