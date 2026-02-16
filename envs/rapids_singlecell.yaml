@@ -20,6 +20,7 @@ dependencies:
   - sparse
   - harmonypy
   - pytorch
+  - pandas<3
   - pip
   - pip:
     - rapids-singlecell

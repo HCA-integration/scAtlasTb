@@ -8,6 +8,7 @@ dependencies:
   - anndata<0.11
   - scanpy=1.9.5
   - zarr<3
+  - pandas<3
   - scipy<1.13
   - dask
   - sparse

@@ -16,3 +16,4 @@ dependencies:
   - dask-ml
   - sparse
   - zarr
+  - pandas<3

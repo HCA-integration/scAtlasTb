@@ -15,6 +15,7 @@ dependencies:
   - dask-ml
   - sparse
   - zarr<3
+  - pandas<3
   - r-rtensor
   - r-ica
   - bioconductor-fgsea

@@ -5,7 +5,7 @@ channels:
 dependencies:
   - python
   - snakemake=7.31
-  - pandas<3
+  - pandas<2.0.0
   - graphviz
   # - singularity
   - jsonpickle
