@@ -8,6 +8,12 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 import logging
+import torch
+
+try:
+    import drvi
+except ModuleNotFoundError:
+    drvi = None
 logging.basicConfig(level=logging.INFO)
 
 # Monkey-patch torch.load to use CPU when CUDA unavailable
@@ -26,7 +32,18 @@ def _read_model_name_from_registry(model_path) -> str:
 
 def _detect_base_model(model_path):
     """Read from the model's file which scvi_tools model it contains"""
-    return getattr(scvi.model, _read_model_name_from_registry(model_path))
+    model_name = _read_model_name_from_registry(model_path)
+
+    for module in (scvi.model, scvi.external):
+        if hasattr(module, model_name):
+            return getattr(module, model_name)
+
+    if drvi is not None and hasattr(drvi.model, model_name):
+        return getattr(drvi.model, model_name)
+
+    raise ValueError(
+        f"Unsupported model '{model_name}'. Expected a model in scvi.model, scvi.external, or drvi.model."
+    )
 
 
 def _validate_obs_metadata_params(model_registry, model_name, **kwargs):
@@ -69,8 +86,8 @@ def _validate_obs_metadata_params(model_registry, model_name, **kwargs):
             )
 
         elif model_value and query_value and registry_key in [
-            "categorical_covariate",
-            "continuous_covariate",
+            "categorical_covariate_keys",
+            "continuous_covariate_keys",
         ]:
             if len(query_value) != len(model_value):
                 raise ValueError(
@@ -102,6 +119,16 @@ def _align_query_with_registry(adata_query, model_path, **kwargs):
     model = _detect_base_model(model_path)
     model_name = _read_model_name_from_registry(model_path)
     model_registry = model.load_registry(model_path)["setup_args"]
+    
+    if model_name == 'DRVI':
+        batch_key = kwargs.pop('batch_key', None)
+        categorical_covariate_keys = kwargs.get('categorical_covariate_keys', [])
+        
+        if batch_key and batch_key not in categorical_covariate_keys:
+            kwargs['categorical_covariate_keys'].append(batch_key)
+        elif not categorical_covariate_keys:
+            raise ValueError(f'Either "categorical_covariate_keys" or "batch_key" must be present')
+
     _validate_obs_metadata_params(model_registry, model_name, **kwargs)
 
     # align observations
@@ -137,7 +164,7 @@ def _align_query_with_registry(adata_query, model_path, **kwargs):
         'categorical_covariate_keys',
         'continuous_covariate_keys'
     ]:
-        for covariate in model_registry.get(registry_key, []):
+        for covariate in model_registry.get(registry_key, []) or []:
             query_obs[covariate] = adata_query.obs[covariate].values
 
     adata_query.obs = pd.DataFrame(query_obs, index=adata_query.obs_names)
