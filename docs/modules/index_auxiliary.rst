@@ -10,3 +10,4 @@ Auxiliary modules
    relabel
    collect
    uncollect
+   majority_voting
