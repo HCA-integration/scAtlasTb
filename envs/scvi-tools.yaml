@@ -1,21 +1,26 @@
 name: scvi-tools
 channels:
-  - conda-forge
+  - nvidia
   - pytorch
+  - conda-forge
 dependencies:
   - python=3.11
   - anndata=0.11
   - scanpy=1.11
-  # - jaxlib=*=*cuda*
-  - jax<=0.4.28
-  # - cuda-version>12.1
-  # - cuda-nvcc>12.1
   - zarr<3
   - scipy<1.15
   - dask
+  - pandas<3
   - sparse
-  - scvi-tools
+  - jax<=0.4.28
+  # - cuda-version>12.1
+  # - cuda-nvcc>12.1
+  - pytorch>=2.2
+  - jaxlib=*=*cuda*
+  - pytorch-cuda=12.1  # <-- THIS guarantees GPU build
+  - scvi-tools>=1.3.0
   - pip
   - pip:
     - faiss-cpu<=1.9
     - patpy
+    - drvi-py
