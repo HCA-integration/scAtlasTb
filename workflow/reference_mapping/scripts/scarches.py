@@ -32,7 +32,7 @@ else:
     inference_only = False
     train_params = dict(
         max_epochs=10,
-        plan_kwargs=dict(weight_decay=0.0), # default behvaiour, freeze all weights
+        plan_kwargs=dict(weight_decay=0.0), # default behaviour, freeze all weights
         check_val_every_n_epoch=1, # needed for loss curves
     ) | train_params
 logging.info(f'Inference only: {inference_only}')
