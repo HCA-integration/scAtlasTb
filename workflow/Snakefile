@@ -13,9 +13,6 @@ from preprocessing.PreprocessingConfig import PreprocessingConfig
 min_version("6.0")
 container: "docker://condaforge/mambaforge:latest"
 
-configfile: "configs/outputs.yaml"
-configfile: "configs/load_data/config.yaml"
-configfile: "configs/exploration/config.yaml"
 
 # params = pd.read_table('configs/modules.tsv',comment='#')
 # params['submodules'] = params['submodules'].str.split(',')
