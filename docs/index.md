@@ -19,9 +19,10 @@ advanced_configuration/index.md
 :hidden:
 :maxdepth: 2
 
-modules/index_data_processing
-modules/index_method_wrappers
-modules/index_auxiliary
+modules/index_data_preparation
+modules/index_integration
+modules/index_downstream
+modules/index_helpers
 ```
 
 ```{toctree}
