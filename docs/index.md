@@ -31,5 +31,10 @@ modules/index_helpers
 :hidden:
 :maxdepth: 1
 
-workflows/index
+workflows/qc
+workflows/batch_analysis
+workflows/integration
+workflows/metrics
+workflows/clustering
+workflows/label_harmonization
 ```
