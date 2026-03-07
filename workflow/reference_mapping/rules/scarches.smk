@@ -16,9 +16,9 @@ rule scarches:
     conda:
         get_env(config, 'scvi-tools', env_dir='envs')
     resources:
-        partition=lambda wildcards: mcfg.get_resource(profile='gpu',resource_key='partition'),
-        gpu=lambda wildcards: mcfg.get_resource(profile='gpu',resource_key='gpu'),
-        qos=lambda wildcards: mcfg.get_resource(profile='gpu',resource_key='qos'),
-        mem_mb=lambda wildcards: mcfg.get_resource(profile='gpu',resource_key='mem_mb'),
+        partition=mcfg.get_resource(profile='gpu',resource_key='partition'),
+        gpu=mcfg.get_resource(profile='gpu',resource_key='gpu'),
+        qos=mcfg.get_resource(profile='gpu',resource_key='qos'),
+        mem_mb=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='mem_mb',attempt=attempt),
     script:
         '../scripts/scarches.py'
