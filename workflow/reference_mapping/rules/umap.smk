@@ -15,7 +15,7 @@ use rule neighbors from preprocessing as reference_mapping_neighbors with:
         zarr=directory(mcfg.out_dir / 'postprocess' / f'{paramspace.wildcard_pattern}.zarr'),
     params:
         args=update_neighbors_args,
-        extra_uns=lambda wildcards: {'output_type': 'embedding'},
+        extra_uns=lambda wildcards: {'output_type': 'embed'},
     retries: 2
     resources:
         partition=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='partition',attempt=attempt),
