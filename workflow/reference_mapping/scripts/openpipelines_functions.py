@@ -120,15 +120,6 @@ def _align_query_with_registry(adata_query, model_path, **kwargs):
     model_name = _read_model_name_from_registry(model_path)
     model_registry = model.load_registry(model_path)["setup_args"]
     
-    if model_name == 'DRVI':
-        batch_key = kwargs.pop('batch_key', None)
-        categorical_covariate_keys = kwargs.get('categorical_covariate_keys', [])
-        
-        if batch_key and batch_key not in categorical_covariate_keys:
-            kwargs['categorical_covariate_keys'].append(batch_key)
-        elif not categorical_covariate_keys:
-            raise ValueError(f'Either "categorical_covariate_keys" or "batch_key" must be present')
-
     _validate_obs_metadata_params(model_registry, model_name, **kwargs)
 
     # align observations

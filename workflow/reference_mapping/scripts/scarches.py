@@ -84,7 +84,7 @@ var_names = adata.var_names if var_key is None else adata.var[var_key]
 adata = adata[:, var_names.isin(model_genes)].copy()
 assert adata.n_vars > 0, 'No overlapping genes.'
 logging.info(f'Found {adata.n_vars} overlapping genes.')
-dask_compute(adata)
+adata = dask_compute(adata, layers='X')
 
 missing = model_genes.difference(var_names)
 if len(missing) > 0:
@@ -104,7 +104,7 @@ if len(missing) > 0:
 
 logging.info('Detect base model')
 model = _detect_base_model(model_path)
-logging.info(f'Model class: {model}')
+logging.info(f'Model class: {model.__name__}')
 
 logging.info('Align query to model')
 adata = _align_query_with_registry(
