@@ -1,3 +1,7 @@
+import warnings
+warnings.filterwarnings("ignore", message="Can't initialize NVML")
+
+import sys
 import logging
 logging.basicConfig(level=logging.INFO)
 from pathlib import Path
@@ -5,17 +9,26 @@ import pandas as pd
 import numpy as np
 import anndata as ad
 import torch
+import scvi
 from scipy import sparse
 
 from utils.io import read_anndata, write_zarr_linked
 from utils.misc import dask_compute
 from openpipelines_functions import _align_query_with_registry, _detect_base_model
 
+# Import integration utils for plotting
+sys.path.append(str(Path(__file__).parent.parent.parent / 'integration' / 'scripts' / 'methods'))
+from integration_utils import plot_model_history, standardize_training_logs
+
+torch.set_float32_matmul_precision('medium')
+scvi.settings.dl_num_workers = snakemake.threads
 
 input_file = snakemake.input.zarr
 model_path = snakemake.input.model
 output_file = snakemake.output.zarr
 model_output = snakemake.output.model
+output_plot_dir = snakemake.output.plots
+Path(output_plot_dir).mkdir(parents=True, exist_ok=True)
 
 tmpdir = snakemake.resources.tmpdir
 layer = snakemake.params.get('layer', 'X')
@@ -166,6 +179,14 @@ else:
     # Train scArches model for query mapping
     logging.info(f'Training with parameters: {train_params}')
     vae_query.train(**train_params)
+    
+    # Plot training diagnostics
+    plot_model_history(
+        model=vae_query,
+        output_dir=output_plot_dir,
+        model_name=f"scArches on {model.__name__}",
+    )
+    logging.info(f'Saved training plots to {output_plot_dir}')
 
 # get latent representation
 X_emb = vae_query.get_latent_representation(adata=adata)

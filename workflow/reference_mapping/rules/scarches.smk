@@ -5,6 +5,7 @@ rule scarches:
     output:
         zarr=directory(mcfg.out_dir / 'model' / f'{paramspace.wildcard_pattern}.zarr'),
         model=directory(mcfg.out_dir / 'model' / paramspace.wildcard_pattern),
+        plots=directory(mcfg.image_dir / 'model' / paramspace.wildcard_pattern),
     params:
         layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'scarches', default={}).get('layer', 'X'),
         var_key=lambda wildcards: mcfg.get_from_parameters(wildcards, 'scarches', default={}).get('var_key'),
