@@ -38,7 +38,7 @@ def _detect_base_model(model_path):
         if hasattr(module, model_name):
             return getattr(module, model_name)
 
-    if drvi is not None and hasattr(drvi.model, model_name):
+    if drvi is not None and hasattr(drvi, "model") and hasattr(drvi.model, model_name):
         return getattr(drvi.model, model_name)
 
     raise ValueError(
