@@ -14,3 +14,5 @@ dependencies:
   - sparse
   - zarr<3
   - pandas<3
+  - harmony-pytorch
+  - harmonypy

@@ -6,6 +6,7 @@ from matplotlib import pyplot as plt
 import anndata as ad
 import logging
 logging.basicConfig(level=logging.INFO)
+import dask
 
 from integration_utils import add_metadata, get_hyperparams, remove_slots, set_model_history_dtypes, \
     DRVI_MODEL_PARAMS, plot_model_history, clean_categorical_column
@@ -26,6 +27,7 @@ torch.set_float32_matmul_precision('medium')
 # drvi.settings.seed = params.get('seed', 0)
 # drvi.settings.progress_bar_style = 'tqdm'
 # drvi.settings.num_threads = snakemake.threads
+dask.config.set(scheduler='threads', num_workers=snakemake.threads)
 
 model_params, train_params = get_hyperparams(
     hyperparams=params.get('hyperparams', {}),
@@ -77,18 +79,15 @@ if isinstance(categorical_covariate_keys, list):
 else:
     categorical_covariate_keys = []
 
-# add batch key to categorical covariates
-if batch_key not in categorical_covariate_keys:
-    categorical_covariate_keys.append(batch_key)
 
 drvi.model.DRVI.setup_anndata(
     adata,
+    batch_key=batch_key,
     categorical_covariate_keys=categorical_covariate_keys,
     continuous_covariate_keys=continuous_covariate_keys,
-    is_count_data=False,
+    is_count_data=True,
 )
 
-model_params |= dict(categorical_covariates=categorical_covariate_keys)
 logging.info(f'Set up DRVI with parameters:\n{pformat(model_params)}')
 model = drvi.model.DRVI(adata, **model_params)
 

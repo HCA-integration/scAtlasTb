@@ -19,7 +19,7 @@ However, if you want to your code to recognize GPUs when working on a cluster, y
 
 Environments that support GPU are:
 
-* `rapids_singlecell` (only installs when GPU is available)
+* `rapids_singlecell` (only installs when NVIDIA GPU is available)
 * `scarches`
 * `scib_metrics`
 * `scvi-tools`

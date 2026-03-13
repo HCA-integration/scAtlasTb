@@ -9,7 +9,25 @@ DATASETS:
         file_1: test/input/pbmc68k.h5ad
     reference_mapping:
       scarches:
-        model: test/input/model
+        model: "test/input/integration/run_method/dataset~scvi_tools/file_id~orig/\
+          batch~batch/var_mask~highly_variable/method~scvi--hyperparams~11e9065eea--label~None/\
+          model"
+        layer: layers/counts
+        model_params:
+          batch_key: batch
+      umap_colors:
+        - batch
+        - bulk_labels
+
+  test_drvi:
+    input:
+      reference_mapping:
+        file_1: test/input/pbmc68k.h5ad
+    reference_mapping:
+      scarches:
+        model: "test/input/integration/run_method/dataset~drvi/file_id~orig/\
+          batch~batch/var_mask~highly_variable/method~drvi--hyperparams~d585b33bec--label~None/\
+          model"
         layer: layers/counts
         model_params:
           batch_key: batch
