@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - bioconda
 dependencies:
-  - python
+  - python=3.12
   - sphinx>=4
   - sphinx-book-theme>=1.0.0
   - myst-nb
@@ -16,7 +16,6 @@ dependencies:
   - sphinxcontrib-napoleon
   - pdf2image
   - sphinx-design
-  - sphinxcontrib-details-directive
   - pip
   - pip:
       - sphinxemoji

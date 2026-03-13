@@ -12,6 +12,7 @@ dependencies:
   - dask-ml
   - sparse
   - zarr<3
+  - pandas<3
   - pip
   - rpy2=3.5.11  # Required by PILOT. Should be installed by it, but MacOS can lack some of system dependencies, which are installed this way
   - anndata2ri=1.3.1

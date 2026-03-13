@@ -3,14 +3,3 @@
 output_dir: data/out
 images: images
 use_gpu: true
-
-output_map:
-  merge: data/out/merge/dataset~{dataset}.zarr
-  # qc: data/out/qc/dataset~{dataset}/file_id~{file_id}.zarr
-  clustering: data/out/clustering/dataset~{dataset}/file_id~{file_id}.zarr
-  split_data: data/out/split_data/dataset~{dataset}/file_id~{file_id}/key~{key}/value~{value}.zarr
-  relabel: data/out/relabel/dataset~{dataset}/file_id~{file_id}.zarr
-  pca: data/out/preprocessing/dataset~{dataset}/file_id~{file_id}/pca.zarr
-  neighbors: data/out/preprocessing/dataset~{dataset}/file_id~{file_id}/neighbors.zarr
-  preprocessing: data/out/preprocessing/dataset~{dataset}/file_id~{file_id}/preprocessed.zarr
-  # integration: data/out/integration/dataset~{dataset}/file_id~{file_id}/batch~{batch}/method~{method}--hyperparams~{hyperparams}--label~{label}--output_type~{output_type}.zarr
