@@ -13,3 +13,5 @@ dependencies:
   - dask-ml
   - sparse
   - zarr<3
+  - harmony-pytorch
+  - harmonypy
