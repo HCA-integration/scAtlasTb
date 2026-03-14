@@ -73,24 +73,31 @@ def update_input_files_per_dataset(
     if config_kwargs is None:
         config_kwargs = {}
     
-    file_map = InputFiles.parse(config['DATASETS'][dataset]['input'][module_name])
+    original_input = config['DATASETS'][dataset]['input'][module_name]
+    # Check if user provided explicit file name mapping (dict) vs simple module reference (string)
+    user_provided_mapping = isinstance(original_input, dict)
+    
+    # Parse original input into file name to input specification mapping
+    file_map = InputFiles.parse(original_input)
+
+    # Parse input specification to file paths
     input_files = {}
-    for file_name, file_path in file_map.items():
-        if ',' in file_path and '.zarr' not in file_path and '.h5ad' not in file_path:
-            # multiple files
-            file_paths = file_path.split(',')
+    for file_name, input_specifier in file_map.items():
+        if '.zarr' in input_specifier or '.h5ad' in input_specifier or ',' not in input_specifier:
+            # single file
+            input_specifiers = [input_specifier]
         else:
-            file_paths = [file_path]
+            input_specifiers = input_specifier.split(',')
         
-        for file_path in file_paths:
-            file_path = file_path.strip()
-            if '/' in file_path:
-                # assert Path(file_path).exists(), f'Missing input file "{file_path}"'
-                input_files |= {file_name: file_path}
+        for input_specifier in input_specifiers:  # iterate file paths (e.g. when more than 1 input module specified)
+            input_specifier = input_specifier.strip()
+            if '/' in input_specifier:
+                # assert Path(input_specifier).exists(), f'Missing input file "{input_specifier}"'
+                input_files |= {file_name: input_specifier}
                 continue
-            
-            # get output files for input module
-            input_module = file_path  # rename for easier readability
+
+            # Get output files for input module via recursion
+            input_module = input_specifier  # rename for easier readability
             config = update_input_files_per_dataset(
                 dataset=dataset,
                 module_name=input_module,
@@ -99,6 +106,7 @@ def update_input_files_per_dataset(
                 config_class_map=config_class_map,
             )
             
+            # Create module config for input module to get output files
             ModuleConfigClass = config_class_map.get(input_module, ModuleConfig)
             input_cfg = ModuleConfigClass(
                 module_name=input_module,
@@ -110,7 +118,22 @@ def update_input_files_per_dataset(
                 subset_dict={'dataset': dataset},
                 as_dict=True
             )
-            input_files |= InputFiles.parse(output_files)
+            
+            # Handle file naming based on whether user provided explicit mapping
+            if user_provided_mapping:
+                # User explicitly provided file_name mapping, use their naming
+                if len(output_files) == 1:
+                    # Single output: use user-provided file name
+                    output_path = list(output_files.values())[0]
+                    input_files |= {file_name: output_path}
+                else:
+                    # Multiple outputs: prepend user-provided file name
+                    for output_id, output_path in output_files.items():
+                        new_file_id = f"{file_name}:{output_id}"
+                        input_files |= {new_file_id: output_path}
+            else:
+                # Use output file IDs from ModuleConfig's output_map as file names
+                input_files |= output_files
     
     config['DATASETS'][dataset]['input'][module_name] = input_files
     return config
