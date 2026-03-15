@@ -207,6 +207,48 @@ resolved ids for ``collect`` are:
 
 If two resolved entries produce the same file id, the later entry overwrites the earlier one.
 
+Output naming for multi-output rules
+------------------------------------
+
+Internally, output ids are created in ``ModuleConfig.get_output_files`` and may later be
+propagated through ``update_input_files_per_dataset``.
+
+If a rule expands to multiple outputs for one input file id, each output gets its own output id entry that contains wildcards.
+This affects the following modules:
+
+- ``split_data`` where data is split y ``key`` into ``values`` specified by the user
+- ``integration`` where each combination of integration method, batch variable, highly variable gene mask (var_mask) results in a separate output file
+- ``sample_representation`` where each combination of representation and method results in a separate output file
+
+Below is an example for the ``split_data`` module:
+
+.. code-block:: yaml
+
+   DATASETS:
+     my_task:
+       input:
+         split_data:
+           pbmc1: data/pbmc68k.h5ad
+           pbmc2: data/pbmc68k.h5ad # same input file for demonstration purposes only
+         collect:
+           lineage: split_data
+    
+    split_data:
+      key: lineage
+      values:
+        - TCD4
+        - TCD8_NK
+
+The input of ``split_data`` consists of 2 files named ``pbmc1`` and ``pbmc2`` that will each be split by the ``lineage`` key into 2 output files.
+The output files include wildcards, resulting in the following output file names:
+  - ``split_data:filter:relabel:pbmc1--split_data_key=lineage--split_data_value=TCD4``, 
+  - ``split_data:filter:relabel:pbmc1--split_data_key=lineage--split_data_value=TCD8_NK``
+  - ``split_data:filter:relabel:pbmc2--split_data_key=lineage--split_data_value=TCD4``
+  - ``split_data:filter:relabel:pbmc2--split_data_key=lineage--split_data_value=TCD8_NK``
+In cases of very long output ids e.g. for ``integration``, where more wildcards are in the output file name, they are shortened by ``shorten_name`` in ``ModuleConfig.get_output_files``.
+In that case, wildcards from the same module are collapsed into ``module={hash({module_parameter}={module_value})}``.
+This keeps ids deterministic while preventing path/name explosion.
+
 .. _practical-recommendations:
 
 Practical recommendations
