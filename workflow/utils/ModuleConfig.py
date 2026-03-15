@@ -1,6 +1,7 @@
 from pprint import pprint, pformat
 from typing import Union
 from pathlib import Path
+from itertools import groupby
 import pandas as pd
 from snakemake.exceptions import WildcardError
 from snakemake.io import expand, Wildcards
@@ -80,6 +81,7 @@ class ModuleConfig:
             input_file_wildcards=self.input_files.get_wildcards(),
             dataset_config=self.datasets,
             default_config=self.config.get('defaults'),
+            default_datasets=self.default_datasets,
             dont_inherit=dont_inherit,
             wildcard_names=wildcard_names,
             mandatory_wildcards=mandatory_wildcards,
@@ -132,6 +134,9 @@ class ModuleConfig:
             dataset: entry for dataset, entry in self.config['DATASETS'].items()
             if self.module_name in entry.get('input', {}).keys()
         }
+        
+        # Store default datasets list from config
+        self.default_datasets = self.config.get('defaults', {}).get('datasets', None)
         
         for dataset in self.datasets:
             self.set_defaults_per_dataset(dataset, warn=warn)
@@ -195,10 +200,18 @@ class ModuleConfig:
         return self.config
 
 
-    def get_datasets(self) -> dict:
+    def get_datasets(self, default_datasets: bool = True) -> dict:
         """
         Get config for datasets that use the module
+        
+        :param default_datasets: whether to filter by defaults: datasets (default: True)
+        :return: dictionary of dataset configurations
         """
+        if default_datasets and self.default_datasets is not None:
+            return {
+                dataset: entry for dataset, entry in self.datasets.items()
+                if dataset in self.default_datasets
+            }
         return self.datasets
 
 
@@ -259,11 +272,72 @@ class ModuleConfig:
                     return f'{self.module_name}:{wildcard_value}'
             return f'{self.module_name}_{wildcard_name}={wildcard_value}'
         
-        def shorten_name(name, max_length=205):
-            split_values = name.split(f'--{self.module_name}_', 1)
-            if len(split_values) > 1 and len(name) > max_length:
-                name = f'{split_values[0]}--{self.module_name}={create_hash(split_values[1])}'
-            return name
+        def shorten_name(name, max_length=150):
+            if len(name) <= max_length:
+                return name
+            
+            def parse_module_token(token):
+                """Parse '<module>_<wildcard>=<value>' -> (module, wildcard, value) or None."""
+                if '=' not in token or '_' not in (left := token.split('=', 1)[0]):
+                    return None
+                module_name, wildcard_name = left.split('_', 1)
+                return module_name, wildcard_name, token.split('=', 1)[1]
+            
+            # Parse tokens, keeping raw form for unparseable ones
+            parsed_tokens = [
+                (token, *p)
+                if (p := parse_module_token(token))
+                else (token, None, None, None)
+                for token in name.split('--')
+            ]
+            
+            # Collapse contiguous same-module tokens
+            shortened_tokens = []
+            for module_name, group in groupby(parsed_tokens, key=lambda x: x[1]):
+                group = list(group)
+                if module_name is not None and len(group) > 1:
+                    grouped_values = '--'.join(
+                        f'{wildcard_name}={value}'
+                        for _, _, wildcard_name, value in group
+                    )
+                    shortened_tokens.append(f'{module_name}={create_hash(grouped_values)}')
+                else:
+                    shortened_tokens.extend(token for token, _, _, _ in group)
+
+            if len(name := '--'.join(shortened_tokens)) <= max_length:
+                return name
+            
+            # Fallback: separate current module and others, hash others first
+            def join_parts(*parts):
+                return '--'.join(p for p in parts if p)
+            
+            other_tokens = [
+                t
+                for t in shortened_tokens
+                if not (
+                    t.startswith(f'{self.module_name}=') or
+                    t.startswith(f'{self.module_name}_')
+                )
+            ]
+            current_tokens = [
+                t
+                for t in shortened_tokens
+                if t.startswith(f'{self.module_name}=') or t.startswith(f'{self.module_name}_')
+            ]
+            
+            other_part = join_parts(*other_tokens)
+            if len(other_tokens) > 1:
+                other_part = create_hash(other_part)
+            
+            if len(name := join_parts(other_part, *current_tokens)) <= max_length:
+                return name
+            
+            # Also hash current module if still too long
+            if current_tokens:
+                current_params = join_parts(*(t.split('=', 1)[1] for t in current_tokens))
+                return join_parts(other_part, f'{self.module_name}={create_hash(current_params)}')
+            
+            return name  # Can't shorten further
         
         wildcard_names = list(wildcards.keys())
         wildcard_values = list(wildcards.values())

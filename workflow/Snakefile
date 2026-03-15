@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 from snakemake.utils import min_version
 
-from utils.pipeline import update_module_configs, config_for_module, update_input_files_per_dataset, update_file_for_module_param
+from utils.pipeline import update_input_files_per_dataset
 from utils.ModuleConfig import ModuleConfig
 from integration.IntegrationConfig import IntegrationConfig
 from sample_representation.SampleRepresentationConfig import SampleRepresentationConfig
@@ -13,10 +13,6 @@ from preprocessing.PreprocessingConfig import PreprocessingConfig
 min_version("6.0")
 container: "docker://condaforge/mambaforge:latest"
 
-
-# params = pd.read_table('configs/modules.tsv',comment='#')
-# params['submodules'] = params['submodules'].str.split(',')
-# config = update_module_configs(config, params)
 
 config_kwargs = {
     'batch_analysis': dict(

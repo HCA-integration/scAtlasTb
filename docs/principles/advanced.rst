@@ -58,7 +58,7 @@ Additionally to the module defaults, you can set which datasets you want to incl
        - test2
 
 Automatic environment management
--------------------------------
+--------------------------------
 
 Snakemake supports automatically creating conda environments for each rule.
 
@@ -89,8 +89,8 @@ You can read more about profiles in `Snakemake's documentation <https://snakemak
 Cluster execution
 -----------------
 
-Snakemake supports scheduling rules as jobs on a cluster.
-If you want your workflow to use your cluster architecture, create a Snakemake profile under ``.profiles/<your_profile>/config.yaml``.
+Snakemake supports scheduling rules as jobs on a cluster and ``scAtlasTb`` has been developed and tested to work with SLURM.
+In order for Snakemakek  to deploy jobs through SLURM create a Snakemake profile under ``.profiles/<your_profile>/config.yaml``.
 
 .. dropdown:: Example profile for SLURM
    :icon: beaker
@@ -136,23 +136,51 @@ If you want your workflow to use your cluster architecture, create a Snakemake p
         - code
       show-failed-logs: True
 
-In order to specify the actual cluster parameters such as memory requirements, nodes or GPU, you need to specify the resources in your config file.
-The toolbox requires different settings for CPU and GPU resources.
+
+You can find detailed information on cluster execution in the `Snakemake documentation <https://snakemake.readthedocs.io/en/v7.31.1/executing/cluster.html>`_.
+
+Additionally, you need to configure ``cpu`` and ``gpu`` resource settings in your workflow config file (NOT the snakemake profile config), under ``resources``.
+These settings will be used by scAtlasTb to determine how to schedule the different rules on the cluster, depending on whether they require GPU or not.
+For each resource profile, you need to set the memory requirements (``mem_mb``), ``partition``, ``qos``, and ``gpu`` count.
+If your system does define any ``qos``, you can set it to ``normal``, which is the default.
 
 .. code-block:: yaml
 
-   resources:
-     cpu:
-       partition: cpu
-       qos: normal
-       gpu: 0
-       mem_mb: 100000
-     gpu:
-       partition: gpu
-       qos: normal
-       gpu: 1
-       mem_mb: 100000
+  use_gpu: true  # assuming you have and want to use GPU nodes
+  resources:
+    cpu: # set CPU resource settings for rules that do not require GPU; must be called "cpu"
+      partition: cpu
+      qos: normal
+      gpu: 0
+      mem_mb: 100000
+    gpu: # set GPU resource settings for rules that require GPU; must be called "gpu"
+      partition: gpu
+      qos: normal
+      gpu: 1
+      mem_mb: 100000
 
+In order for jobs to make use of the GPU, make sure that your GPU environments are installed correctly (see `Working with GPUs <../advanced_configuration/troubleshooting.html#working-with-gpus>`_).
 If you don't have GPU nodes, you can configure the gpu resources to be the same as the cpu resources.
 
-You can find detailed information on cluster execution in the `Snakemake documentation <https://snakemake.readthedocs.io/en/v7.31.1/executing/cluster.html>`_.
+.. code-block:: yaml
+
+  use_gpu: false
+  resources:
+    cpu:
+      partition: cpu
+      qos: normal
+      gpu: 0
+      mem_mb: 100000
+    gpu:
+      partition: cpu
+      qos: normal
+      gpu: 1
+      mem_mb: 100000
+
+Finally, include the snakemake profile in your Snakemake command:
+
+.. code-block:: bash
+
+   <snakemake_cmd> --profile .profiles/<your_profile>
+
+with ``<snakemake_cmd>`` being either ``snakemake`` or  your runner script (recommended, e.g. ``run.sh``).
