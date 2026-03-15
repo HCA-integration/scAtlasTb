@@ -15,6 +15,7 @@ mcfg = ModuleConfig(
         'values',
         'dask',
         'slots',
+        'fail_on_empty_subset',
         'write_copy',
         'threads',
     ],
@@ -25,6 +26,7 @@ mcfg = ModuleConfig(
         'dask': bool,
         'write_copy': bool,
         'threads': int,
+        'fail_on_empty_subset': bool,
     }
 )
 paramspace = mcfg.get_paramspace()
@@ -53,6 +55,7 @@ rule split:
         values=lambda wildcards: mcfg.get_from_parameters(wildcards, 'value', single_value=False),
         dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=False),
         slots=lambda wildcards: mcfg.get_from_parameters(wildcards, 'slots', default={}),
+        fail_on_empty_subset=lambda wildcards: mcfg.get_from_parameters(wildcards, 'fail_on_empty_subset'),
         write_copy=lambda wildcards: mcfg.get_from_parameters(wildcards, 'write_copy', default=False),
     resources:
         mem_mb=lambda wildcards, attempt: mcfg.get_resource(profile='cpu',resource_key='mem_mb', attempt=attempt, factor=1),

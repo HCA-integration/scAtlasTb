@@ -17,6 +17,7 @@ input_file = snakemake.input[0]
 output_dir = snakemake.output[0]
 split_key = snakemake.wildcards.key
 values = snakemake.params.get('values', [])
+fail_on_empty = snakemake.params.get('fail_on_empty_subset', True)
 dask = snakemake.params.get('dask', False)
 write_copy = snakemake.params.get('write_copy', False) or input_file.endswith('.h5ad')
 slots = snakemake.params.get('slots', {})
@@ -59,14 +60,19 @@ logging.info(adata.__str__())
 
 # convert split_key column to string
 adata.obs[split_key] = adata.obs[split_key].astype(str)
-logging.info(adata.obs[split_key].value_counts())
+value_counts = adata.obs[split_key].value_counts()
+logging.info(value_counts)
 
 file_value_map = {
     s.replace(' ', '_').replace('/', '_'): s
-    for s in adata.obs[split_key].astype(str).unique()
+    for s in value_counts.index.astype(str)
 }
-logging.info(f'file_value_map: {pformat(file_value_map)}')
-logging.info(f'splits: {pformat(values)}')
+logging.info(f'file_value_map:\n{pformat(file_value_map)}')
+logging.info(f'splits:\n{pformat(values)}')
+
+missing = set(values) - set(file_value_map)
+if fail_on_empty and missing:
+    raise ValueError(f"Missing values in value_counts: {sorted(missing)}")
 
 for i, value in enumerate(values):
     split = file_value_map.get(value, value)
