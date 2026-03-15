@@ -11,7 +11,7 @@ import time
 da_config.set(num_workers=snakemake.threads)
 
 from utils.annotate import add_wildcards
-from utils.io import read_anndata, write_zarr, write_zarr_linked, ALL_SLOTS
+from utils.io import read_anndata, write_zarr, write_zarr_linked, ALL_SLOTS, check_slot_exists
 
 input_file = snakemake.input[0]
 output_dir = snakemake.output[0]
@@ -22,7 +22,9 @@ write_copy = snakemake.params.get('write_copy', False) or input_file.endswith('.
 slots = snakemake.params.get('slots', {})
 
 if not slots:
-    slots = {s: s for s in ALL_SLOTS}
+    # Determine which slots actually exist in the input file
+    slots = {s: s for s in ALL_SLOTS if check_slot_exists(input_file, s)}
+    logging.info(f'Existing slots in input file: {list(slots.keys())}')
 
 exclude_slots = [
     slot for slot in ALL_SLOTS
@@ -39,8 +41,12 @@ if not out_dir.exists():
 # minimal slots to be read
 if not write_copy and all(k == v for k, v in slots.items()):
     # only obs needed if everything else gets linked directly
-    slots = dict(obs='obs', var='var')
+    slots = dict(obs='obs', var='var', uns='uns')
     # TODO: also optimise case where slot key and value does not match fully
+else:
+    # Always ensure uns is read
+    if 'uns' not in slots and check_slot_exists(input_file, 'uns'):
+        slots['uns'] = 'uns'
 
 logging.info(f'Read anndata file {input_file}...')
 adata = read_anndata(
