@@ -216,7 +216,7 @@ propagated through ``update_input_files_per_dataset``.
 If a rule expands to multiple outputs for one input file id, each output gets its own output id entry that contains wildcards.
 This affects the following modules:
 
-- ``split_data`` where data is split y ``key`` into ``values`` specified by the user
+- ``split_data`` where data is split by ``key`` into ``values`` specified by the user
 - ``integration`` where each combination of integration method, batch variable, highly variable gene mask (var_mask) results in a separate output file
 - ``sample_representation`` where each combination of representation and method results in a separate output file
 
