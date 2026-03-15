@@ -418,5 +418,11 @@ logging.info(adata.__str__())
 
 logging.info(f'Write to {out_file}...')
 if isinstance(adata.X, da.Array):
-    logging.info(f'Task graph size: {len(adata.X.__dask_graph__())} layers')
+    graph = adata.X.__dask_graph__()
+    n_tasks = len(graph)
+    if hasattr(graph, "layers"):
+        n_layers = len(graph.layers)
+        logging.info(f'Dask graph: {n_layers} layers, {n_tasks} tasks')
+    else:
+        logging.info(f'Dask graph: {n_tasks} tasks')
 write_zarr(adata, out_file)
