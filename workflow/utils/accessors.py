@@ -53,15 +53,17 @@ def select_neighbors(adata, output_type):
     return adata
 
 
-def _filter_batch(adata, batch_key=None):
+def _filter_batch(adata, batch_key=None, min_cells=10):
     """
     Filter cells from batches with too few cells
     """
     mask = np.ones(adata.n_obs, dtype=bool)
     if batch_key is not None:
         cells_per_batch = adata.obs[batch_key].value_counts()
-        if cells_per_batch.min() < 2:
-            mask = adata.obs[batch_key].isin(cells_per_batch[cells_per_batch > 1].index)
+        if cells_per_batch.min() < min_cells:
+            batches = cells_per_batch[cells_per_batch >= min_cells].index
+            print(f'Keeping {len(batches)} out of {len(cells_per_batch)} batches with at least {min_cells} cells')
+            mask = adata.obs[batch_key].isin(batches)
     return mask
 
 
@@ -73,22 +75,14 @@ def _filter_genes(adata, verbose=True, return_varnames=False, **kwargs):
     from dask import array as da
     from tqdm.dask import TqdmCallback
     from contextlib import nullcontext
-        
-    # if isinstance(adata.X, da.Array):
-    #     import sparse
-        
-    #     min_cells = kwargs.get('min_cells', 0)
-        
-    #     with TqdmCallback(
-    #         desc=f"Determine genes with >= {min_cells} cells",
-    #         miniters=10,
-    #         mininterval=5,
-    #     ):
-    #         X = X.map_blocks(sparse.COO)
-    #         mask = (X != 0).sum(axis=0) >= min_cells
-    #         mask = mask.compute().todense()
-    #     return mask
-
+    
+    # Handle empty adata
+    if adata.n_obs == 0:
+        gene_subset = np.zeros(adata.n_vars, dtype=bool)
+        if return_varnames:
+            gene_subset = adata.var_names[gene_subset]
+        return gene_subset
+    
     X = adata.X
     context = TqdmCallback(desc='Filter genes', miniters=1) if verbose and isinstance(X, da.Array) else nullcontext()
     
@@ -202,7 +196,7 @@ def parse_gene_names(adata, gene_list):
     return gene_list
 
 
-def match_genes(var_df, gene_list, column=None, return_index=True, as_list=False):
+def match_genes(var_df, gene_list, column=None, return_index=True, as_list=False, return_mask=False):
     """
     Match genes from a provided list against a variable (gene) annotation table.
 
@@ -221,7 +215,7 @@ def match_genes(var_df, gene_list, column=None, return_index=True, as_list=False
     var_df
         A pandas-like DataFrame or Series containing gene annotations, typically
         ``adata.var``. Matching is performed either on its index or on a specified
-        column.
+        column (or columns).
     gene_list
         Iterable of strings representing gene identifiers to match. Entries may
         also be:
@@ -230,8 +224,11 @@ def match_genes(var_df, gene_list, column=None, return_index=True, as_list=False
         For such entries, the file/URL is read and the contained genes are added
         to the list of genes to match.
     column
-        Optional name of a column in ``var_df`` to use for matching. If ``None``,
-        the index of ``var_df`` is used.
+        Optional name(s) of column(s) in ``var_df`` to use for matching. Can be:
+          * A single column name (str), or
+          * A list/tuple of column names to match against.
+        If ``None``, the index of ``var_df`` is used. Matching is performed
+        against any of the specified columns (OR operation).
     return_index
         If ``True``, return the index labels corresponding to the matched genes.
         If ``False``, return the matched values themselves (e.g. a Series or
@@ -240,6 +237,10 @@ def match_genes(var_df, gene_list, column=None, return_index=True, as_list=False
         If ``True``, convert the final result (index or values) to a Python
         ``list`` before returning. If ``False``, return it in its native type
         (e.g. pandas Index or Series).
+    return_mask
+        If ``True``, return a tuple of (genes, mask) where mask is a boolean
+        array indicating which rows in ``var_df`` matched the gene list.
+        If ``False``, return only the matched genes.
 
     Returns
     -------
@@ -253,6 +254,9 @@ def match_genes(var_df, gene_list, column=None, return_index=True, as_list=False
             similar object of matched gene values.
           * If ``return_index=False`` and ``as_list=True``: a ``list`` of matched
             gene values.
+    mask : ndarray, optional
+        If ``return_mask=True``, returns a boolean array of shape (n_genes,)
+        indicating which rows matched the gene list. Otherwise, not returned.
 
     Raises
     ------
@@ -289,17 +293,40 @@ def match_genes(var_df, gene_list, column=None, return_index=True, as_list=False
         gene_list.extend(genes)
         gene_list.remove(path)
 
-    # Get the genes series from the dataframe
-    genes = var_df.index.to_series() if column is None else var_df[column]
+    # Normalize column parameter to list
+    if column is None:
+        columns = [None]
+    elif isinstance(column, str):
+        columns = [column]
+    else:
+        columns = list(column)
+    
+    # Get the genes series from the dataframe or specified columns
+    # Create a mask for matching across all specified columns (OR operation)
+    mask = np.zeros(len(var_df), dtype=bool)
     
     # Handle empty gene list - return empty result instead of matching all genes
     if not gene_list:
         logging.warning('Gene list is empty after processing, returning empty result')
-        genes = genes[genes.index.isin([])]  # Empty series preserving structure
+        genes = var_df.index.to_series()[:0]  # Return empty Series
     else:
         try:
             pattern = '|'.join(re.escape(g) for g in gene_list)
-            genes = genes[genes.astype(str).str.contains(pattern, regex=True)].drop_duplicates()
+            
+            # Match against each column and combine with OR
+            for col in columns:
+                if col is None:
+                    genes_series = var_df.index.to_series()
+                else:
+                    genes_series = var_df[col]
+                
+                col_mask = genes_series.astype(str).str.contains(pattern, regex=True)
+                mask |= col_mask.values  # OR operation
+            
+            # Get results from first column for the genes output
+            genes_series = var_df.index.to_series() if columns[0] is None else var_df[columns[0]]
+            genes = genes_series[mask].drop_duplicates()
+            
         except Exception as e:
             logging.error(f'Error: {e}')
             logging.error(f'Gene list: {gene_list}')
@@ -307,10 +334,13 @@ def match_genes(var_df, gene_list, column=None, return_index=True, as_list=False
             logging.error(f'Gene names: {var_df.index}')
             raise e
 
-
     if return_index:
         genes = genes.index
 
     if as_list:
         genes = genes.tolist()
+    
+    if return_mask:
+        return genes, mask
+    
     return genes

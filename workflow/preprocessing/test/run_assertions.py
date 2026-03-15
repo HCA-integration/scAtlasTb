@@ -7,6 +7,8 @@ import logging
 from itertools import product
 logging.basicConfig(level=logging.INFO)
 
+warnings.filterwarnings("ignore", category=FutureWarning)
+
 from utils.misc import check_sparse_equal
 from utils.io import read_anndata
 
@@ -38,13 +40,13 @@ def _build_suffixes(param_dict):
     suffixes = []
     for combo_values in product(*values):
         combo = dict(zip(keys, combo_values))
-        suffix = '--' + '--'.join(f"{k}={combo[k]}" for k in keys)
+        suffix = '-' + '-'.join(f"{k}={combo[k]}" for k in keys)
         suffixes.append(suffix)
     return suffixes
 
 
 def expected_hvg_columns(hvg_config):
-    """Expected 'highly_variable--...' columns from HVG config.
+    """Expected 'highly_variable-...' columns from HVG config.
 
     If hvg_config is False, HVG is treated as disabled and no columns are expected.
     If hvg_config is None, empty, or has no recognized HVG keys, a default
@@ -64,7 +66,7 @@ def expected_hvg_columns(hvg_config):
 
 
 def expected_extra_hvg_columns(extra_config):
-    """Expected 'extra_hvgs--...' columns from extra_hvgs overwrite_args.
+    """Expected 'extra_hvgs-...' columns from extra_hvgs overwrite_args.
     If no overwrite_args provided, expect plain 'extra_hvgs'.
     """
     if not isinstance(extra_config, dict):
@@ -74,6 +76,7 @@ def expected_extra_hvg_columns(extra_config):
     if suffixes:
         return ['extra_hvgs' + s for s in suffixes]
     return ['extra_hvgs']
+
 
 config = yaml.safe_load(open('test/config.yaml', 'r'))
 config_no_gpu = yaml.safe_load(open('test/config_no_gpu.yaml', 'r'))
@@ -86,11 +89,11 @@ assert len(single_outputs) > 0, 'No output files found'
 for file in single_outputs:
     matching_datasets = [x for x in config['DATASETS'] if x in file]
     if not matching_datasets or matching_datasets[0] == 'empty':
-        logging.info(f'No matching dataset found for {file}, skipping...')
+        logging.info(f'⚠️ No matching dataset found for {file}, skipping...')
         continue
     
     dataset = matching_datasets[0]
-    logging.info(f'Check dataset "{dataset}", file {file}')
+    logging.info(f'ℹ️ Check dataset "{dataset}", file {file}')
 
     preprocessing_config = config['DATASETS'][dataset]['preprocessing']
 
@@ -123,6 +126,7 @@ for file in single_outputs:
             adata_norm = read_anndata(file, X='layers/normcounts', dask=True, backed=True, verbose=False)
             normcounts = adata_norm.X
             assert check_sparse_equal(X, normcounts)
+            logging.info('✅ normcounts checks passed')
 
         if 'highly_variable_genes' in preprocessing_config['assemble']:
             var = read_anndata(file, var='var', verbose=False).var
@@ -133,10 +137,11 @@ for file in single_outputs:
                     f'Expected HVG column "{col}" not found. '
                     f'Available HVG columns: {[c for c in var.columns if c.startswith("highly_variable")]}'
                 )
-                logging.info(f'Found expected HVG column: {col}')
+                logging.info(f'✅ Found expected HVG column: {col}')
             if preprocessing_config['highly_variable_genes'] is False:
                 assert var['highly_variable'].sum() == var.shape[0], \
                     f'Expected all genes to be marked highly_variable, got {var["highly_variable"].sum()} / {var.shape[0]}'
+                logging.info('✅ all genes marked highly_variable as expected')
 
         if 'extra_hvgs' in preprocessing_config['assemble']:
             var = read_anndata(file, var='var', verbose=False).var
@@ -145,18 +150,21 @@ for file in single_outputs:
                     f'Expected extra_hvgs column "{col}" not found. '
                     f'Available columns: {[c for c in var.columns if c.startswith("extra_hvgs")]}'
                 )
-                logging.info(f'Found expected extra_hvgs column: {col}')
+                logging.info(f'✅ Found expected extra_hvgs column: {col}')
 
         if 'pca' in preprocessing_config['assemble']:
             assert 'X_pca' in z['obsm']
+            logging.info('✅ PCA checks passed')
 
         if 'neighbors' in preprocessing_config['assemble']:
             assert 'neighbors' in z['uns']
             assert 'distances' in z['obsp']
             assert 'connectivities' in z['obsp']
+            logging.info('✅ neighbors checks passed')
             
         assert 'wildcards' in z['uns']
+        logging.info(f'🎉 Dataset "{dataset}" checks passed')
     except AssertionError as e:
-        logging.error(pformat(preprocessing_config))
-        logging.error(f'Assertion failed for dataset "{dataset}", file {file}')
+        logging.error(f'🧾 Preprocessing config:\n{pformat(preprocessing_config)}')
+        logging.error(f'❌ Assertion failed for dataset "{dataset}", file {file}')
         raise e

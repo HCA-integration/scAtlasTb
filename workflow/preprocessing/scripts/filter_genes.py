@@ -15,9 +15,11 @@ from utils.processing import _filter_genes
 input_file = snakemake.input[0]
 output_file = snakemake.output[0]
 dask = snakemake.params.get('dask', True)
+args = snakemake.params.get('args', dict(min_cells=1))
 
 logging.info(f'Read {input_file}...')
-kwargs = dict(
+adata = read_anndata(
+    input_file,
     X='X',
     var='var',
     backed=dask,
@@ -25,13 +27,11 @@ kwargs = dict(
     stride=100_000,
 )
 # TODO: read with chunks (None, 'auto') for optimal gene-wise operations
-
-adata = read_anndata(input_file, **kwargs)
 logging.info(adata.__str__())
 var = adata.var.copy()
 
 logging.info('Determine nonzero genes...')
-adata.var['nonzero_genes'] = _filter_genes(adata, min_cells=1)
+adata.var['nonzero_genes'] = _filter_genes(adata, **args)
 
 write_zarr_linked(
     adata,

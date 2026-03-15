@@ -30,7 +30,7 @@ overwrite_args = snakemake.params.get('overwrite_args', {})
 union_over = extra_hvg_args.get('union_over')
 extra_genes = extra_hvg_args.get('extra_genes', [])
 remove_genes = extra_hvg_args.get('remove_genes', [])
-min_cells = extra_hvg_args.pop('min_cells', 10)
+min_cells = extra_hvg_args.pop('min_cells', max(args.get('n_bins', 20), 200))
 
 logging.info(f'Extra HVG args:\n{pformat(extra_hvg_args)}')
 logging.info(f'Overwrite args:\n{pformat(overwrite_args)}')
@@ -50,15 +50,16 @@ elif isinstance(args, dict):
 if isinstance(overwrite_args, dict):
     args |= overwrite_args
     for key in sorted(overwrite_args.keys()):
-        hvg_column_name += f'--{key}={overwrite_args[key]}'
+        hvg_column_name += f'-{key}={overwrite_args[key]}'
 
 logging.info(f'args: {args}')
 logging.info(f'dask: {dask}')
 
 logging.info(f'Read {input_file}...')
+layer = 'layers/counts' if args.get('flavor') == 'seurat_v3' else 'layers/normcounts'
 adata = read_anndata(
     input_file,
-    X='X',
+    X=layer,
     obs='obs',
     var='var',
     uns='uns',
@@ -85,16 +86,51 @@ if adata.n_obs == 0:
     adata.write_zarr(output_file)
     exit(0)
 
+# make a copy of var for later use since we'll be subsetting adata for HVG selection
 var = adata.var.copy()
+
+# filter genes and cells that would break HVG function
+batch_mask = _filter_batch(
+    adata,
+    batch_key=args.get('batch_key'),
+    min_cells=min_cells,
+)
+logging.info(f'Before filtering for HVG selection: {adata.shape}')
+adata = adata[batch_mask, adata.var['nonzero_genes']].copy()
+logging.info(f'After filtering for HVG selection: {adata.shape}')
+
+# Handle case where filtering resulted in empty data
+if adata.n_obs == 0:
+    logging.info('No data after filtering, write empty file...')
+    var[hvg_column_name] = True
+    adata = ad.AnnData(var=var, uns=adata.uns)
+    write_zarr_linked(
+        adata,
+        in_dir=input_file,
+        out_dir=output_file,
+        files_to_keep=['uns', 'var']
+    )
+    exit(0)
+
+# Keep batches contiguous for count-based operations.
+batch_key = args.get('batch_key') if isinstance(args, dict) else None
+if batch_key in adata.obs.columns:
+    adata.obs_names_make_unique()
+    adata = adata[adata.obs.sort_values(batch_key, kind='stable').index].copy()
 
 # workaround for CxG datasets
 feature_col = 'feature_name' if 'feature_name' in var.columns else None
 
 # remove user-specified genes
 if remove_genes:
-    remove_genes = match_genes(var, remove_genes, column=feature_col)
+    remove_genes, remove_mask = match_genes(
+        adata.var,
+        remove_genes,
+        column=feature_col,
+        return_mask=True
+    )
     logging.info(f'Remove {len(remove_genes)} genes (subset data)...')
-    adata = adata[:, ~adata.var_names.isin(remove_genes)].copy()
+    adata = adata[:, ~remove_mask].copy()
 
 adata.var[hvg_column_name] = False
 
@@ -111,48 +147,41 @@ if union_over is not None:
     remove_groups = value_counts[value_counts < min_cells]
     union_values = union_values[~union_values.isin(remove_groups.index)]
     
-    # set union_over values in adata.obs
-    adata.obs['union_over'] = union_values
-    adata.obs['union_over'] = adata.obs['union_over'].astype('category')
-    
-    logging.info(adata.obs['union_over'].value_counts(dropna=False))
-    if len(remove_groups) > 0:
-        logging.info(f'Removed groups with fewer than {min_cells} cells:\n{remove_groups}')
-    
-    for group in tqdm(
-        adata.obs['union_over'].dropna().unique(),
-        miniters=1,
-        desc='Computing HVGs per group',
-    ):
-        _ad = adata[adata.obs['union_over'] == group].copy()
+    if union_values.empty:
+        logging.info('No valid union_over groups found; running HVG selection on all cells...')
+        union_over = None
+    else:
+        # set union_over values in adata.obs
+        adata.obs['union_over'] = union_values
+        adata.obs['union_over'] = adata.obs['union_over'].astype('category')
         
-        if not dask:
-            logging.info('Compute matrix...')
-            _ad = dask_compute(_ad)
+        logging.info(adata.obs['union_over'].value_counts(dropna=False))
+        if len(remove_groups) > 0:
+            logging.info(f'Removed groups with fewer than {min_cells} cells:\n{remove_groups}')
         
-        # filter genes and cells that would break HVG function
-        batch_mask = _filter_batch(_ad, batch_key=args.get('batch_key'))
-        _ad = _ad[batch_mask, _ad.var['nonzero_genes']].copy()
-        
-        # if _ad.n_obs > 1e6:
-        #     use_gpu = False
-        #     sc = scanpy
-        # elif USE_GPU:
-        #     use_gpu = True
-        #     sc = rsc
-        
-        if use_gpu:
-            rsc.get.anndata_to_GPU(_ad)
+        for group in tqdm(
+            adata.obs['union_over'].dropna().unique(),
+            miniters=1,
+            desc='Computing HVGs per group',
+        ):
+            _ad = adata[adata.obs['union_over'] == group].copy()
+            
+            if not dask:
+                logging.info('Compute matrix...')
+                _ad = dask_compute(_ad)
+            
+            if use_gpu:
+                rsc.get.anndata_to_GPU(_ad)
 
-        sc.pp.highly_variable_genes(_ad, **args)
+            sc.pp.highly_variable_genes(_ad, **args)
+            
+            # get union of gene sets
+            adata.var[hvg_column_name] = adata.var[hvg_column_name] | _ad.var['highly_variable']
+            del _ad
         
-        # get union of gene sets
-        adata.var[hvg_column_name] = adata.var[hvg_column_name] | _ad.var['highly_variable']
-        del _ad
-    
-    logging.info(f'Computed {adata.var[hvg_column_name].sum()} highly variable genes.')
+        logging.info(f'Computed {adata.var[hvg_column_name].sum()} highly variable genes.')
 
-else:
+if union_over is None:
     # default gene selection
     logging.info(f'Select features for all cells with arguments: {args}...')
     if use_gpu:
@@ -161,6 +190,8 @@ else:
     if not dask:
         logging.info('Compute matrix...')
         adata = dask_compute(adata)
+    else: # persist
+        adata.X = adata.X.rechunk((200_000, -1)).persist()
 
     with TqdmCallback(desc=f'Select features with arguments: {args}...', miniters=1):
         sc.pp.highly_variable_genes(adata, **args)

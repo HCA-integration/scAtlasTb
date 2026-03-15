@@ -7,7 +7,6 @@ logging.basicConfig(level=logging.INFO)
 import warnings
 warnings.filterwarnings("ignore", message="The frame.append method is deprecated and will be removed from pandas in a future version.")
 import anndata as ad
-from tqdm.dask import TqdmCallback
 from dask import array as da
 from dask import config as da_config
 da_config.set(num_workers=snakemake.threads)
@@ -36,15 +35,18 @@ logging.info(f'args: {args}')
 logging.info(f'dask: {dask}')
 
 logging.info(f'Read {input_file}...')
-kwargs = dict(
-    X='X',
+layer = 'layers/normcounts'
+if args and args.get('flavor') == 'seurat_v3':
+    layer = 'layers/counts'
+adata = read_anndata(
+    input_file,
+    X=layer,
     obs='obs',
     var='var',
     uns='uns',
     backed=dask,
     dask=dask,
 )
-adata = read_anndata(input_file, **kwargs)
 logging.info(adata.__str__())
 var = adata.var.copy()
 
@@ -62,7 +64,7 @@ for col in list(var.columns):
 hvg_column_name = 'highly_variable'
 if isinstance(args, dict):
     for key in sorted(args.keys()):
-        hvg_column_name += f'--{key}={args[key]}'
+        hvg_column_name += f'-{key}={args[key]}'
 
 if adata.n_obs == 0:
     logging.info('No data, write empty file...')
@@ -75,21 +77,47 @@ if args == False:
     logging.info('No highly variable gene parameters provided, including all genes...')
     var['highly_variable'] = True
 else:
+    min_cells = args.pop('min_cells', max(args.get('n_bins', 20), 200))
+
     # filter genes and cells that would break HVG function
-    batch_mask = _filter_batch(adata, batch_key=args.get('batch_key'))
+    batch_mask = _filter_batch(
+        adata,
+        batch_key=args.get('batch_key'),
+        min_cells=min_cells,
+    )
     adata = adata[batch_mask, adata.var['nonzero_genes']].copy()
+    
+    # Handle case where filtering resulted in empty data
+    if adata.n_obs == 0:
+        logging.info('No data after filtering, write empty file...')
+        var[hvg_column_name] = True
+        var['highly_variable'] = True
+        adata = ad.AnnData(var=var, uns=adata.uns)
+        write_zarr_linked(
+            adata,
+            in_dir=input_file,
+            out_dir=output_file,
+            files_to_keep=['uns', 'var']
+        )
+        exit(0)
+    
+    # Keep batches contiguous for count-based operations (after filtering for efficiency).
+    batch_key = args.get('batch_key') if isinstance(args, dict) else None
+    if batch_key in adata.obs.columns:
+        adata.obs_names_make_unique()
+        adata = adata[adata.obs.sort_values(batch_key, kind='stable').index].copy()
+    
+    # Persist dask arrays to reset task graph before expensive HVG computation.
+    if dask:
+        logging.info('Persist dask arrays before HVG computation...')
+        adata.X = adata.X.rechunk((200_000, -1)).persist()
     
     # make sure data is on GPU for rapids_singlecell
     if USE_GPU:
         sc.get.anndata_to_GPU(adata)
     
     logging.info(f'Select features with arguments: {args}...')
-    with TqdmCallback(
-        desc=f'Select features with arguments: {args}...',
-        miniters=1,
-        mininterval=1,
-    ):
-        sc.pp.highly_variable_genes(adata, **args)
+    sc.pp.highly_variable_genes(adata, **args)
 
     # add HVG info back to adata
     hvg_column_map = {

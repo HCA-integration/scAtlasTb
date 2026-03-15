@@ -44,8 +44,17 @@ adata.var_names_make_unique()
 
 # deal with empty files
 if adata.n_obs == 0:
-    logging.info('No data, write empty file...')
+    logging.info('No data, write empty file with all layers...')
     adata.X = np.zeros(adata.shape)
+    # create counts and normcounts layers for consistency
+    adata.layers['counts'] = adata.X.copy()
+    adata.layers['normcounts'] = adata.X.copy()
+    # add preprocessing metadata
+    if 'preprocessing' not in adata.uns:
+        adata.uns['preprocessing'] = {}
+    adata.uns['preprocessing']['normalization'] = args
+    adata.uns['preprocessing']['log-transformed'] = True
+    adata.uns["log1p"] = {"base": None}
     adata.write_zarr(output_file)
     exit(0)
 

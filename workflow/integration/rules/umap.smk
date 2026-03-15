@@ -20,7 +20,9 @@ def get_colors(wildcards):
     labels = labels if isinstance(labels, list) else [labels]
     batch = mcfg.get_from_parameters(wildcards, 'batch')
     batch = batch if isinstance(batch, list) else [batch]
-    umap_colors = mcfg.get_for_dataset(dataset, query=[mcfg.module_name, 'umap_colors'], default=[])
+    
+    umap_colors = mcfg.get_from_parameters(wildcards, 'umap_colors', default=[])
+    umap_colors += mcfg.get_from_parameters(wildcards, 'plots', default={}).get('colors', [])
     return [*labels, *batch, *umap_colors]
 
 
@@ -32,9 +34,9 @@ use rule plots from preprocessing as integration_plot_umap with:
     params:
         color=get_colors,
         basis='X_umap',
-        # ncols=1,
-        # outlier_factor=10,
         min_cells_per_category=0.0001,
+        plot_centroids=lambda w: mcfg.get_from_parameters(w, 'plots', default={}).get('plot_centroids', []),
+        gene_chunk_size=lambda w: mcfg.get_from_parameters(w, 'plots', default={}).get('plot_gene_chunk_size', 12),
     resources:
         partition=mcfg.get_resource(profile='cpu',resource_key='partition'),
         qos=mcfg.get_resource(profile='cpu',resource_key='qos'),
