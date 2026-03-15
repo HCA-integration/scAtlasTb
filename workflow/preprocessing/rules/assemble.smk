@@ -190,5 +190,5 @@ rule assemble_all:
             for file_list in collect_files(dict(dataset=dataset)).values()
             for file in file_list
         ],
-        assemble_output=mcfg.get_output_files(rules.preprocessing_assemble.output),
+        assemble_output=mcfg.get_output_files(rules.preprocessing_assemble.output.zarr),
     localrule: True
