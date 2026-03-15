@@ -311,8 +311,19 @@ class ModuleConfig:
             def join_parts(*parts):
                 return '--'.join(p for p in parts if p)
             
-            other_tokens = [t for t in shortened_tokens if not t.startswith(f'{self.module_name}=')]
-            current_tokens = [t for t in shortened_tokens if t.startswith(f'{self.module_name}=')]
+            other_tokens = [
+                t
+                for t in shortened_tokens
+                if not (
+                    t.startswith(f'{self.module_name}=') or
+                    t.startswith(f'{self.module_name}_')
+                )
+            ]
+            current_tokens = [
+                t
+                for t in shortened_tokens
+                if t.startswith(f'{self.module_name}=') or t.startswith(f'{self.module_name}_')
+            ]
             
             other_part = join_parts(*other_tokens)
             if len(other_tokens) > 1:
