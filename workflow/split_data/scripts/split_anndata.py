@@ -41,7 +41,7 @@ if not out_dir.exists():
 
 # minimal slots to be read
 if not write_copy and all(k == v for k, v in slots.items()):
-    # only obs needed if everything else gets linked directly
+    # only obs, var, and uns are read if everything else gets linked directly
     slots = dict(obs='obs', var='var', uns='uns')
     # TODO: also optimise case where slot key and value does not match fully
 else:
