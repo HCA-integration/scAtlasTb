@@ -64,6 +64,8 @@ def make_dask_chunk(x: "SparseDataset", start: int, end: int) -> da.Array:
 def sparse_dataset_as_dask(x, stride: int = 1000):
     if not isinstance(x, (ad.experimental.CSRDataset, ad.experimental.CSCDataset, da.Array)):
         return x
+    
+    stride = max(1, stride)  # Ensure stride is at least 1 to avoid ZeroDivisionError
     n_chunks, rem = divmod(x.shape[0], stride)
 
     chunks = []
