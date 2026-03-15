@@ -80,9 +80,11 @@ DATASETS:
         target_sum: 10_000
       scale: true
       highly_variable_genes:
-        n_top_genes:
-          - 100
-          - 200
+        flavor:
+          - seurat
+          - seurat_v3
+          - cell_ranger
+        n_top_genes: 100
       assemble:
         - counts
         - normalize
