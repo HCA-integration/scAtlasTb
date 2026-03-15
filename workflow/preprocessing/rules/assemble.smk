@@ -30,6 +30,7 @@ use rule filter_genes from preprocessing as preprocessing_filter_genes with:
         zarr=directory(mcfg.out_dir / 'preprocessed' / paramspace.wildcard_pattern / 'filtered_genes.zarr'),
     params:
         dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=True),
+        min_cells=lambda wildcards: mcfg.get_from_parameters(wildcards, 'filter', default={}).get('min_cells',),
     threads:
         lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_threads', default=10)
     resources:
@@ -141,30 +142,33 @@ use rule umap from preprocessing as preprocessing_umap with:
 
 
 def collect_files(wildcards):
+    # Configuration: step_name -> (rule_name, wildcard_names)
+    base_wildcards = ['dataset', 'file_id']
+    step_config = {
+        'normalize': (rules.preprocessing_normalize, base_wildcards),
+        'highly_variable_genes': (rules.preprocessing_highly_variable_genes, base_wildcards + ['hvg_args']),
+        'extra_hvgs': (rules.preprocessing_extra_hvgs, base_wildcards + ['overwrite_args']),
+        'pca': (rules.preprocessing_pca, base_wildcards),
+        'neighbors': (rules.preprocessing_neighbors, base_wildcards),
+        'umap': (rules.preprocessing_umap, base_wildcards),
+    }
+    
+    # Build file dictionary
     file_dict = {
-        # 'counts': mcfg.get_input_file(**wildcards),
-        'normalize': rules.preprocessing_normalize.output.zarr,
-        'highly_variable_genes': mcfg.get_output_files(
-            rules.preprocessing_highly_variable_genes.output.zarr,
+        step: mcfg.get_output_files(
+            _rule.output.zarr,
             subset_dict=wildcards,
-            wildcard_names=['dataset', 'file_id', 'hvg_args'],
-        ),
-        'extra_hvgs': mcfg.get_output_files(
-            rules.preprocessing_extra_hvgs.output.zarr,
-            subset_dict=wildcards,
-            wildcard_names=['dataset', 'file_id', 'overwrite_args'],
-        ),
-        'pca': rules.preprocessing_pca.output.zarr,
-        'neighbors': rules.preprocessing_neighbors.output.zarr,
-        'umap': rules.preprocessing_umap.output.zarr,
+            wildcard_names=step_wildcards,
+        )
+        for step, (_rule, step_wildcards) in step_config.items()
     }
+    
+    # Filter by assembly configuration if present
     assembly_config = mcfg.get_from_parameters(wildcards, 'assemble')
-    if assembly_config is None:
-        return file_dict
-    return {
-        k: v for k, v in file_dict.items()
-        if k in assembly_config
-    }
+    if assembly_config is not None:
+        file_dict = {k: v for k, v in file_dict.items() if k in assembly_config}
+    
+    return file_dict
 
 
 use rule assemble from preprocessing as preprocessing_assemble with:
@@ -181,5 +185,10 @@ use rule assemble from preprocessing as preprocessing_assemble with:
 
 rule assemble_all:
     input:
-        mcfg.get_output_files(rules.preprocessing_assemble.output.zarr),
+        assemble_input=[
+            file for dataset in mcfg.get_datasets()
+            for file_list in collect_files(dict(dataset=dataset)).values()
+            for file in file_list
+        ],
+        assemble_output=mcfg.get_output_files(rules.preprocessing_assemble.output),
     localrule: True
