@@ -77,7 +77,11 @@ gene_colors = parse_gene_names(adata, gene_colors)
 gene_colors.sort()
 
 # filter colors that aren't in object
-colors = [color for color in colors if color in obs_columns]
+colors = [
+    color for color in colors
+    if color in obs_columns
+    and adata.obs[color].nunique() > 1
+]
 logging.info(f'Colors from obs after filtering:\n{pformat(colors)}')
 
 for color in colors:
@@ -128,11 +132,12 @@ if adata.is_view:
     adata = adata.copy()
 
 # set minimum point size
-default_size = 200_000 / adata.n_obs
+min_size = 0.5 if adata.n_obs > 500_000 else 1
+default_size = max(min_size, 200_000 / adata.n_obs)
 size = params.get('size', default_size)
 if size is None:
     size = default_size
-params['size'] = np.min([np.max([size, 0.4, default_size]), 200])
+params['size'] = min(200, max(default_size, size))
 
 
 def plot_centroids_on_embedding(ax, adata, color, basis, legend, category_numbers, legend_fontsize=10):
@@ -199,14 +204,29 @@ def plot_centroids_on_embedding(ax, adata, color, basis, legend, category_number
             ),
             mpl.patheffects.Normal()
         ])
-    
-    # Add category numbers to legend labels
+
+    # Add category numbers and group sizes to legend labels.
+    category_numbers_str = {str(k): v for k, v in category_numbers.items()}
+
+    def formatter(label):
+        mapped = category_numbers_str.get(label)
+        return f"{mapped}: {label}" if isinstance(mapped, int) else label
+
+    add_group_sizes_to_legend(legend=legend, adata=adata, color=color, label_formatter=formatter)
+
+
+def add_group_sizes_to_legend(legend, adata, color, label_formatter=None):
+    """Append group sizes to legend labels for categorical columns."""
+    category_counts_str = {
+        str(category): int(count)
+        for category, count in adata.obs[color].value_counts(dropna=False).items()
+    }
     for text in legend.get_texts():
         label = text.get_text()
-        if label in category_numbers:
-            mapped = category_numbers[label]
-            if isinstance(mapped, int):
-                text.set_text(f"{mapped}: {label}")
+        count = category_counts_str.get(label)
+        if count is not None:
+            prefix = label if label_formatter is None else label_formatter(label)
+            text.set_text(f"{prefix} (n={count})")
 
 
 def plot_color(
@@ -281,7 +301,8 @@ def plot_color(
             **kwargs,
         )
         suptitle_text = f'{title}\nn={n_cells}'
-        fig.suptitle(suptitle_text, fontsize=12)
+        suptitle_fontsize = 12
+        fig.suptitle(suptitle_text, fontsize=suptitle_fontsize)
 
         # fix legend
         ax = fig.get_axes()[0]
@@ -308,6 +329,14 @@ def plot_color(
                 category_numbers=category_numbers,
                 legend_fontsize=fontsize,
             )
+
+        elif legend and len(colors) == 1 and is_categorical_dtype(adata.obs[color]):
+            add_group_sizes_to_legend(
+                legend=legend,
+                adata=adata,
+                color=color,
+            )
+
 
         if legend:
             # adjust legend
