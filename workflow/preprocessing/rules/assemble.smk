@@ -30,7 +30,7 @@ use rule filter_genes from preprocessing as preprocessing_filter_genes with:
         zarr=directory(mcfg.out_dir / 'preprocessed' / paramspace.wildcard_pattern / 'filtered_genes.zarr'),
     params:
         dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=True),
-        min_cells=lambda wildcards: mcfg.get_from_parameters(wildcards, 'filter', default={}).get('min_cells', 10),
+        args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'filter', default=dict(min_cells=1)),
     threads:
         lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_threads', default=10)
     resources:
