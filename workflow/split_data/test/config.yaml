@@ -15,6 +15,7 @@ DATASETS:
         obsm: obsm
         obsp: obsp
       key: bulk_labels
+      fail_on_empty_subset: false
       values:
         - CD4+_CD45RA+_CD25-_Naive_T
         - Dendritic

@@ -17,6 +17,7 @@ The script:
 - `split_key`: Column name in `.obs` to split by (passed as wildcard)
 - `values`: List of specific values to extract (uses sanitized filenames)
 - `dask`: Whether to keep arrays as dask arrays before writing copy (default: False)
+- `fail_on_empty_subset`: Whether to raise an error when one or more requested `values` are not found in `split_key` (default: False)
 - `write_copy`: Whether to write full copies vs linked subsets (default: False, auto-enabled for .h5ad inputs)
 - `slots`: Optional mapping of slots to read/write
 
@@ -33,6 +34,7 @@ DATASETS:
         pbmc: test/input/pbmc68k.h5ad
     split_data:
       key: bulk_labels
+      fail_on_empty_subset: true
       values:
         - CD4+_CD45RA+_CD25-_Naive_T
         - Dendritic
