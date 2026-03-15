@@ -38,13 +38,13 @@ def _build_suffixes(param_dict):
     suffixes = []
     for combo_values in product(*values):
         combo = dict(zip(keys, combo_values))
-        suffix = '--' + '--'.join(f"{k}={combo[k]}" for k in keys)
+        suffix = '-' + '-'.join(f"{k}={combo[k]}" for k in keys)
         suffixes.append(suffix)
     return suffixes
 
 
 def expected_hvg_columns(hvg_config):
-    """Expected 'highly_variable--...' columns from HVG config.
+    """Expected 'highly_variable-...' columns from HVG config.
 
     If hvg_config is False, HVG is treated as disabled and no columns are expected.
     If hvg_config is None, empty, or has no recognized HVG keys, a default
@@ -64,7 +64,7 @@ def expected_hvg_columns(hvg_config):
 
 
 def expected_extra_hvg_columns(extra_config):
-    """Expected 'extra_hvgs--...' columns from extra_hvgs overwrite_args.
+    """Expected 'extra_hvgs-...' columns from extra_hvgs overwrite_args.
     If no overwrite_args provided, expect plain 'extra_hvgs'.
     """
     if not isinstance(extra_config, dict):
