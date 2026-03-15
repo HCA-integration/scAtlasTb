@@ -15,7 +15,7 @@ from utils.processing import _filter_genes
 input_file = snakemake.input[0]
 output_file = snakemake.output[0]
 dask = snakemake.params.get('dask', True)
-args = snakemake.params.get('filter', dict(min_cells=1))
+args = snakemake.params.get('args', snakemake.params.get('filter', dict(min_cells=1)))
 
 logging.info(f'Read {input_file}...')
 adata = read_anndata(
