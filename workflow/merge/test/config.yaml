@@ -22,6 +22,7 @@ DATASETS:
       keep_all_columns: true
       allow_duplicate_obs: true
       allow_duplicate_vars: false
+      persist: true
       threads: 5
       stride: 500_000
       dask: true
@@ -31,6 +32,17 @@ DATASETS:
         obs: obs
         var: var
         layers: layers
+  
+  test_dask:
+    input:
+      merge:
+        file_1: test/input/pbmc68k.h5ad
+        file_2: test/input/pbmc68k.h5ad
+    merge:
+      dask: true
+      allow_duplicate_obs: true
+
+
   test:
     input:
       merge:

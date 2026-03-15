@@ -445,9 +445,8 @@ def read_anndata_or_mudata(file):
 def write_zarr(adata, file, compute=False):
     def sparse_coo_to_csr(matrix):
         from dask import array as da
-        import sparse
         
-        if isinstance(matrix, da.Array) and isinstance(matrix._meta, sparse.COO):
+        if isinstance(matrix, da.Array) and type(matrix._meta).__name__ == 'COO':
             matrix = matrix.map_blocks(lambda x: x.tocsr(), dtype=matrix.dtype)
         return matrix
     
