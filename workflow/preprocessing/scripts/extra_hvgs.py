@@ -123,9 +123,14 @@ feature_col = 'feature_name' if 'feature_name' in var.columns else None
 
 # remove user-specified genes
 if remove_genes:
-    remove_genes = match_genes(var, remove_genes, column=feature_col)
+    remove_genes, remove_mask = match_genes(
+        adata.var,
+        remove_genes,
+        column=feature_col,
+        return_mask=True
+    )
     logging.info(f'Remove {len(remove_genes)} genes (subset data)...')
-    adata = adata[:, ~adata.var_names.isin(remove_genes)].copy()
+    adata = adata[:, ~remove_mask].copy()
 
 adata.var[hvg_column_name] = False
 
