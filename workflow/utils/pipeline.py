@@ -104,6 +104,7 @@ def update_input_files_per_dataset(
                 config=config,
                 first_module=first_module,
                 config_class_map=config_class_map,
+                config_kwargs=config_kwargs,
             )
             
             # Create module config for input module to get output files
