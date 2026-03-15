@@ -50,7 +50,7 @@ elif isinstance(args, dict):
 if isinstance(overwrite_args, dict):
     args |= overwrite_args
     for key in sorted(overwrite_args.keys()):
-        hvg_column_name += f'--{key}={overwrite_args[key]}'
+        hvg_column_name += f'-{key}={overwrite_args[key]}'
 
 logging.info(f'args: {args}')
 logging.info(f'dask: {dask}')

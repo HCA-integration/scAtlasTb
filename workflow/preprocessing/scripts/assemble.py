@@ -38,15 +38,15 @@ def assemble_adata(file, file_type, adata, is_default=True):
         if any(adata.var_names != adata_pp.var_names):
             adata = adata[:, adata_pp.var_names]
         
-        # Find the specific HVG column (should be highly_variable or highly_variable--)
-        hvg_col = next((col for col in adata_pp.var.columns if col.startswith('highly_variable--')), 'highly_variable')
+        # Find the specific HVG column (should be highly_variable or highly_variable-)
+        hvg_col = next((col for col in adata_pp.var.columns if col.startswith('highly_variable-')), 'highly_variable')
         adata.var[hvg_col] = adata_pp.var[hvg_col]
         if is_default:
             adata.var['highly_variable'] = adata_pp.var[hvg_col]
 
     elif file_type == 'extra_hvgs':
         var = read_anndata(file, var='var', verbose=False).var
-        extra_hvg_cols = [col for col in var.columns if col.startswith('extra_hvgs')]
+        extra_hvg_cols = [col for col in var.columns if col.startswith('extra_hvgs-')]
         if not extra_hvg_cols:
             raise ValueError("No columns starting with 'extra_hvgs' found in 'var' when processing file_type 'extra_hvgs'.")
         hvg_col = extra_hvg_cols[0]
@@ -97,7 +97,7 @@ def assemble_zarr(file, file_type, slot_map, in_dir_map, is_default=True):
         var = read_anndata(file, var='var', verbose=False).var
 
         # map specific hvg_column
-        hvg_col = next((col for col in var.columns if col.startswith('highly_variable--')), 'highly_variable')
+        hvg_col = next((col for col in var.columns if col.startswith('highly_variable-')), 'highly_variable')
         update_slot_map |= {
             f'var/{hvg_col}': f'var/{hvg_col}',
             f'uns/preprocessing/{hvg_col}': f'uns/preprocessing/highly_variable_genes',
@@ -114,7 +114,7 @@ def assemble_zarr(file, file_type, slot_map, in_dir_map, is_default=True):
         logging.info('add highly variable genes')
         var = read_anndata(file, var='var', verbose=False).var
         
-        hvg_cols = [col for col in var.columns if col.startswith('extra_hvgs')]
+        hvg_cols = [col for col in var.columns if col.startswith('extra_hvgs-')]
         if not hvg_cols:
             raise ValueError(
                 "No columns starting with 'extra_hvgs' found in 'var' for file "

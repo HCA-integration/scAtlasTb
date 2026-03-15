@@ -62,7 +62,7 @@ for col in list(var.columns):
 hvg_column_name = 'highly_variable'
 if isinstance(args, dict):
     for key in sorted(args.keys()):
-        hvg_column_name += f'--{key}={args[key]}'
+        hvg_column_name += f'-{key}={args[key]}'
 
 if adata.n_obs == 0:
     logging.info('No data, write empty file...')
