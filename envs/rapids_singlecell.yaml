@@ -12,14 +12,15 @@ dependencies:
   - louvain
   - zarr
   - cuda-version=12
-  - rapids=24.06
+  - rapids=25.10
   - scikit-learn<1.6 # required by dask-ml
   - scipy<1.15
   - dask
   - dask-ml
-  - sparse
-  - harmonypy
+  - pandas<3
   - pytorch
+  - harmonypy
+  - harmony-pytorch
   - pip
   - pip:
     - rapids-singlecell

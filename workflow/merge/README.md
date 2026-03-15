@@ -18,6 +18,7 @@ DATASETS:
       allow_duplicate_obs: true
       allow_duplicate_vars: false
       new_indices: false
+      persist: true
       threads: 5
       stride: 500_000
       dask: true
@@ -53,7 +54,10 @@ DATASETS:
 
 * **`threads`**: Number of threads for parallel processing (used with Dask)
 
-* **`stride`**: Chunk size for processing large datasets to control memory usage
+* **`stride`**: Cell batch size for processing large datasets
+  - Controls how many cells are processed/merged in a single chunk.
+  - In Dask mode with `persist: true`, this value is used as the batch size for each persisted merge step (up to `stride` cells per batch).
+  - Smaller values reduce peak memory usage at the cost of more, smaller batches and higher scheduling overhead; larger values improve throughput but increase peak RAM usage.
 
 * **`dask`**: Enable Dask arrays for distributed/out-of-core processing
   - `true`: Use Dask for memory-efficient processing of very large datasets
@@ -62,6 +66,13 @@ DATASETS:
 * **`backed`**: Enable backed mode using AnnCollection for efficient merging
   - `true`: Keep data on disk during merging process
   - `false`: Load all data into memory
+
+* **`persist`**: Persist intermediate Dask arrays during merge to keep task graphs shallow
+  - `true`: In Dask mode with more than 2 inputs, merges files in cell-count batches of up to `stride` cells and persists each intermediate result.
+  - `false`: Uses direct concatenation without intermediate persistence (default).
+  - Persists materialize intermediate Dask arrays into worker memory; this can significantly increase peak RAM usage compared to non-persisted execution, especially for large `stride` values or very large datasets.
+  - Recommended for performance when enough memory is available; consider disabling or reducing `stride` on memory-constrained systems.
+  - Only relevant when `dask: true`
 
 * **`slots`**: Specify which data slots to read from zarr files
   - Dictionary mapping slot names to zarr group names
@@ -78,6 +89,7 @@ DATASETS:
 - Uses Dask arrays for out-of-core processing
 - Memory-efficient for very large datasets
 - Supports parallel processing across chunks
+- With `persist: true` and more than 2 input files, intermediate merges are persisted to reduce graph depth and scheduler overhead
 
 ### Backed Mode (`backed: true`)
 - Uses AnnCollection to keep data on disk
@@ -106,6 +118,7 @@ DATASETS:
 - Slot removal to free memory during processing
 - Sparse matrix format preservation
 - Chunked processing for large datasets
+- Optional intermediate persistence for Dask merges (`persist: true`)
 
 ## Output
 

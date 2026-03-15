@@ -1,6 +1,8 @@
 import logging
 from pathlib import Path
 logging.basicConfig(level=logging.INFO)
+import warnings
+warnings.filterwarnings('ignore', category=FutureWarning)
 import gc
 import faulthandler
 faulthandler.enable()
@@ -18,13 +20,13 @@ from dask import config as da_config
 da_config.set(
     **{
         'num_workers': snakemake.threads,
-        'array.slicing.split_large_chunks': False
+        'array.slicing.split_large_chunks': False,
     }
 )
 logging.info(f"Dask using {da_config.get('num_workers')} workers")
 
 from utils.io import read_anndata, link_zarr, write_zarr
-from utils.misc import apply_layers, dask_compute, ensure_sparse
+from utils.misc import apply_layers, ensure_sparse
 
 
 def read_adata(
@@ -32,7 +34,7 @@ def read_adata(
     file_id=None,
     backed=False,
     dask=False,
-    stride=10_000,
+    stride=100_000,
     chunks=(-1, -1),
     log=True,
     **slots
@@ -65,6 +67,134 @@ def remove_slots(adata):
             delattr(adata, slot)
 
 
+def persist_batch_adata(adata):
+    """Persist dask arrays in adata to reset task graph."""
+    dask_layers = ['X', 'raw'] + list(adata.layers.keys())
+    return apply_layers(
+        adata,
+        func=lambda x: x if not isinstance(x, da.Array) else x.persist(),
+        layers=dask_layers,
+    )
+
+
+def calculate_batch_boundaries(adatas, batch_cell_size):
+    """
+    Calculate batch boundaries based on target cell count.
+    
+    Returns list of (start_idx, end_idx, total_cells) tuples.
+    """
+    batches = []
+    batch_start = 0
+    cells_in_batch = 0
+    
+    for idx, adata in enumerate(adatas):
+        cells_in_batch += adata.n_obs
+        is_last_file = (idx == len(adatas) - 1)
+        
+        if cells_in_batch >= batch_cell_size or is_last_file:
+            batches.append((batch_start, idx + 1, cells_in_batch))
+            batch_start = idx + 1
+            cells_in_batch = 0
+    
+    return batches
+
+
+def reduce_pairwise_with_persist(adatas, merge_strategy):
+    """
+    Reduce a list of AnnData objects in pairwise rounds.
+
+    Algorithm
+    ---------
+    1. Start with all batch-level merged objects.
+    2. In each round, merge neighbors in pairs: (0,1), (2,3), ...
+    3. Persist each newly merged pair immediately to reset Dask graph depth.
+    4. If a round has an odd item, carry it unchanged to the next round.
+    5. Repeat until one AnnData remains.
+    6. Persist once more before returning to ensure a compact final graph.
+
+    Why this helps
+    --------------
+    Pairwise tree reduction avoids building one long concatenation chain,
+    which keeps graph depth and scheduler overhead lower for many inputs.
+    """
+    level = adatas
+    round_idx = 0
+
+    while len(level) > 1:
+        round_idx += 1
+        next_level = []
+        n_pairs = (len(level) + 1) // 2
+        logging.info(f'Reduction round {round_idx}: {len(level)} nodes -> {n_pairs}')
+
+        for i in tqdm(range(0, len(level), 2), unit='pair'):
+            pair = level[i:i + 2]
+
+            # Odd-node carry: keep as-is for the next round.
+            if len(pair) == 1:
+                next_level.append(pair[0])
+                continue
+
+            merged = sc.concat(pair, join=merge_strategy, axis=0)
+            merged = persist_batch_adata(merged)
+            next_level.append(merged)
+
+        level = next_level
+
+    return persist_batch_adata(level[0])
+
+
+def merge_adatas_with_batching(adatas, merge_strategy, batch_cell_size):
+    """
+    Merge adatas in batches by cell count and persist after each batch to reduce dask layer depth.
+    
+    Parameters
+    ----------
+    adatas : list of AnnData
+        List of AnnData objects to merge
+    merge_strategy : str
+        Join strategy ('inner', 'outer')
+    batch_cell_size : int
+        Target number of cells per batch
+        
+    Returns
+    -------
+    AnnData
+        Merged AnnData object with persisted dask arrays
+    """
+    if len(adatas) <= 1:
+        return adatas[0] if adatas else None
+    
+    # Calculate batch boundaries
+    batch_boundaries = calculate_batch_boundaries(adatas, batch_cell_size)
+    total_cells = sum(adata.n_obs for adata in adatas)
+    
+    logging.info(
+        f'Merging {len(adatas)} files ({total_cells:,} cells) '
+        f'in {len(batch_boundaries)} batches of ~{batch_cell_size:,} cells'
+    )
+    
+    # Phase 1: merge file-level inputs into cell-count-based batches.
+    # Each batch merge is persisted immediately to keep each batch graph shallow.
+    merged_batches = []
+
+    for batch_num, (start, end, n_cells) in enumerate(
+        tqdm(batch_boundaries, desc='Merging batches', unit='batch'), start=1
+    ):
+        batch_slice = adatas[start:end]
+        merged_batch = sc.concat(batch_slice, join=merge_strategy, axis=0)
+        merged_batch = persist_batch_adata(merged_batch)
+        merged_batches.append(merged_batch)
+        
+        logging.info(
+            f'[Batch {batch_num}/{len(batch_boundaries)}] '
+            f'{len(batch_slice)} files, {n_cells:,} cells -> {merged_batch.shape}'
+        )
+
+    # Phase 2: reduce persisted batches with pairwise rounds.
+    # This keeps final-merge graph growth controlled for many batches.
+    return reduce_pairwise_with_persist(merged_batches, merge_strategy)
+
+
 dataset = snakemake.wildcards.dataset
 files = snakemake.input
 out_file = snakemake.output.zarr
@@ -76,7 +206,8 @@ allow_duplicate_vars = snakemake.params.get('allow_duplicate_vars', False)
 new_indices = snakemake.params.get('new_indices', False)
 backed = snakemake.params.get('backed', False)
 dask = snakemake.params.get('dask', False)
-stride = snakemake.params.get('stride', 500_000)
+persist = snakemake.params.get('persist', False)
+stride = snakemake.params.get('stride', 100_000)
 slots = snakemake.params.get('slots', {})
 if slots is None:
     slots = {}
@@ -120,24 +251,38 @@ if len(files) == 0:
     AnnData().write_zarr(out_file)
     exit(0)
 
+
 if dask:
-    logging.info('Read all files with dask...')
-    adatas = (
+    logging.info('Loading all files as backed Dask AnnDatas...')
+    adatas = [
         read_adata(
             file_path,
             file_id=file_id,
-            backed=backed,
-            dask=dask,
+            backed=True,
+            dask=True,
             stride=stride,
             **slots,
             log=False,
         )
         for file_id, file_path in tqdm(files.items(), desc='Read files', miniters=1)
-    )
+    ]
     
-    # concatenate
-    adata = sc.concat(adatas, join=merge_strategy)
-    print(adata, flush=True)
+    # Merge adatas with batching to reduce dask layer depth
+    if persist and len(adatas) > 2:
+        adata = merge_adatas_with_batching(adatas, merge_strategy, batch_cell_size=stride)
+    else:
+        logging.info('Concatenating adatas with lazy counts...')
+        adata = sc.concat(adatas, join=merge_strategy, axis=0)
+        if persist:
+            logging.info('Persisting concatenated adata to reset Dask graph...')
+            adata = persist_batch_adata(adata)
+    
+    logging.info(adata.__str__())
+    logging.info(f'raw present: {adata.raw is not None}, layers: {adata.layers.keys()}')
+    
+    if persist and len(adatas) == 1:
+        logging.info('Persisting single file (batching not applicable)...')
+        adata = persist_batch_adata(adata)
 
     
 elif backed:
@@ -273,5 +418,11 @@ logging.info(adata.__str__())
 
 logging.info(f'Write to {out_file}...')
 if isinstance(adata.X, da.Array):
-    print(adata.X.dask, flush=True)
+    graph = adata.X.__dask_graph__()
+    n_tasks = len(graph)
+    if hasattr(graph, "layers"):
+        n_layers = len(graph.layers)
+        logging.info(f'Dask graph: {n_layers} layers, {n_tasks} tasks')
+    else:
+        logging.info(f'Dask graph: {n_tasks} tasks')
 write_zarr(adata, out_file)

@@ -1,4 +1,4 @@
-# The `metrics` module
+# Metrics
 
 This module computes metrics for quantitatively evaluating data integration (scib, Moran's I metrics).
 The metrics measure either the biological conservation or the batch correction of a cellular representation.

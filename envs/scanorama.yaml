@@ -8,5 +8,6 @@ dependencies:
   - scanpy=1.11
   - scanorama>=1.7.4
   - zarr<3
+  - pandas<3
   - dask
   - sparse

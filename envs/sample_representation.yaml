@@ -12,6 +12,7 @@ dependencies:
   - dask-ml
   - sparse
   - zarr<3
+  - pandas<3
   - pip
   - pip:
     - faiss-cpu<=1.9

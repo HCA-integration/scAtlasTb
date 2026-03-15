@@ -11,18 +11,21 @@ import time
 da_config.set(num_workers=snakemake.threads)
 
 from utils.annotate import add_wildcards
-from utils.io import read_anndata, write_zarr, write_zarr_linked, ALL_SLOTS
+from utils.io import read_anndata, write_zarr, write_zarr_linked, ALL_SLOTS, check_slot_exists
 
 input_file = snakemake.input[0]
 output_dir = snakemake.output[0]
 split_key = snakemake.wildcards.key
 values = snakemake.params.get('values', [])
+fail_on_empty = snakemake.params.get('fail_on_empty_subset', False)
 dask = snakemake.params.get('dask', False)
 write_copy = snakemake.params.get('write_copy', False) or input_file.endswith('.h5ad')
 slots = snakemake.params.get('slots', {})
 
 if not slots:
-    slots = {s: s for s in ALL_SLOTS}
+    # Determine which slots actually exist in the input file
+    slots = {s: s for s in ALL_SLOTS if check_slot_exists(input_file, s)}
+    logging.info(f'Existing slots in input file: {list(slots.keys())}')
 
 exclude_slots = [
     slot for slot in ALL_SLOTS
@@ -38,9 +41,13 @@ if not out_dir.exists():
 
 # minimal slots to be read
 if not write_copy and all(k == v for k, v in slots.items()):
-    # only obs needed if everything else gets linked directly
-    slots = dict(obs='obs', var='var')
+    # only obs, var, and uns are read if everything else gets linked directly
+    slots = dict(obs='obs', var='var', uns='uns')
     # TODO: also optimise case where slot key and value does not match fully
+else:
+    # Always ensure uns is read
+    if 'uns' not in slots and check_slot_exists(input_file, 'uns'):
+        slots['uns'] = 'uns'
 
 logging.info(f'Read anndata file {input_file}...')
 adata = read_anndata(
@@ -53,14 +60,19 @@ logging.info(adata.__str__())
 
 # convert split_key column to string
 adata.obs[split_key] = adata.obs[split_key].astype(str)
-logging.info(adata.obs[split_key].value_counts())
+value_counts = adata.obs[split_key].value_counts()
+logging.info(value_counts)
 
 file_value_map = {
     s.replace(' ', '_').replace('/', '_'): s
-    for s in adata.obs[split_key].astype(str).unique()
+    for s in value_counts.index.astype(str)
 }
-logging.info(f'file_value_map: {pformat(file_value_map)}')
-logging.info(f'splits: {pformat(values)}')
+logging.info(f'file_value_map:\n{pformat(file_value_map)}')
+logging.info(f'splits:\n{pformat(values)}')
+
+missing = set(values) - set(file_value_map)
+if fail_on_empty and missing:
+    raise ValueError(f"Missing values in value_counts: {sorted(missing)}")
 
 for i, value in enumerate(values):
     split = file_value_map.get(value, value)

@@ -19,12 +19,15 @@ Please refer to the [documentation][].
 
 The modules are located under `workflow/` and can be run independently or combined into a more complex workflow.
 
+<details>
+<summary><b>Click to expand the full list of modules</b></summary>
+
 | Module                 | Description                                                               |
 |------------------------|---------------------------------------------------------------------------|
 | `load_data`            | Loading datasets from URLs and converting them to AnnData objects         |
 | `exploration`          | Exploration and quality control of datasets                               |
 | `batch_analysis`       | Exploration and quality control of batches within datasets                |
-| `qc`                   | Semi-automaetd quality control of datasets using [sctk AutoQC](https://teichlab.github.io/sctk/notebooks/automatic_qc.html) |
+| `qc`                   | Semi-automated quality control of datasets using [sctk AutoQC](https://teichlab.github.io/sctk/notebooks/automatic_qc.html) |
 | `doublets`             | Identifying and handling doublets in datasets                             |
 | `merge`                | Merging datasets                                                          |
 | `filter`               | Filtering datasets based on specified criteria                            |
@@ -34,12 +37,18 @@ The modules are located under `workflow/` and can be run independently or combin
 | `preprocessing`        | Preprocessing of datasets (normalization, feature selection, PCA, kNN graph, UMAP) |
 | `integration`          | Running single cell batch correction methods on datasets                  |
 | `metrics`              | Calculating [scIB metrics](https://scib.readthedocs.io/en/latest/), mainly for benchmarking of integration methods  |
+| `clustering`           | Multi-resolution and hierarchical clustering of datasets                  |
 | `label_harmonization`  | Providing alignment between unharmonized labels using [CellHint](https://cellhint.readthedocs.io/en/latest) |
-| `label_transfer`       | Transfer annotations of annotated cells to annotated cells e.g. via majority voting |
-| `sample_representation`| Methods for aggregating cells to sample level e.g. pseudobulk             |
+| `label_transfer`       | Transfer annotations of annotated cells to unannotated cells              |
+| `majority_voting`      | Consensus voting across multiple cell type assignments                    |
+| `celltype_prediction`  | Predict cell types from reference model e.g. celltypist                   |
+| `reference_mapping`    | Map query datasets to reference atlases                                   |
+| `marker_genes`         | Identify marker genes for cell types                                      |
 | `collect`              | Collect multiple input anndata objects into a single anndata object       |
 | `uncollect`            | Distribute slots of an anndata object to multiple anndata objects         |
-| `cell_type_prediction` | Predict cell types from reference model e.g. celltypist                   |
+| `common`               | Common utilities and helper functions for workflows                       |
+
+</details>
 
 ## 👀 TL;DR What does a full workflow look like?
 
