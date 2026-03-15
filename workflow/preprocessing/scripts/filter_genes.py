@@ -15,6 +15,7 @@ from utils.processing import _filter_genes
 input_file = snakemake.input[0]
 output_file = snakemake.output[0]
 dask = snakemake.params.get('dask', True)
+min_cells = snakemake.params.get('min_cells', 10)
 
 logging.info(f'Read {input_file}...')
 kwargs = dict(
@@ -31,7 +32,7 @@ logging.info(adata.__str__())
 var = adata.var.copy()
 
 logging.info('Determine nonzero genes...')
-adata.var['nonzero_genes'] = _filter_genes(adata, min_cells=1)
+adata.var['nonzero_genes'] = _filter_genes(adata, min_cells=min_cells)
 
 write_zarr_linked(
     adata,

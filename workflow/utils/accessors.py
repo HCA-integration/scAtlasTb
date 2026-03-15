@@ -73,22 +73,14 @@ def _filter_genes(adata, verbose=True, return_varnames=False, **kwargs):
     from dask import array as da
     from tqdm.dask import TqdmCallback
     from contextlib import nullcontext
-        
-    # if isinstance(adata.X, da.Array):
-    #     import sparse
-        
-    #     min_cells = kwargs.get('min_cells', 0)
-        
-    #     with TqdmCallback(
-    #         desc=f"Determine genes with >= {min_cells} cells",
-    #         miniters=10,
-    #         mininterval=5,
-    #     ):
-    #         X = X.map_blocks(sparse.COO)
-    #         mask = (X != 0).sum(axis=0) >= min_cells
-    #         mask = mask.compute().todense()
-    #     return mask
-
+    
+    # Handle empty adata
+    if adata.n_obs == 0:
+        gene_subset = np.zeros(adata.n_vars, dtype=bool)
+        if return_varnames:
+            gene_subset = adata.var_names[gene_subset]
+        return gene_subset
+    
     X = adata.X
     context = TqdmCallback(desc='Filter genes', miniters=1) if verbose and isinstance(X, da.Array) else nullcontext()
     
