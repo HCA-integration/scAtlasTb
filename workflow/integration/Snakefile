@@ -23,6 +23,8 @@ mcfg = IntegrationConfig(
         'seed',
         'threads',
         'save_subset',
+        'umap_colors',
+        'plots',
     ],
     wildcard_names=['method', 'batch', 'label', 'var_mask', 'output_type'],
     rename_config_params={'methods': 'method'},

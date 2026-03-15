@@ -13,9 +13,10 @@ use rule plots from preprocessing as clustering_plot_umap with:
         plots=directory(mcfg.image_dir / 'dataset~{dataset}' / 'file_id~{file_id}' / 'umap')
     params:
         basis='X_umap',
-        color=lambda wildcards: mcfg.get_from_parameters(wildcards, 'umap_colors', default=[]),
-        plot_centroids=get_cluster_keys,
-        # outlier_factor=10,
+        color=lambda wildcards: mcfg.get_from_parameters(wildcards, 'umap_colors', default=[]) +
+            mcfg.get_from_parameters(wildcards, 'plots', default={}).get('colors', []),
+        plot_centroids=lambda wildcards: get_cluster_keys(wildcards) +
+            mcfg.get_from_parameters(wildcards, 'plots', default={}).get('plot_centroids', []),
     resources:
         mem_mb=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='mem_mb',attempt=attempt, factor=1),
         partition=mcfg.get_resource(profile='cpu',resource_key='partition'),

@@ -23,6 +23,7 @@ mcfg = ClusteringConfig(
         'overwrite',
         'use_gpu',
         'n_cell_cpu',
+        'plots',
     ],
     # wildcard_names=['algorithm', 'resolution'],
     rename_config_params={'resolutions': 'resolution'},
