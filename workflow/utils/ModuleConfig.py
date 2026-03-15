@@ -1,6 +1,7 @@
 from pprint import pprint, pformat
 from typing import Union
 from pathlib import Path
+from itertools import groupby
 import pandas as pd
 from snakemake.exceptions import WildcardError
 from snakemake.io import expand, Wildcards
@@ -80,6 +81,7 @@ class ModuleConfig:
             input_file_wildcards=self.input_files.get_wildcards(),
             dataset_config=self.datasets,
             default_config=self.config.get('defaults'),
+            default_datasets=self.default_datasets,
             dont_inherit=dont_inherit,
             wildcard_names=wildcard_names,
             mandatory_wildcards=mandatory_wildcards,
@@ -132,6 +134,9 @@ class ModuleConfig:
             dataset: entry for dataset, entry in self.config['DATASETS'].items()
             if self.module_name in entry.get('input', {}).keys()
         }
+        
+        # Store default datasets list from config
+        self.default_datasets = self.config.get('defaults', {}).get('datasets', None)
         
         for dataset in self.datasets:
             self.set_defaults_per_dataset(dataset, warn=warn)
@@ -195,10 +200,18 @@ class ModuleConfig:
         return self.config
 
 
-    def get_datasets(self) -> dict:
+    def get_datasets(self, default_datasets: bool = True) -> dict:
         """
         Get config for datasets that use the module
+        
+        :param default_datasets: whether to filter by defaults: datasets (default: True)
+        :return: dictionary of dataset configurations
         """
+        if default_datasets and self.default_datasets is not None:
+            return {
+                dataset: entry for dataset, entry in self.datasets.items()
+                if dataset in self.default_datasets
+            }
         return self.datasets
 
 

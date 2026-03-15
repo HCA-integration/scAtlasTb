@@ -23,6 +23,7 @@ class WildcardParameters:
         input_file_wildcards: dict,
         dataset_config: dict,
         default_config: dict,
+        default_datasets: list,
         dont_inherit: list,
         wildcard_names: list,
         mandatory_wildcards: list = None,
@@ -38,6 +39,7 @@ class WildcardParameters:
         :param input_file_wildcards: dictionary with input file wildcards for each dataset
         :param dataset_config: dictionary with dataset configuration for module
         :param default_config: dictionary with default configuration for module
+        :param default_datasets: list of default datasets from config
         :param wildcard_names: list of wildcard names for expanding rules
         :param config_params: list of parameters that a module should consider as wildcards, order and length must match wildcard_names, by default will take wildcard_names
         :param explode_by: column(s) to explode wildcard_names extracted from config by
@@ -49,6 +51,7 @@ class WildcardParameters:
         # determine wildcards
         self.dataset_config = dataset_config
         self.default_config = default_config
+        self.default_datasets = default_datasets
         self.set_wildcards(
             config_params=config_params,
             wildcard_names=wildcard_names,
@@ -232,7 +235,10 @@ class WildcardParameters:
                 return 0.0
             return None
 
-        na_map = {col: get_default_value(df[col], dtype) for col, dtype in dtypes.items()}
+        na_map = {
+            col: get_default_value(df[col], dtype)
+            for col, dtype in dtypes.items()
+        }
         na_map = {k: v for k, v in na_map.items() if v is not None}
         df = df.fillna(value=na_map).astype(dtypes)
         
@@ -309,7 +315,10 @@ class WildcardParameters:
                 print(f'wildcard_names: {wildcard_names}')
         
         if default_datasets:
-            query_dict = {'dataset': self.default_config['datasets']}
+            if self.default_datasets is not None:
+                query_dict = {'dataset': self.default_datasets}
+            else:
+                query_dict = {}
         else:
             query_dict = {}
         query_dict |= subset_dict
@@ -374,14 +383,22 @@ class WildcardParameters:
         as_type: type = None,
     ):
         """
-        Get entries from parameters dataframe
+        Get parameter value(s) from wildcards dataframe by querying with wildcards.
+        
+        Subsets the wildcards_df by query_dict conditions and retrieves the specified parameter.
+        Supports single and multiple value returns, type conversion, and null checking.
 
-        :param query_dict: dictionary with column (must be present in parameters_df) to value mapping
-        :param parameter_key: key of parameter
-        :param wildcards_sub: list of wildcards used for subsetting the parameters
-        :param exclude: list of wildcard names to exclude
-        :param check_query_keys: whether to check if all keys in query_dict are in wildcards_sub
-        :return: single parameter value or list of parameters as specified by column
+        :param query_dict: Dictionary mapping wildcard column names to values for filtering
+        :param parameter_key: Name of the column to retrieve values from
+        :param wildcards_sub: List of wildcard columns to use for subsetting. Defaults to all columns.
+        :param exclude: Wildcard name(s) to exclude from wildcards_sub
+        :param check_query_keys: If True, verify all query_dict keys are in wildcards_sub
+        :param check_null: If True, raise error if parameter is None/NaN/'None'
+        :param default: Default value to return if parameter is None/NaN/'None'
+        :param single_value: If True, return single value; if False, return list
+        :param verbose: If True, print debug information
+        :param as_type: Optional type to cast parameter to (e.g., int, str, list)
+        :return: Parameter value(s) matching the query, or default if null
         """
         if wildcards_sub is None:
             wildcards_sub = self.wildcards_df.columns.tolist()
@@ -416,12 +433,12 @@ class WildcardParameters:
                 # params_sub = self.subset_by_query(query_dict, columns, verbose=False)
                 params_sub = self.subset_by_query(query_dict, verbose=False)
                 # remove columns that are the same for all rows
-                n_unique_columns = params_sub.nunique() > 1
+                n_unique_columns = params_sub.astype(str).nunique() > 1
                 non_unique_columns = n_unique_columns[n_unique_columns].index.tolist()
                 # subset to columns
                 non_unique_columns = [col for col in non_unique_columns if col not in columns]
                 params_sub = params_sub[columns + non_unique_columns]
-            
+
             raise AssertionError(
                 f'{e} for:\n\tparameter_key="{parameter_key}"\n\twildcards_sub={wildcards_sub}'
                 f'\nquery_dict:\n{pformat(query_dict)}'
