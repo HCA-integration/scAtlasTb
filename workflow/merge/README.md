@@ -18,6 +18,7 @@ DATASETS:
       allow_duplicate_obs: true
       allow_duplicate_vars: false
       new_indices: false
+      persist: true
       threads: 5
       stride: 500_000
       dask: true
@@ -63,6 +64,11 @@ DATASETS:
   - `true`: Keep data on disk during merging process
   - `false`: Load all data into memory
 
+* **`persist`**: Persist intermediate Dask arrays during merge to keep task graphs shallow
+  - `true`: In Dask mode with more than 2 inputs, merges files in cell-count batches and persists each intermediate result
+  - `false`: Uses direct concatenation without intermediate persistence (default)
+  - Only relevant when `dask: true`
+
 * **`slots`**: Specify which data slots to read from zarr files
   - Dictionary mapping slot names to zarr group names
   - Only applies to zarr input files
@@ -78,6 +84,7 @@ DATASETS:
 - Uses Dask arrays for out-of-core processing
 - Memory-efficient for very large datasets
 - Supports parallel processing across chunks
+- With `persist: true` and more than 2 input files, intermediate merges are persisted to reduce graph depth and scheduler overhead
 
 ### Backed Mode (`backed: true`)
 - Uses AnnCollection to keep data on disk
@@ -106,6 +113,7 @@ DATASETS:
 - Slot removal to free memory during processing
 - Sparse matrix format preservation
 - Chunked processing for large datasets
+- Optional intermediate persistence for Dask merges (`persist: true`)
 
 ## Output
 
