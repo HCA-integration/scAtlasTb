@@ -46,7 +46,7 @@ def assemble_adata(file, file_type, adata, is_default=True):
 
     elif file_type == 'extra_hvgs':
         var = read_anndata(file, var='var', verbose=False).var
-        extra_hvg_cols = [col for col in var.columns if col.startswith('extra_hvgs-')]
+        extra_hvg_cols = [col for col in var.columns if col.startswith('extra_hvgs')]
         if not extra_hvg_cols:
             raise ValueError("No columns starting with 'extra_hvgs' found in 'var' when processing file_type 'extra_hvgs'.")
         hvg_col = extra_hvg_cols[0]
@@ -114,7 +114,7 @@ def assemble_zarr(file, file_type, slot_map, in_dir_map, is_default=True):
         logging.info('add highly variable genes')
         var = read_anndata(file, var='var', verbose=False).var
         
-        hvg_cols = [col for col in var.columns if col.startswith('extra_hvgs-')]
+        hvg_cols = [col for col in var.columns if col.startswith('extra_hvgs')]
         if not hvg_cols:
             raise ValueError(
                 "No columns starting with 'extra_hvgs' found in 'var' for file "
