@@ -9,14 +9,6 @@
 :maxdepth: 1
 
 getting_started/index.md
-```
-
-```{toctree}
-:caption: Configuration
-:name: configuration
-:hidden:
-:maxdepth: 1
-
 principles/index.md
 ```
 

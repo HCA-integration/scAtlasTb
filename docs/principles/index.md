@@ -1,4 +1,4 @@
-# Usage
+# Configuration
 
 ```{toctree}
 :maxdepth: 2
