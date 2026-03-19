@@ -1,7 +1,7 @@
 .. _advanced-configuration:
 
 ⚙️ Advanced configuration
-========================
+=========================
 
 
 Set defaults
