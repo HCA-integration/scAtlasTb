@@ -3,13 +3,21 @@
 ```
 
 ```{toctree}
-:caption: Setup
-:name: setup
+:caption: Usage
+:name: usage
 :hidden:
 :maxdepth: 1
 
 getting_started/index.md
-advanced_configuration/index.md
+```
+
+```{toctree}
+:caption: Configuration
+:name: configuration
+:hidden:
+:maxdepth: 1
+
+principles/index.md
 ```
 
 

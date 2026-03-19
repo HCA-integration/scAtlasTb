@@ -159,7 +159,7 @@ If your system does define any ``qos``, you can set it to ``normal``, which is t
       gpu: 1
       mem_mb: 100000
 
-In order for jobs to make use of the GPU, make sure that your GPU environments are installed correctly (see `Working with GPUs <../advanced_configuration/troubleshooting.html#working-with-gpus>`_).
+In order for jobs to make use of the GPU, make sure that your GPU environments are installed correctly (see `Working with GPUs <troubleshooting.html#working-with-gpus>`_).
 If you don't have GPU nodes, you can configure the gpu resources to be the same as the cpu resources.
 
 .. code-block:: yaml

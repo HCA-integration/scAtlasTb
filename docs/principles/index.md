@@ -1,4 +1,4 @@
-# Pipeline definition principles
+# Usage
 
 ```{toctree}
 :maxdepth: 2
