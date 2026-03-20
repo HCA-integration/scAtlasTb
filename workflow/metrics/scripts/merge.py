@@ -1,105 +1,88 @@
-import re
 import pandas as pd
 import warnings
 
 warnings.filterwarnings('ignore')
 
+# load snakemake variables
 input_metrics = snakemake.input.metrics
 input_benchmark = snakemake.input.benchmark
 out_tsv = snakemake.output.tsv
-extra_columns = snakemake.output.extra_columns
+extra_columns_file = snakemake.output.extra_columns
 expanded_wildcards = snakemake.params['wildcards']
-# expanded_wildcards = pd.DataFrame(expanded_wildcards)
 max_len = int(snakemake.params.get('max_file_name_len', 100))
 
-metrics_df = pd.concat(
-    [pd.read_table(file) for file in input_metrics],
-    ignore_index=True,
-).reset_index(drop=True)
-print(metrics_df, flush=True)
+# efficient data loading
+metrics_df = pd.concat([pd.read_table(f) for f in input_metrics], ignore_index=True)
+benchmark_df = pd.concat([pd.read_table(f) for f in input_benchmark], ignore_index=True)
 
-# set extra columns
-columns_to_ignore = ['score', 'metric_type', 'metric_name']
-ex_columns = set(
-    [
-        col for col in metrics_df.columns
-        if col not in expanded_wildcards.columns.tolist()+columns_to_ignore
-    ]
-)
-
-benchmark_df = pd.concat(
-    [pd.read_table(file) for file in input_benchmark],
-    ignore_index=True,
-).reset_index(drop=True)
-
-print(benchmark_df, flush=True)
-
+# merge wildcards and potential benchmarks
+# Assuming expanded_wildcards aligns row-wise with input_benchmark
 benchmark_df = pd.concat([expanded_wildcards, benchmark_df], axis=1)
-metrics_df = metrics_df.merge(benchmark_df).drop_duplicates()
 
-# parse any extra entries in file_id
-expanded_file_ids = metrics_df['file_id'].str.split('--', expand=True)
+# merge metrics and benchmarks using left join ensures not losing metrics if bench missing
+metrics_df = metrics_df.merge(benchmark_df, how='left').drop_duplicates()
 
+# vectorized metada extraction (better than for loop for bigger data bases)
+mask_overwrite = metrics_df.get('overwrite_file_id', False) == True
 
-def check_existing(df, row, key):
-    return key in df.columns \
-        and isinstance(df.loc[row, key], str) \
-        and df.loc[row, key] != ''
+# case a: simple file_id
+metrics_df.loc[~mask_overwrite, 'file_name'] = metrics_df.loc[~mask_overwrite, 'file_id']
 
-
-for row, _dict in expanded_file_ids.to_dict('index').items():
-    # skip file_id if overwrite_file_id is True
-    if not metrics_df.loc[row, 'overwrite_file_id']:
-        key = 'file_name'
-        metrics_df.loc[row, key] = metrics_df.loc[row, 'file_id']
-        ex_columns.add(key)
-        continue
-    
-    for _, value in _dict.items():
-        if value is None:
-            continue
-        
-        if '=' in value: # split key, value
-            key, value = value.split('=', maxsplit=1)
-        elif ':' in value:
-            key, value = 'file_name', value.split(':')[-1]
-        else:
-            key = 'file_name'
-
-        if check_existing(metrics_df, row, key):
-            if key == 'file_name' and metrics_df.loc[row, key] != value:
-                value = metrics_df.loc[row, key] + '--' + value
-            else:
-                # don't overwrite existing values
-                continue
-        
-        # add extra metadata
-        metrics_df.loc[row, key] = value
-        ex_columns.add(key)
-
-if 'file_name' in metrics_df.columns:
-    # truncate file_name if too long
-    metrics_df['file_name'] = metrics_df['file_name'].apply(
-        lambda x: x[:max_len] + '...' if isinstance(x, str) and len(x) > max_len else x
+# case b: complex file_id parsing
+if mask_overwrite.any():
+    # split the file_id strings by '--' and expand into a long-format
+    # 
+    extracted = (
+        metrics_df.loc[mask_overwrite, 'file_id']
+        .str.split('--', expand=True)
+        .stack()
+        .reset_index(level=1, drop=True)
     )
 
-# rename metric names
-metrics_df['metric'] = metrics_df['metric_name']
-del metrics_df['metric_name']
+    # key value pairs
+    kv_mask = extracted.str.contains('=')
+    if kv_mask.any():
+        kv_split = extracted[kv_mask].str.split('=', n=1, expand=True)
+        for key, group in kv_split.groupby(0):
+            # Map values back to original indices
+            metrics_df.loc[group.index, key] = group[1]
 
-ex_columns = sorted(ex_columns)
-print(metrics_df[ex_columns].drop_duplicates(), flush=True)
+    # colon paths or raw strings
+    simple_mask = ~kv_mask
+    if simple_mask.any():
+        
+        names = extracted[simple_mask].apply(lambda x: x.split(':')[-1] if ':' in x else x)
+        
+        # combine multiple file names
+        combined_names = names.groupby(level=0).agg('--'.join)
+        
+        # if already exists append it
+        existing_names = metrics_df.loc[combined_names.index, 'file_name']
+        metrics_df.loc[combined_names.index, 'file_name'] = (
+            combined_names if existing_names.isna() 
+            else existing_names + '--' + combined_names
+        )
 
-# save extra columns
-with open(extra_columns, 'w') as f:
+# final clean up and formatting
+if 'file_name' in metrics_df.columns:
+    metrics_df['file_name'] = metrics_df['file_name'].apply(
+        lambda x: (x[:max_len] + '...') if isinstance(x, str) and len(x) > max_len else x
+    )
+
+# rename metric column
+metrics_df['metric'] = metrics_df.get('metric_name', '')
+
+# identification of extra columns
+standard_cols = set(expanded_wildcards.columns.tolist() + ['score', 'metric_type', 'metric_name', 'metric', 'overwrite_file_id'])
+ex_columns = sorted([c for c in metrics_df.columns if c not in standard_cols])
+
+# save extra columns list
+with open(extra_columns_file, 'w') as f:
     for col in ex_columns:
         f.write(f'{col}\n')
 
-# save metrics
-del metrics_df['overwrite_file_id']
+# final export
+metrics_df = metrics_df.drop(columns=['overwrite_file_id'], errors='ignore')
 metrics_df.to_csv(out_tsv, sep='\t', index=False)
 
-print(
-    metrics_df[['metric', 'output_type', 'metric_type', 'score', 's', 'h:m:s']],
-    flush=True
-)
+print("Processing complete. Final shape:", metrics_df.shape)
