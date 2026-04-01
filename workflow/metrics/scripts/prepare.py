@@ -23,7 +23,6 @@ def compute_pca(adata, matrix):
 input_file = snakemake.input[0]
 output_file = snakemake.output[0]
 params = snakemake.params
-# label_key = params.get('label_key')
 neighbor_args = params.get('neighbor_args', {})
 unintegrated_layer = params.get('unintegrated_layer', 'X')
 corrected_layer = params.get('corrected_layer', 'X')
@@ -137,6 +136,12 @@ compute_neighbors(
     check_n_neighbors=False,
     **neighbor_args
 )
+
+# remove any obsm keys except for X_pca and X_emb to save space
+for key in list(adata.obsm.keys()):
+    if key in ['X_pca', 'X_emb']:
+        continue
+    del adata.obsm[key]
 
 logging.info(f'Write to {output_file}...')
 logging.info(adata.__str__())
