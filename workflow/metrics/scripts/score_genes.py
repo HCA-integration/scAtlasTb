@@ -31,9 +31,10 @@ output_file = snakemake.output[0]
 params = snakemake.params
 unintegrated_layer = params.get('unintegrated_layer', 'X')
 raw_counts_layer = params.get('raw_counts_layer', unintegrated_layer)
-var_key = params.get('var_mask', 'highly_variable')
 gene_sets = params['gene_sets']
 n_random_permutations = params.get('n_permutations', 100)
+n_random_genes = params.get('n_random_genes', 50)
+ctrl_size = params.get('ctrl_size', 50)
 n_quantiles = params.get('n_quantiles', 2)
 MAX_OBS = int(params.get('MAX_OBS', 4e6))
 

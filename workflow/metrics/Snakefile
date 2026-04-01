@@ -38,10 +38,7 @@ mcfg = MetricsConfig(
         'clustering',
         'covariates',
         'gene_sets',
-        'n_permutations',
-        'n_quantiles',
-        'weight_batch',
-        'overwrite_file_id',
+        'gene_score',
     ],
     # wildcard_names=['label', 'batch'],
     rename_config_params={

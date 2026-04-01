@@ -123,11 +123,10 @@ rule score_genes:
         zarr=directory(mcfg.out_dir / 'prepare' / paramspace.wildcard_pattern / 'gene_scores.zarr'),
     params:
         unintegrated_layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'unintegrated', default='X'),
-        raw_counts_layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'raw_counts', default=None),
         var_mask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'var_mask', default='highly_variable'),
         gene_sets=lambda wildcards: mcfg.get_gene_sets(wildcards.dataset),
-        n_permutations=lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_permutations', default=20),
-        n_quantiles=lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_quantiles', default=5),
+        n_permutations=lambda wildcards: mcfg.get_from_parameters(wildcards, 'gene_score', default={}).get('n_permutations', 20),
+        n_quantiles=lambda wildcards: mcfg.get_from_parameters(wildcards, 'gene_score', default={}).get('n_quantiles', 5),
     conda:
         get_env(config, 'scanpy', gpu_env='rapids_singlecell')
     resources:
