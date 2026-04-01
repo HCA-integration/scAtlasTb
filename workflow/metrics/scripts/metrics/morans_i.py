@@ -132,7 +132,7 @@ def morans_i_genes(adata, output_type, gene_set, **kwargs):
 
 def morans_i_genescore(adata, output_type, gene_set, use_random_gene_score=False, **kwargs):
     
-    metric = "M's I gene score"
+    metric = "M's I gs"
     metric_names = []
     scores = []
     
@@ -146,7 +146,7 @@ def morans_i_genescore(adata, output_type, gene_set, use_random_gene_score=False
         score = _morans_i(adata, covariate=gene_score_name)
 
         if use_random_gene_score:
-            random_gene_score_name = f'random_gene_scores:{len(gene_list)}'
+            random_gene_score_name = 'random_gene_scores'
             raise NotImplementedError("The 'use_random_gene_score' option is not yet implemented.")
             #     raise ValueError(f'Gene score {random_gene_score_name} not found in adata.obsm')
 
