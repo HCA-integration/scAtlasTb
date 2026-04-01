@@ -3,7 +3,7 @@ import scanpy as sc
 from .utils import select_neighbors, rename_categories, scanpy_to_neighborsresults
 
 
-def ari(adata, output_type, batch_key, label_key, cluster_key, **kwargs):
+def ari(adata, output_type, batch_key, label_key, cluster_keys, **kwargs):
     import scib
 
     adata = select_neighbors(adata, output_type)

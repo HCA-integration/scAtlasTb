@@ -3,16 +3,30 @@ import scanpy as sc
 from .utils import select_neighbors, rename_categories, scanpy_to_neighborsresults
 
 
-def nmi(adata, output_type, batch_key, label_key, cluster_key, **kwargs):
+def nmi(adata, output_type, batch_key, label_key, cluster_keys, **kwargs):
     import scib
 
     adata = select_neighbors(adata, output_type)
-    scib.cl.cluster_optimal_resolution(
+    adata = adata[adata.obs[label_key].notna()].copy()
+    # scib.cl.cluster_optimal_resolution(
+    #     adata=adata,
+    #     label_key=label_key,
+    #     cluster_key=cluster_key,
+    #     metric=scib.me.nmi,
+    #     use_rep=None,
+    # )
+    cluster_key = cluster_keys[0]
+    nmi_max = 0
+    for col in cluster_keys:
+        nmi = scib.me.nmi(adata, label_key, col)
+        if nmi > nmi_max:
+            nmi_max = nmi
+            cluster_key = col
+
+    score = scib.me.nmi(
         adata=adata,
         label_key=label_key,
         cluster_key=cluster_key,
-        metric=scib.me.nmi,
-        use_rep=None,
     )
     return scib.me.nmi(
         adata=adata[adata.obs[label_key].notna()],
