@@ -237,7 +237,7 @@ class ClustermapPlotter:
         else:
             self._create_simple_heatmap(cbar_label)
         
-        if self.config.show_barplot:
+        if self.config.show_barplot and self._clustermap is not None:
             self._add_barplot(bar_xlabel)
         
         self._configure_heatmap_axis()
