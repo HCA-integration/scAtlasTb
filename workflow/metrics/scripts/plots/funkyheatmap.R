@@ -7,6 +7,11 @@ value_var <- snakemake@params$value_var
 variable_var <- snakemake@params$variable_var
 weight_batch <- snakemake@params$weight_batch
 n_top <- snakemake@params$n_top
+group_col <- snakemake@params$group_col
+scale <- snakemake@params$scale
+scale <- ifelse(is.null(scale), FALSE, scale)
+dpi <- snakemake@params$dpi
+dpi <- ifelse(is.null(dpi), 300, dpi)
 
 tryCatch({
  library(funkyheatmap)
@@ -101,19 +106,48 @@ metrics_tab <- metrics_tab[1:min(n_top, nrow(metrics_tab))]
 # add funkyheatmap data
 row_info <- NULL
 row_groups <- NULL
-# if ('split_data_value' %in% colnames(metrics_tab)) {
-#   ## hardcoded!!!
-#   # set split_data_value NaN values to values from file_name column
-#   metrics_tab[split_data_value == '', split_data_value := file_name]
-#   metrics_tab[, split_data_value := gsub("_", "+", split_data_value)]
-#   metrics_tab[split_data_value == 'B+plasma', split_data_value := 'B+Plasma']
-#   metrics_tab <- metrics_tab[order(get('split_data_value'))]
-#   metrics_tab[, id := rownames(metrics_tab)]
-#   row_info <- data.table(id = metrics_tab$id, group = metrics_tab[, get('split_data_value')]) #  metrics_tab$output_type)
-#   # metrics_tab[, output_type := NULL]
-#   row_groups <- data.table(group=unique(row_info$group), Group=unique(row_info$group))
-#   metrics_tab[, split_data_value := NULL]
-# }
+
+# Group rows by the specified column if provided
+if (!is.null(group_col) && "Overall Score" %in% colnames(metrics_tab)) {
+  # Verify that the grouping column exists in the table
+  assertthat::assert_that(group_col %in% colnames(metrics_tab))
+
+  # Rank groups by best performer, then second-best performer.
+  metrics_tab[, .group_value := as.character(get(group_col))]
+  metrics_tab[is.na(.group_value), .group_value := "NA"]
+
+  metrics_tab[, c("best_score", "second_best_score") := {
+    s <- sort(`Overall Score`[!is.na(`Overall Score`)], decreasing = TRUE)
+    list(
+      if (length(s) >= 1) s[1] else -Inf,
+      if (length(s) >= 2) s[2] else -Inf
+    )
+  }, by = .group_value]
+
+  metrics_tab <- metrics_tab[
+    order(
+      -best_score,
+      -second_best_score,
+      .group_value,
+      -`Overall Score`,
+      na.last = TRUE
+    )
+  ]
+
+  # Build row grouping metadata before removing the grouping column
+  metrics_tab[, id := as.character(seq_len(.N))]
+  row_info <- data.table(
+    id = metrics_tab$id,
+    group = paste(group_col, metrics_tab[[group_col]], sep = '=')
+  )
+  row_groups <- data.table(
+    group = unique(row_info$group),
+    Group = unique(row_info$group)
+  )
+
+  # remove grouping column and temporary score columns
+  metrics_tab[, c(group_col, "best_score", "second_best_score", ".group_value") := NULL]
+}
 
 # # shorten redundant information in long names
 # cols <- colnames(metrics_tab)
