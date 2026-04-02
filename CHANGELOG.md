@@ -1,5 +1,16 @@
 # Changelog
 
+## 02.04.2026 Metrics prepare optimisation
+
+PR: https://github.com/HCA-integration/scAtlasTb/pull/361
+
+Metrics module preparation was optimized to reduce memory and I/O overhead and avoid unnecessary recomputation.
+
+- `prepare_all` now aggregates dedicated subtargets (`pca_all`, `score_genes_all`, `cluster_all`) instead of forcing all heavy preparation steps for every dataset.
+- Clustering is skipped automatically for clustering-based metrics when `clustering.precomputed_key` is set.
+- Prepared AnnData now keeps only required embeddings in `.obsm` (`X_pca`, `X_emb`) to reduce output size.
+- Gene-score random permutations are precomputed once and reused across gene sets in `score_genes`, reducing repeated work.
+
 ## 05.05.2025 Storage optimisation when subsetting data
 
 PR: https://github.com/HCA-integration/scAtlasTb/pull/233

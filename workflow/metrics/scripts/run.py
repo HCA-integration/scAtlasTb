@@ -81,6 +81,8 @@ logger.info(f'Read {input_file} of input_type {input_type}...')
 adata = read_anndata(input_file, **kwargs)
 if 'feature_name' in adata.var.columns:
     adata.var_names = adata.var['feature_name'].astype(str)
+obs_mask = ~adata.obs[batch_key].isna()
+adata = adata[obs_mask].copy()
 print(adata, flush=True)
 
 adata_raw = None
@@ -99,12 +101,14 @@ if 'raw' in snakemake.input.keys():
 
     # assemble PCA for unintegrated
     adata_raw.obsm['X_pca'] = read_anndata(raw_file, X='obsm/X_pca').X
-    adata_raw.obs = adata.obs
     assert_pca(adata_raw)
     
+    # deal with metadata
+    adata_raw = adata_raw[obs_mask].copy()
+    adata_raw.obs = adata.obs
     if 'feature_name' in adata_raw.var.columns:
         adata_raw.var_names = adata_raw.var['feature_name'].astype(str)
-
+    
 
 # set default covariates
 if use_covariate and len(covariates) == 0:
@@ -128,8 +132,6 @@ columns = list(set(columns))  # make unique
 adata.obs = adata.obs[columns].copy()
 
 logger.info(f'Run metric {metric} for {output_type}...')
-adata.obs[batch_key] = adata.obs[batch_key].astype(str)
-
 # TODO: deal with bootstrapping
 scores = metric_function(
     adata,

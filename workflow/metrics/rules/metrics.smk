@@ -8,7 +8,8 @@ class MetricNotDefinedError(RuntimeError):
 
 def get_metric_input(wildcards):
     files = dict(zarr=rules.prepare.output.zarr)
-    if mcfg.get_from_parameters(wildcards, 'needs_clustering', default=False):
+    if mcfg.get_from_parameters(wildcards, 'needs_clustering', default=False) and \
+       not mcfg.get_from_parameters(wildcards, 'clustering', default={}).get('precomputed_key'):
         files['zarr'] = rules.metrics_cluster_collect.output.zarr
     if mcfg.get_from_parameters(wildcards, 'use_gene_set', default=False):
         files['zarr'] = rules.score_genes.output.zarr
@@ -52,7 +53,7 @@ rule run:
         metric_type=lambda wildcards: mcfg.get_from_parameters(wildcards, 'metric_type', default=MetricNotDefinedError(wildcards)),
         allowed_output_types=lambda wildcards: mcfg.get_from_parameters(wildcards, 'allowed_output_types', default=MetricNotDefinedError(wildcards)),
         input_type=lambda wildcards: mcfg.get_from_parameters(wildcards, 'input_type', default=MetricNotDefinedError(wildcards)),
-        cluster_key=lambda wildcards: mcfg.get_from_parameters(wildcards, 'clustering', default={}).get('algorithm', 'leiden'),
+        clustering=lambda wildcards: mcfg.get_from_parameters(wildcards, 'clustering', default={}),
         use_covariate=lambda wildcards: mcfg.get_from_parameters(wildcards, 'use_covariate', default=False),
         use_gene_set=lambda wildcards: mcfg.get_from_parameters(wildcards, 'use_gene_set', default=False),
         covariates=lambda wildcards: mcfg.get_from_parameters(wildcards, 'covariate', default=[]),

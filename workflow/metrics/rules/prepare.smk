@@ -46,16 +46,14 @@ use rule pca from preprocessing as metrics_pca with:
         mem_mb=lambda w, attempt: mcfg.get_resource(resource_key='mem_mb', profile='gpu', attempt=attempt),
 
 
-rule prepare_all:
+rule pca_all:
     input:
-        prepare=mcfg.get_output_files(rules.prepare.output),
         pca=[
             mcfg.get_output_files(rules.metrics_pca.output, subset_dict=dict(dataset=dataset))
             for dataset in mcfg.get_datasets()
             if sum(mcfg.get_from_parameters(dict(dataset=dataset), 'comparison', single_value=False)) > 0
-        ],
+        ]
     localrule: True
-
 
 # Clustering for cluster-based metrics
 
@@ -107,7 +105,12 @@ use rule merge from clustering as metrics_cluster_collect with:
 
 rule cluster_all:
     input:
-        mcfg.get_output_files(rules.metrics_cluster_collect.output)
+        clusters=[
+            mcfg.get_output_files(rules.metrics_cluster_collect.output, subset_dict=dict(dataset=dataset))
+            for dataset in mcfg.get_datasets()
+            if sum(mcfg.get_from_parameters(dict(dataset=dataset), 'needs_clustering', single_value=False)) > 0
+            and not mcfg.get_from_parameters(dict(dataset=dataset), 'clustering', default={}).get('precomputed_key')
+        ]
     localrule: True
 
 
@@ -120,11 +123,10 @@ rule score_genes:
         zarr=directory(mcfg.out_dir / 'prepare' / paramspace.wildcard_pattern / 'gene_scores.zarr'),
     params:
         unintegrated_layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'unintegrated', default='X'),
-        raw_counts_layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'raw_counts', default=None),
         var_mask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'var_mask', default='highly_variable'),
         gene_sets=lambda wildcards: mcfg.get_gene_sets(wildcards.dataset),
-        n_permutations=lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_permutations', default=20),
-        n_quantiles=lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_quantiles', default=5),
+        n_permutations=lambda wildcards: mcfg.get_from_parameters(wildcards, 'gene_score', default={}).get('n_permutations', 20),
+        n_quantiles=lambda wildcards: mcfg.get_from_parameters(wildcards, 'gene_score', default={}).get('n_quantiles', 5),
     conda:
         get_env(config, 'scanpy', gpu_env='rapids_singlecell')
     resources:
@@ -137,5 +139,19 @@ rule score_genes:
 
 
 rule score_genes_all:
-    input: mcfg.get_output_files(rules.score_genes.output)
+    input:
+        gene_scores=[
+            mcfg.get_output_files(rules.score_genes.output, subset_dict=dict(dataset=dataset))
+            for dataset in mcfg.get_datasets()
+            if sum(mcfg.get_from_parameters(dict(dataset=dataset), 'use_gene_set', single_value=False)) > 0
+        ]
+    localrule: True
+
+
+rule prepare_all:
+    input:
+        prepare=mcfg.get_output_files(rules.prepare.output),
+        pca=rules.pca_all.input,
+        gene_scores=rules.score_genes_all.input,
+        clusters=rules.cluster_all.input,
     localrule: True

@@ -4,7 +4,6 @@ logging.basicConfig(level=logging.INFO)
 import numpy as np
 import anndata as ad
 from tqdm import tqdm
-from scipy import sparse
 
 from metrics.bootstrap import get_bootstrap_adata
 from utils.io import read_anndata, write_zarr_linked
@@ -31,9 +30,10 @@ output_file = snakemake.output[0]
 params = snakemake.params
 unintegrated_layer = params.get('unintegrated_layer', 'X')
 raw_counts_layer = params.get('raw_counts_layer', unintegrated_layer)
-var_key = params.get('var_mask', 'highly_variable')
 gene_sets = params['gene_sets']
 n_random_permutations = params.get('n_permutations', 100)
+n_random_genes = params.get('n_random_genes', 50)
+ctrl_size = params.get('ctrl_size', 50)
 n_quantiles = params.get('n_quantiles', 2)
 MAX_OBS = int(params.get('MAX_OBS', 4e6))
 
@@ -96,56 +96,59 @@ if adata.var_names.duplicated().sum() > 0:
 if adata.n_obs > MAX_OBS:
     adata = get_bootstrap_adata(adata, size=MAX_OBS)
 
-# subset to HVGs (used for control genes) + genes of interest
-logging.info(f'Subset to {adata.n_vars} genes for scoring')
-logging.debug(adata.__str__())
-assert var_key in adata.var.columns, f'var_key "{var_key}" not in adata.var columns: {adata.var.columns}'
-adata.var.loc[adata.var_names.isin(genes), var_key] = True
-adata = adata[:, adata.var[var_key]].copy()
+# Extract control genes and precompute random sets
+control_genes = adata.var_names[~adata.var_names.isin(genes)].tolist()
+effective_n_random_genes = min(n_random_genes, len(control_genes))
+if effective_n_random_genes < n_random_genes:
+    logger.warning(
+        f'Only {len(control_genes)} control genes available, '
+        f'reducing n_random_genes from {n_random_genes} to {effective_n_random_genes}'
+    )
+random_gene_sets = [
+    np.random.choice(control_genes, size=effective_n_random_genes, replace=False)
+    for _ in range(n_random_permutations)
+]
+all_random_genes = set().union(*random_gene_sets) if random_gene_sets else set()
 
-# Compute matrix
+# Include additional control genes for validation
+n_control = min(ctrl_size, sum(1 for g in control_genes if g not in all_random_genes))
+control_reserve = [g for g in control_genes if g not in all_random_genes][:n_control]
+
+# Subset adata and prepare for scoring
+genes_for_scoring = set(genes) | all_random_genes | set(control_reserve)
+adata = adata[:, adata.var_names.isin(genes_for_scoring)].copy()
+logging.info(f'Subset to {adata.n_vars} genes ({len(genes)} from user + {len(all_random_genes)} random + {n_control} control)')
 adata = dask_compute(adata, layers='X')
 
-for set_name, gene_list in tqdm(gene_sets.items(), desc='Compute Gene scores', miniters=1):
-    n_genes = len(gene_list)
-    if n_genes == 0:
-        logging.info(f'Gene set with {n_genes} genes is too small, skip')
+# Score random gene sets
+logging.info('Computing random gene scores...')
+random_scores = []
+for random_genes in random_gene_sets:
+    sc.tl.score_genes(
+        adata,
+        gene_list=random_genes,
+        ctrl_size=ctrl_size
+    )
+    random_scores.append(adata.obs['score'].values)
+if 'score' in adata.obs.columns:
+    del adata.obs['score']
+adata.obsm['random_gene_scores'] = np.stack(random_scores, axis=1) if random_scores else np.empty((adata.n_obs, 0))
+logging.info(f'Stored {len(random_scores)} random gene score sets in obsm')
+
+# Score gene sets of interest
+for set_name, gene_list in tqdm(gene_sets.items(), desc='Gene scores'):
+    if len(gene_list) == 0:
+        logging.warning(f'Gene set "{set_name}" is empty, skipping')
         continue
-    
-    logging.info(f'Gene score for gene set with {len(gene_list)} genes...')
     sc.tl.score_genes(
         adata,
         gene_list=gene_list,
+        ctrl_size=ctrl_size,
         score_name=f'gene_score:{set_name}'
     )
 
-    logging.info('Add random gene scores...')
-    random_key = f'random_gene_scores:{n_genes}'
-    if random_key in adata.obsm.keys():
-        logging.info(f'Random gene scores for {n_genes} genes already computed, skip')
-        continue
-    
-    scores = []
-    for _ in range(n_random_permutations):
-        sc.tl.score_genes(
-            adata,
-            gene_list=np.random.choice(
-                adata.var_names,
-                size=n_genes,
-                replace=False
-            )
-        )
-        scores.append(adata.obs['score'].values)
-    del adata.obs['score']
-    adata.obsm[random_key] = sparse.csr_matrix(np.vstack(scores).T)
-
-# logging.info('Bin expression...')
+# Final subset to genes of interest only
 adata = adata[:, genes].copy()
-# adata = dask_compute(adata[:, genes].copy(), layers='raw_counts')
-# adata.X = bins_by_quantiles(
-#     adata.layers['raw_counts'].toarray(),
-#     n_quantiles=n_quantiles,
-# )
 
 logging.info(f'Write to {output_file}...')
 logging.info(adata.__str__())

@@ -34,6 +34,7 @@ defaults:
   datasets:
     - test_metrics
     - test_clustering_metrics
+    - test_clustering_precomputed
     - test_integration
     - scib_metrics
     - morans_i
@@ -72,6 +73,21 @@ DATASETS:
         - isolated_label_f1
         - graph_connectivity
   
+  test_clustering_precomputed:
+    input:
+      metrics: test/input/pbmc68k.h5ad
+    metrics:
+      label: bulk_labels
+      batch: batch
+      output_type: full
+      recompute_neighbors: true
+      clustering:
+        precomputed_key: bulk_labels
+      metrics:
+        - nmi
+        - ari
+        - graph_connectivity
+  
   test_integration:
     input:
       metrics:
@@ -82,7 +98,7 @@ DATASETS:
         harmony: test/input/integration/dataset~harmony/file_id~3bd5f9cfa3/batch~batch/var_mask~highly_variable/method~harmonypy--hyperparams~6e507e5a19--label~None--output_type~embed.zarr
         # scanorama_full: test/input/integration/dataset~test/file_id~pbmc68k/batch~batch/var_mask~highly_variable/method~scanorama--hyperparams~a90b47ca49--label~None--output_type~full.zarr
         # scanorama_embed: test/input/integration/dataset~test/file_id~pbmc68k/batch~batch/var_mask~highly_variable/method~scanorama--hyperparams~a90b47ca49--label~None--output_type~embed.zarr
-        scvi: test/input/integration/dataset~scvi_tools/file_id~orig/batch~batch/var_mask~highly_variable/method~scvi--hyperparams~5604fd8c38--label~None--output_type~embed.zarr
+        scvi: test/input/integration/dataset~scvi_tools/file_id~orig/batch~batch/var_mask~highly_variable/method~scvi--hyperparams~11e9065eea--label~None--output_type~embed.zarr
     metrics:
       unintegrated: layers/normcounts
       raw_counts: layers/counts
