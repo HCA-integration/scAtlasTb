@@ -132,6 +132,7 @@ rule funkyheatmap:
         r_utils=workflow.source_path('../scripts/plots/r_utils.R'),
     output:
         pdf=mcfg.image_dir / 'all' / 'funky_heatmap.pdf',
+        pdf_overall=mcfg.image_dir / 'all' / 'funky_heatmap_overall_metrics.pdf',
         tsv=mcfg.image_dir / 'all' / 'funky_heatmap.tsv'
     params:
         id_vars=['dataset', 'output_type', 'batch', 'label'], # TODO: 'hyperparams'
@@ -157,6 +158,7 @@ use rule funkyheatmap as funkyheatmap_per_dataset with:
         r_utils=workflow.source_path('../scripts/plots/r_utils.R'),
     output:
         pdf=mcfg.image_dir / 'dataset~{dataset}' / 'funky_heatmap.pdf',
+        pdf_overall=mcfg.image_dir / 'dataset~{dataset}' / 'funky_heatmap_overall_metrics.pdf',
         tsv=mcfg.image_dir / 'dataset~{dataset}' / 'funky_heatmap.tsv',
     params:
         id_vars=['dataset', 'output_type', 'batch', 'label'],
@@ -178,6 +180,7 @@ use rule funkyheatmap as funkyheatmap_per_batch with:
         r_utils=workflow.source_path('../scripts/plots/r_utils.R'),
     output:
         pdf=mcfg.image_dir / 'dataset~{dataset}' / 'batch~{batch}' / 'funky_heatmap.pdf',
+        pdf_overall=mcfg.image_dir / 'dataset~{dataset}' / 'batch~{batch}' / 'funky_heatmap_overall_metrics.pdf',
         tsv=mcfg.image_dir / 'dataset~{dataset}' / 'batch~{batch}' / 'funky_heatmap.tsv',
     params:
         id_vars=['dataset', 'output_type', 'batch', 'label'],
@@ -199,6 +202,7 @@ use rule funkyheatmap as funkyheatmap_per_label with:
         r_utils=workflow.source_path('../scripts/plots/r_utils.R'),
     output:
         pdf=mcfg.image_dir / 'dataset~{dataset}' / 'label~{label}' / 'funky_heatmap.pdf',
+        pdf_overall=mcfg.image_dir / 'dataset~{dataset}' / 'label~{label}' / 'funky_heatmap_overall_metrics.pdf',
         tsv=mcfg.image_dir / 'dataset~{dataset}' / 'label~{label}' / 'funky_heatmap.tsv',
     params:
         id_vars=['dataset', 'output_type', 'batch', 'label'],

@@ -1,6 +1,7 @@
 input_file <- snakemake@input$tsv
 output_tsv <- snakemake@output$tsv
 output_pdf <- snakemake@output$pdf
+output_pdf_overall <- snakemake@output$pdf_overall
 
 id_vars <- snakemake@params$id_vars
 value_var <- snakemake@params$value_var
@@ -24,6 +25,7 @@ suppressPackageStartupMessages({
   library(data.table)
   library(tidyverse)
   library(dynutils)
+  library(RColorBrewer)
 })
 source(snakemake@input$r_utils)
 
@@ -50,7 +52,7 @@ if ('unintegrated' %in% dt$method & uniqueN(dt$method) > 1) {
 integration_setup <- id_vars
 bio_metrics <- unique(dt[metric_type == 'bio_conservation' & !is.na(score), metric]) 
 batch_metrics <- unique(dt[metric_type == 'batch_correction' & !is.na(score), metric])
-metrics <- c(bio_metrics, batch_metrics)
+metrics <- c(batch_metrics, bio_metrics)
 
 # subset data.table to columns of interest & transform
 all_columns <- c(id_vars, variable_var, value_var, 'metric_type')
@@ -91,10 +93,19 @@ if(length(score_group_bio) > 0){
 }
 if(length(score_all) > 0){
   metrics_tab <- add_column(metrics_tab, "Overall Score" = score_all, .before = "Batch Correction")
-  metrics_tab <- metrics_tab[order(metrics_tab$`Overall Score`,  decreasing = T), ]
+  metrics_tab <- metrics_tab[order(-`Overall Score`, na.last = TRUE)]
 }
-# order methods by the overall score
-metrics_tab <- metrics_tab[order(metrics_tab$`Overall Score`,  decreasing = T), ]
+
+metric_columns <- c(
+  "Overall Score",
+  "Batch Correction",
+  batch_metrics,
+  "Bio Conservation",
+  bio_metrics
+)
+metric_columns <- metric_columns[metric_columns %in% colnames(metrics_tab)]
+non_metric_columns <- setdiff(colnames(metrics_tab), metric_columns)
+metrics_tab <- metrics_tab[, c(non_metric_columns, metric_columns), with = FALSE]
 
 # write output summary.csv file before plotting ? Michaela to check the output dir?
 cat('Writing output file: ', output_tsv, '\n')
@@ -103,7 +114,28 @@ fwrite(metrics_tab, output_tsv, sep='\t')
 # subset data
 metrics_tab <- metrics_tab[1:min(n_top, nrow(metrics_tab))]
 
-# add funkyheatmap data
+# Check if we have enough data to create a meaningful heatmap
+if (nrow(metrics_tab) < 2) {
+  cat("Warning: Only", nrow(metrics_tab), "row(s) available. Skipping funkyheatmap generation.\n")
+  cat("Creating empty PDF placeholder...\n")
+  pdf(output_pdf, width = 8, height = 4)
+  plot.new()
+  text(
+    0.5, 0.5,
+    paste(
+      "Insufficient data for heatmap visualization\n",
+      "Only", nrow(metrics_tab), "method(s) available\n",
+      "See", basename(output_tsv), "for results"
+    ),
+    cex = 1.2, col = "gray40"
+  )
+  dev.off()
+  file.copy(output_pdf, output_pdf_overall, overwrite = TRUE)
+  quit(save = "no", status = 0)
+}
+
+### add funkyheatmap data
+
 row_info <- NULL
 row_groups <- NULL
 
@@ -149,20 +181,11 @@ if (!is.null(group_col) && "Overall Score" %in% colnames(metrics_tab)) {
   metrics_tab[, c(group_col, "best_score", "second_best_score", ".group_value") := NULL]
 }
 
-# # shorten redundant information in long names
-# cols <- colnames(metrics_tab)
-# for (col in c('file_name', 'file_id')) {
-#   col_values <- metrics_tab[[col]]
-#   max_len <- max(nchar(na.omit(col_values)), na.rm = TRUE)
-#   if (!is.na(max_len) && (max_len > 20) && !is.numeric(col_values)) {
-#     lcs <- longest_common_substring(col_values)
-#     metrics_tab[[col]] <- gsub(lcs, '', metrics_tab[[col]])
-#   }
-# }
-# remove uninformative columns TODO: include this information in figure header
+# remove uninformative columns
+columns_to_keep <- c(metrics, 'file_name', 'label', 'batch', 'Bio Conservation', 'Batch Correction', 'Overall Score')
 columns <- names(metrics_tab)[
   sapply(metrics_tab, uniqueN) != 1 |
-  names(metrics_tab) %in% c(metrics, 'file_name', 'label', 'batch')
+  names(metrics_tab) %in% columns_to_keep
 ]
 metrics_tab <- metrics_tab[, ..columns]
 
@@ -182,41 +205,135 @@ dt1 <- data.table(
   palette='setup',
   width=sapply(integration_setup, get_col_width, dt=metrics_tab)
 )
-dt2 <- data.table(id="Overall Score", group="Overall", geom="bar", palette="overall", width=4)
-dt3 <- data.table(id="Bio Conservation", group="Bio Conservation", geom='bar', palette='bio', width=4)
-dt4 <- data.table(id=bio_metrics, group="Bio Conservation", geom='funkyrect', palette='bio', width=1)
-dt5 <- data.table(id="Batch Correction", group="Batch Correction", geom='bar', palette='batch', width=4)
-dt6 <- data.table(id=batch_metrics, group="Batch Correction", geom='circle', palette='batch', width=1)
+dt2 <- data.table(
+  id="Overall Score",
+  group="Overall",
+  geom="bar",
+  palette="overall",
+  width=4
+)
+dt3 <- data.table(
+  id="Batch Correction",
+  group="Batch Correction",
+  geom='bar',
+  palette='batch',
+  width=4
+)
+dt4 <- data.table(
+  id=batch_metrics,
+  name=batch_metrics,
+  group="Batch Correction",
+  geom='circle',
+  palette='batch',
+  width=1
+)
+dt5 <- data.table(
+  id="Bio Conservation",
+  group="Bio Conservation",
+  geom='bar',
+  palette='bio',
+  width=4
+)
+dt6 <- data.table(
+  id=bio_metrics,
+  name=bio_metrics,
+  group="Bio Conservation",
+  geom='funkyrect',
+  palette='bio',
+  width=1
+)
 column_info <- rbind(dt1, dt2, dt3, dt4, dt5, dt6, fill=TRUE)
 column_info <- column_info[column_info$id %in% colnames(metrics_tab)]
+column_info$name <- column_info$id
 print("column_info")
 print(column_info)
 
 n_top <- min(n_top, nrow(metrics_tab))
+
+# Define shared plot configuration
+plot_column_groups <- data.table(
+  group = c("Integration Setup", "Overall", "Batch Correction", "Bio Conservation"),
+  palette = c('setup', 'overall', 'batch', 'bio'),
+  level1 = c("Integration Setup", "Overall", "Batch Correction", "Bio Conservation")
+)
+
+plot_palettes <- list(
+  setup = rev(brewer.pal(5, "Greys")),
+  overall = rev(brewer.pal(5, "Greens")),
+  bio = rev(brewer.pal(5, "YlOrBr")),
+  batch = rev(brewer.pal(5, "Blues"))
+)
+
+# Filter palettes to only include those referenced in column_info
+used_palettes <- unique(column_info$palette[!is.na(column_info$palette)])
+plot_palettes <- plot_palettes[names(plot_palettes) %in% used_palettes]
+
+plot_legends <- list(
+  list(title = "Batch Correction", palette = "batch", geom = "circle"),
+  list(title = "Bio Conservation", palette = "bio", geom = "funkyrect")
+)
+
+# Adapt label spacing to annotation length to avoid overlaps.
+max_col_name_len <- max(nchar(as.character(column_info$name)), na.rm = TRUE)
+has_row_groups <- !is.null(row_groups) && nrow(row_groups) > 0
+plot_position_args <- position_arguments(
+  col_annot_offset = max(3, min(10, ceiling(max_col_name_len * 0.4))),
+  col_annot_angle = 90,
+)
+
+# Extract dataset name if available
+title_text <- NULL
+if ('dataset' %in% colnames(metrics_tab)) {
+  datasets <- unique(na.omit(metrics_tab$dataset))
+  if (length(datasets) > 0) {
+    title_text <- paste("Dataset:", paste(datasets, collapse=", "))
+    cat('Title text:', title_text, '\n')
+  }
+}
+
+# Create full heatmap
 g <- funky_heatmap(
   metrics_tab,
   row_info = row_info,
   row_groups = row_groups,
   column_info = column_info,
-  column_groups = data.table(
-    group = c("Integration Setup", "Overall", "Bio Conservation", "Batch Correction"),
-    palette = c('setup', 'overall', 'bio', 'batch'),
-    level1 = c("Integration Setup", "Overall", "Bio Conservation", "Batch Correction")
-  ),
-  palettes = list(
-    setup = "Greys",
-    overall = "Greens",
-    bio = "YlOrBr",
-    batch = "Blues"
-  ),
-  legends = list(
-    list(title = "Bio Conservation", palette = "bio", geom = "funkyrect"),
-    list(title = "Batch Correction", palette = "batch", geom = "circle")
-  ),
-  position_args = position_arguments(
-    col_annot_offset = 7,
-    col_annot_angle = 90,
-  ),
-  scale_column = FALSE
+  column_groups = plot_column_groups,
+  palettes = plot_palettes,
+  legends = plot_legends,
+  position_args = plot_position_args,
+  scale_column = scale
 )
-ggsave(output_pdf, g, device = cairo_pdf, width = g$width, height = g$height, dpi=300)
+
+if (!is.null(title_text)) g <- g + ggtitle(title_text)
+ggsave(
+  output_pdf,
+  g,
+  device = cairo_pdf,
+  width = g$width,
+  height = g$height,
+  dpi=dpi
+)
+
+# Create overall metrics heatmap (subset with only overall/bio/batch scores)
+overall_cols <- c(integration_setup, "Overall Score", "Batch Correction", "Bio Conservation")
+overall_cols <- overall_cols[overall_cols %in% colnames(metrics_tab)]
+g <- funky_heatmap(
+  metrics_tab[, ..overall_cols],
+  row_info = row_info,
+  row_groups = row_groups,
+  column_info = column_info[id %in% overall_cols],
+  palettes = plot_palettes,
+  legends = plot_legends,
+  position_args = plot_position_args,
+  scale_column = scale
+)
+
+if (!is.null(title_text)) g <- g + ggtitle(title_text)
+ggsave(
+  output_pdf_overall,
+  g,
+  width = g$width,
+  height = g$height,
+  device = cairo_pdf,
+  dpi=dpi
+)
