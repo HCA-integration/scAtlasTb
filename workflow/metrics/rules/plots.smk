@@ -22,7 +22,7 @@ use rule barplot from plots as metrics_barplot with:
         description=wildcards_to_str,
         dodge=True,
     group:
-        'metrics_merge'
+        'metrics_postprocess'
 
 
 use rule barplot from plots as metrics_barplot_per_dataset with:
@@ -39,7 +39,7 @@ use rule barplot from plots as metrics_barplot_per_dataset with:
         description=wildcards_to_str,
         dodge=True,
     group:
-        'metrics_merge'
+        'metrics_postprocess'
 
 
 use rule barplot from plots as metrics_barplot_per_file with:
@@ -56,7 +56,7 @@ use rule barplot from plots as metrics_barplot_per_file with:
         description=wildcards_to_str,
         dodge=True,
     group:
-        'metrics_merge'
+        'metrics_postprocess'
 
 
 # swarm plots
@@ -75,7 +75,7 @@ use rule swarmplot from plots as metrics_swarmplot with:
         title='Metrics',
         description=wildcards_to_str,
     group:
-        'metrics_merge'
+        'metrics_postprocess'
 
 
 use rule swarmplot from plots as metrics_swarmplot_per_dataset with:
@@ -92,7 +92,7 @@ use rule swarmplot from plots as metrics_swarmplot_per_dataset with:
         description=wildcards_to_str,
         dodge=True,
     group:
-        'metrics_merge'
+        'metrics_postprocess'
 
 
 use rule swarmplot from plots as metrics_swarmplot_per_file with:
@@ -108,6 +108,8 @@ use rule swarmplot from plots as metrics_swarmplot_per_file with:
         title='Metrics',
         description=wildcards_to_str,
         dodge=True,
+    group:
+        'metrics_postprocess'
 
 
 rule compare_metrics:
@@ -146,7 +148,7 @@ rule funkyheatmap:
     singularity:
         'docker://ghcr.io/dynverse/funky_heatmap:latest'
     group:
-        'metrics_merge'
+        'metrics_postprocess'
     script:
         '../scripts/plots/funkyheatmap.R'
 
@@ -170,7 +172,7 @@ use rule funkyheatmap as funkyheatmap_per_dataset with:
         scale=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('scale', False),
         cran_url=config.get('cran_url', 'https://cloud.r-project.org'),
     group:
-        'metrics_merge'
+        'metrics_postprocess'
 
 
 use rule funkyheatmap as funkyheatmap_per_batch with:
@@ -192,7 +194,7 @@ use rule funkyheatmap as funkyheatmap_per_batch with:
         scale=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('scale', False),
         cran_url=config.get('cran_url', 'https://cloud.r-project.org'),
     group:
-        'metrics_merge'
+        'metrics_postprocess'
 
 
 use rule funkyheatmap as funkyheatmap_per_label with:
@@ -214,7 +216,7 @@ use rule funkyheatmap as funkyheatmap_per_label with:
         scale=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('scale', False),
         cran_url=config.get('cran_url', 'https://cloud.r-project.org'),
     group:
-        'metrics_merge'
+        'metrics_postprocess'
 
 
 use rule funkyheatmap as funkyheatmap_per_file with:
@@ -235,7 +237,7 @@ use rule funkyheatmap as funkyheatmap_per_file with:
         scale=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('scale', False),
         cran_url=config.get('cran_url', 'https://cloud.r-project.org'),
     group:
-        'metrics_merge'
+        'metrics_postprocess'
 
 
 rule funkyheatmap_standalone:
@@ -257,9 +259,9 @@ rule plots_all:
         # funky heatmap
         rules.funkyheatmap.output,
         mcfg.get_output_files(rules.funkyheatmap_per_dataset.output),
-        mcfg.get_output_files(rules.funkyheatmap_per_batch.output, wildcard_names=['dataset', 'batch']),
-        mcfg.get_output_files(rules.funkyheatmap_per_label.output, wildcard_names=['dataset', 'label']),
-        # # barplot
+        # mcfg.get_output_files(rules.funkyheatmap_per_batch.output, wildcard_names=['dataset', 'batch']),
+        # mcfg.get_output_files(rules.funkyheatmap_per_label.output, wildcard_names=['dataset', 'label']),
+        # barplot
         expand(
             rules.metrics_barplot.output,
             metric=['s', 'max_uss', 'score']
