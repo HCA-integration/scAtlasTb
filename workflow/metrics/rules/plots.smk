@@ -137,8 +137,8 @@ rule funkyheatmap:
         id_vars=['dataset', 'output_type', 'batch', 'label'], # TODO: 'hyperparams'
         variable_var='metric',
         value_var='score',
-        weight_batch=lambda wildcards: mcfg.get_from_parameters(wildcards, 'weight_batch', default=0.4),
-        n_top=50,
+        group_col='dataset',
+        scale=config.get('funkyheatmap', {}).get('scale', False),
         cran_url=config.get('cran_url', 'https://cloud.r-project.org'), #'https://ftp.fau.de/cran/'
     conda:
         get_env(config, 'funkyheatmap')  # TODO: use post-deployment script https://snakemake.readthedocs.io/en/stable/snakefiles/deployment.html#providing-post-deployment-scripts
@@ -162,8 +162,10 @@ use rule funkyheatmap as funkyheatmap_per_dataset with:
         id_vars=['dataset', 'output_type', 'batch', 'label'],
         variable_var='metric',
         value_var='score',
-        weight_batch=lambda wildcards: mcfg.get_from_parameters(wildcards, 'weight_batch', default=0.4),
-        n_top=50,
+        weight_batch=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('weight_batch', 0.4),
+        n_top=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('n_top', 50),
+        group_col=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('group_col'),
+        scale=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('scale', False),
         cran_url=config.get('cran_url', 'https://cloud.r-project.org'),
     group:
         'metrics_merge'
@@ -181,8 +183,10 @@ use rule funkyheatmap as funkyheatmap_per_batch with:
         id_vars=['dataset', 'output_type', 'batch', 'label'],
         variable_var='metric',
         value_var='score',
-        weight_batch=lambda wildcards: mcfg.get_from_parameters(wildcards, 'weight_batch', default=0.4),
-        n_top=50,
+        weight_batch=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('weight_batch', 0.4),
+        n_top=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('n_top', 50),
+        group_col=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('group_col'),
+        scale=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('scale', False),
         cran_url=config.get('cran_url', 'https://cloud.r-project.org'),
     group:
         'metrics_merge'
@@ -200,8 +204,10 @@ use rule funkyheatmap as funkyheatmap_per_label with:
         id_vars=['dataset', 'output_type', 'batch', 'label'],
         variable_var='metric',
         value_var='score',
-        weight_batch=lambda wildcards: mcfg.get_from_parameters(wildcards, 'weight_batch', default=0.4),
-        n_top=50,
+        weight_batch=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('weight_batch', 0.4),
+        n_top=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('n_top', 50),
+        group_col=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('group_col'),
+        scale=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('scale', False),
         cran_url=config.get('cran_url', 'https://cloud.r-project.org'),
     group:
         'metrics_merge'
@@ -219,8 +225,10 @@ use rule funkyheatmap as funkyheatmap_per_file with:
         id_vars=['dataset', 'output_type', 'batch', 'label'],
         variable_var='metric',
         value_var='score',
-        weight_batch=lambda wildcards: mcfg.get_from_parameters(wildcards, 'weight_batch', default=0.4),
-        n_top=50,
+        weight_batch=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('weight_batch', 0.4),
+        n_top=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('n_top', 50),
+        group_col=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('group_col'),
+        scale=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('scale', False),
         cran_url=config.get('cran_url', 'https://cloud.r-project.org'),
     group:
         'metrics_merge'
