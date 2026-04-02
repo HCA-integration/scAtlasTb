@@ -43,7 +43,7 @@ rule batch_pcr:
     threads:
         lambda w: max(
             1, min(
-                mcfg.get_from_parameters(w, 'max_threads', check_query_keys=False, default=20),
+                mcfg.get_from_parameters(w, 'max_threads', check_query_keys=False, default=1),
                 mcfg.get_from_parameters(w, 'n_permutations', check_query_keys=False, default=100)
             )
         )
@@ -55,7 +55,7 @@ rule batch_pcr:
         '../scripts/batch_pcr.py'
 
 
-rule collect:
+rule batch_pcr_collect:
     input:
         tsv=lambda wildcards: get_from_checkpoint(wildcards, rules.batch_pcr.output.tsv),
         setup=lambda wildcards: checkpoints.determine_covariates.get(**wildcards).output[0],
@@ -70,9 +70,9 @@ rule collect:
         df.to_csv(output.tsv, sep='\t', index=False)
 
 
-rule plot:
+rule batch_pcr_plot:
     input:
-        tsv=rules.collect.output.tsv,
+        tsv=rules.batch_pcr_collect.output.tsv,
     output:
         barplot=mcfg.image_dir / paramspace.wildcard_pattern / 'batch_pcr_bar.png',
         violinplot=mcfg.image_dir / paramspace.wildcard_pattern / 'batch_pcr_violin.png',
