@@ -109,6 +109,16 @@ class TheilsUAnalyzer:
             lambda x: x.mode().iloc[0] if not x.mode().empty else np.nan
         )
         
+        # Drop covariates that become constant after aggregation
+        constant_cols = [
+            col for col in self._aggregated_df.columns
+            if self._aggregated_df[col].dropna().nunique() < 2
+        ]
+        if constant_cols:
+            logging.info(f'Dropping covariates constant after aggregation: {constant_cols}')
+            self._aggregated_df = self._aggregated_df.drop(columns=constant_cols)
+            self._valid_covariates = [c for c in self._valid_covariates if c not in constant_cols]
+        
         return self._aggregated_df
     
     def compute_theils_u(self) -> pd.DataFrame:
@@ -126,7 +136,7 @@ class TheilsUAnalyzer:
         for i, x in enumerate(cols):
             h_x = entropies[x]
             for j, y in enumerate(cols):
-                if i == j or h_x == 0:
+                if i == j:
                     u[i, j] = 1.0
                 else:
                     u[i, j] = (h_x - self._conditional_entropy(df[x], df[y])) / h_x
