@@ -3,13 +3,13 @@
 ```
 
 ```{toctree}
-:caption: Setup
-:name: setup
+:caption: Usage
+:name: usage
 :hidden:
 :maxdepth: 1
 
 getting_started/index.md
-advanced_configuration/index.md
+principles/index.md
 ```
 
 
@@ -38,3 +38,4 @@ workflows/metrics
 workflows/clustering
 workflows/label_harmonization
 ```
+

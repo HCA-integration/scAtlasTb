@@ -28,12 +28,7 @@ def nmi(adata, output_type, batch_key, label_key, cluster_keys, **kwargs):
         label_key=label_key,
         cluster_key=cluster_key,
     )
-    return scib.me.nmi(
-        adata=adata[adata.obs[label_key].notna()],
-        label_key=label_key,
-        cluster_key=cluster_key,
-    )
-
+    return (score, 'NMI')
 
 def nmi_leiden_y(adata, output_type, batch_key, label_key, **kwargs):
     import scib_metrics

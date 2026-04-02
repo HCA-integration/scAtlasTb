@@ -39,6 +39,8 @@ mcfg = MetricsConfig(
         'covariates',
         'gene_sets',
         'gene_score',
+        'funkyheatmap',
+        'parse_file_id',
     ],
     # wildcard_names=['label', 'batch'],
     rename_config_params={
@@ -50,7 +52,7 @@ mcfg = MetricsConfig(
     explode_by=['metric', 'batch', 'label'],
     # paramspace_kwargs=dict(filename_params=['label', 'batch'], filename_sep='--'),
     dtypes={
-        'overwrite_file_id': bool,
+        'parse_file_id': bool,
     }
 )
 paramspace = mcfg.get_paramspace()

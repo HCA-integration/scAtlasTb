@@ -1,7 +1,7 @@
 .. _input-file-mapping:
 
-Input file mapping principles
-=============================
+📥 Input file mapping principles
+================================
 
 Input mappings define how each module receives its input files for a dataset.
 
@@ -240,11 +240,13 @@ Below is an example for the ``split_data`` module:
         - TCD8_NK
 
 The input of ``split_data`` consists of 2 files named ``pbmc1`` and ``pbmc2`` that will each be split by the ``lineage`` key into 2 output files.
+
 The output files include wildcards, resulting in the following output file names:
-  - ``split_data:filter:relabel:pbmc1--split_data_key=lineage--split_data_value=TCD4``, 
-  - ``split_data:filter:relabel:pbmc1--split_data_key=lineage--split_data_value=TCD8_NK``
-  - ``split_data:filter:relabel:pbmc2--split_data_key=lineage--split_data_value=TCD4``
-  - ``split_data:filter:relabel:pbmc2--split_data_key=lineage--split_data_value=TCD8_NK``
+- ``split_data:filter:relabel:pbmc1--split_data_key=lineage--split_data_value=TCD4``, 
+- ``split_data:filter:relabel:pbmc1--split_data_key=lineage--split_data_value=TCD8_NK``
+- ``split_data:filter:relabel:pbmc2--split_data_key=lineage--split_data_value=TCD4``
+- ``split_data:filter:relabel:pbmc2--split_data_key=lineage--split_data_value=TCD8_NK``
+
 In cases of very long output ids e.g. for ``integration``, where more wildcards are in the output file name, they are shortened by ``shorten_name`` in ``ModuleConfig.get_output_files``.
 In that case, wildcards from the same module are collapsed into ``module={hash({module_parameter}={module_value})}``.
 This keeps ids deterministic while preventing path/name explosion.

@@ -63,4 +63,4 @@ def kbet_pg(adata, output_type, batch_key, label_key, n_threads=1, **kwargs):
         desc=f'Calculate kBET per cell type with {n_threads} threads',
         miniters=1,
     ))
-    return np.nanmean(scores)
+    return (np.nanmean(scores), 'kBET')

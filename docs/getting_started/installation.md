@@ -10,7 +10,7 @@ git clone git@github.com:HCA-integration/scAtlasTb.git
 ```
 
 HTTPS:
-``` clone
+```
 git clone https://github.com/HCA-integration/scAtlasTb.git
 ```
 

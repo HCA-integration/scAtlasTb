@@ -6,7 +6,7 @@ def clisi(adata, output_type, batch_key, label_key, **kwargs):
     import scib
 
     adata = adata[adata.obs[label_key].notna()].copy()
-    return scib.me.clisi_graph(
+    score = scib.me.clisi_graph(
         adata,
         batch_key=batch_key,
         label_key=label_key,
@@ -14,6 +14,7 @@ def clisi(adata, output_type, batch_key, label_key, **kwargs):
         subsample=0.5 * 100,
         scale=True,
     )
+    return (score, 'cLISI graph')
 
 
 def clisi_y(adata, output_type, batch_key, label_key, **kwargs):
@@ -34,13 +35,14 @@ def clisi_y(adata, output_type, batch_key, label_key, **kwargs):
 def ilisi(adata, output_type, batch_key, label_key, **kwargs):
     import scib
 
-    return scib.me.ilisi_graph(
+    score = scib.me.ilisi_graph(
         adata,
         batch_key=batch_key,
         type_='knn',
         subsample=0.5 * 100,
         scale=True,
     )
+    return (score, 'iLISI graph')
 
 
 def ilisi_y(adata, output_type, batch_key, label_key, **kwargs):

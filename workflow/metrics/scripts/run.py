@@ -16,20 +16,6 @@ from utils.io import read_anndata
 from utils.assertions import assert_pca
 
 
-def replace_last(source_string, replace_what, replace_with, cluster_key='leiden'):
-    """
-    Helper function for parsing clustering columns
-    adapted from
-    https://stackoverflow.com/questions/3675318/how-to-replace-some-characters-from-the-end-of-a-string/3675423#3675423
-    """
-    if not source_string.startswith(cluster_key):
-        return source_string
-    if not source_string.endswith(replace_what):
-        return source_string + '_orig'
-    head, _sep, tail = source_string.rpartition(replace_what)
-    return head + replace_with + tail
-
-
 input_file = snakemake.input[0]
 output_file = snakemake.output[0]
 wildcards = snakemake.wildcards
@@ -46,13 +32,19 @@ metric_type = params.get('metric_type')
 assert metric_type in ['batch_correction', 'bio_conservation'], f'Unknown metric_type: {metric_type}'
 allowed_output_types = params.get('allowed_output_types')
 input_type = params.get('input_type')
-cluster_key = params.get('cluster_key', 'leiden')
+clustering = params.get('clustering', {})
 use_covariate = params.get('use_covariate', False)
 use_gene_set = params.get('use_gene_set', False)
 covariates = params.get('covariates', [])
 gene_sets = params.get('gene_sets', {})
 
 metric_function = metric_map[metric]
+
+# parse clustering config
+cluster_key = clustering.get('precomputed_key')
+if use_cluster_range := (cluster_key is None):
+    cluster_key = clustering.get('algorithm', 'leiden')
+    use_cluster_range = True
 
 uns = read_anndata(input_file, uns='uns', verbose=False).uns
 output_type = uns['output_type'] # Same as in prepare.py
@@ -127,11 +119,17 @@ if use_gene_set:
     gene_score_columns = [x for x in adata.obs.columns if x.startswith('gene_score:')]
 
 # subset obs columns for metrics
-cluster_columns = [col for col in adata.obs.columns if col.startswith(cluster_key) and col.endswith('_1')]
+if use_cluster_range:
+    cluster_columns = [
+        col for col in adata.obs.columns
+        if col.startswith(cluster_key) and col.endswith('_1')
+    ]
+else:
+    cluster_columns = [cluster_key]
+
 columns = [batch_key, label_key] + covariates + cluster_columns + gene_score_columns
 columns = list(set(columns))  # make unique
 adata.obs = adata.obs[columns].copy()
-adata.obs.rename(columns=lambda x: replace_last(x, '_1', ''), inplace=True)
 
 logger.info(f'Run metric {metric} for {output_type}...')
 # TODO: deal with bootstrapping
@@ -141,22 +139,27 @@ scores = metric_function(
     batch_key=batch_key,
     label_key=label_key,
     adata_raw=adata_raw,
-    cluster_key=cluster_key,
+    cluster_keys=cluster_columns,
     covariate=covariates,
     gene_set=gene_sets,
     n_threads=threads,
 )
 
 # unpack scores
-if isinstance(scores, tuple):
+if isinstance(scores, tuple) and len(scores) == 2:
     scores, metric_names = scores
-elif isinstance(scores, (int, float, np.number)):
-    scores = [scores]
-    metric_names = [metric]
-elif isinstance(scores, list):
-    metric_names = [metric] * len(scores)
 else:
-    raise ValueError(f'Unknown scores type {type(scores)}')
+    metric_names = None
+
+if isinstance(scores, (int, float, np.number)):
+    scores = [scores]
+elif not isinstance(scores, list):
+    raise ValueError(f"Unknown scores type {type(scores)}")
+
+if metric_names is None:
+    metric_names = [metric] * len(scores)
+elif isinstance(metric_names, str):
+    metric_names = [metric_names]
 
 write_metrics(
     metric_names=metric_names,

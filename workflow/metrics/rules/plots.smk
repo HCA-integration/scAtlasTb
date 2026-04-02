@@ -22,7 +22,7 @@ use rule barplot from plots as metrics_barplot with:
         description=wildcards_to_str,
         dodge=True,
     group:
-        'metrics_merge'
+        'metrics_postprocess'
 
 
 use rule barplot from plots as metrics_barplot_per_dataset with:
@@ -39,7 +39,7 @@ use rule barplot from plots as metrics_barplot_per_dataset with:
         description=wildcards_to_str,
         dodge=True,
     group:
-        'metrics_merge'
+        'metrics_postprocess'
 
 
 use rule barplot from plots as metrics_barplot_per_file with:
@@ -56,7 +56,7 @@ use rule barplot from plots as metrics_barplot_per_file with:
         description=wildcards_to_str,
         dodge=True,
     group:
-        'metrics_merge'
+        'metrics_postprocess'
 
 
 # swarm plots
@@ -75,7 +75,7 @@ use rule swarmplot from plots as metrics_swarmplot with:
         title='Metrics',
         description=wildcards_to_str,
     group:
-        'metrics_merge'
+        'metrics_postprocess'
 
 
 use rule swarmplot from plots as metrics_swarmplot_per_dataset with:
@@ -92,7 +92,7 @@ use rule swarmplot from plots as metrics_swarmplot_per_dataset with:
         description=wildcards_to_str,
         dodge=True,
     group:
-        'metrics_merge'
+        'metrics_postprocess'
 
 
 use rule swarmplot from plots as metrics_swarmplot_per_file with:
@@ -108,6 +108,8 @@ use rule swarmplot from plots as metrics_swarmplot_per_file with:
         title='Metrics',
         description=wildcards_to_str,
         dodge=True,
+    group:
+        'metrics_postprocess'
 
 
 rule compare_metrics:
@@ -132,20 +134,21 @@ rule funkyheatmap:
         r_utils=workflow.source_path('../scripts/plots/r_utils.R'),
     output:
         pdf=mcfg.image_dir / 'all' / 'funky_heatmap.pdf',
+        pdf_overall=mcfg.image_dir / 'all' / 'funky_heatmap_overall_metrics.pdf',
         tsv=mcfg.image_dir / 'all' / 'funky_heatmap.tsv'
     params:
         id_vars=['dataset', 'output_type', 'batch', 'label'], # TODO: 'hyperparams'
         variable_var='metric',
         value_var='score',
-        weight_batch=lambda wildcards: mcfg.get_from_parameters(wildcards, 'weight_batch', default=0.4),
-        n_top=50,
+        group_col='dataset',
+        scale=config.get('funkyheatmap', {}).get('scale', False),
         cran_url=config.get('cran_url', 'https://cloud.r-project.org'), #'https://ftp.fau.de/cran/'
     conda:
         get_env(config, 'funkyheatmap')  # TODO: use post-deployment script https://snakemake.readthedocs.io/en/stable/snakefiles/deployment.html#providing-post-deployment-scripts
     singularity:
         'docker://ghcr.io/dynverse/funky_heatmap:latest'
     group:
-        'metrics_merge'
+        'metrics_postprocess'
     script:
         '../scripts/plots/funkyheatmap.R'
 
@@ -157,16 +160,19 @@ use rule funkyheatmap as funkyheatmap_per_dataset with:
         r_utils=workflow.source_path('../scripts/plots/r_utils.R'),
     output:
         pdf=mcfg.image_dir / 'dataset~{dataset}' / 'funky_heatmap.pdf',
+        pdf_overall=mcfg.image_dir / 'dataset~{dataset}' / 'funky_heatmap_overall_metrics.pdf',
         tsv=mcfg.image_dir / 'dataset~{dataset}' / 'funky_heatmap.tsv',
     params:
         id_vars=['dataset', 'output_type', 'batch', 'label'],
         variable_var='metric',
         value_var='score',
-        weight_batch=lambda wildcards: mcfg.get_from_parameters(wildcards, 'weight_batch', default=0.4),
-        n_top=50,
+        weight_batch=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('weight_batch', 0.4),
+        n_top=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('n_top', 50),
+        group_col=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('group_col'),
+        scale=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('scale', False),
         cran_url=config.get('cran_url', 'https://cloud.r-project.org'),
     group:
-        'metrics_merge'
+        'metrics_postprocess'
 
 
 use rule funkyheatmap as funkyheatmap_per_batch with:
@@ -176,16 +182,19 @@ use rule funkyheatmap as funkyheatmap_per_batch with:
         r_utils=workflow.source_path('../scripts/plots/r_utils.R'),
     output:
         pdf=mcfg.image_dir / 'dataset~{dataset}' / 'batch~{batch}' / 'funky_heatmap.pdf',
+        pdf_overall=mcfg.image_dir / 'dataset~{dataset}' / 'batch~{batch}' / 'funky_heatmap_overall_metrics.pdf',
         tsv=mcfg.image_dir / 'dataset~{dataset}' / 'batch~{batch}' / 'funky_heatmap.tsv',
     params:
         id_vars=['dataset', 'output_type', 'batch', 'label'],
         variable_var='metric',
         value_var='score',
-        weight_batch=lambda wildcards: mcfg.get_from_parameters(wildcards, 'weight_batch', default=0.4),
-        n_top=50,
+        weight_batch=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('weight_batch', 0.4),
+        n_top=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('n_top', 50),
+        group_col=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('group_col'),
+        scale=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('scale', False),
         cran_url=config.get('cran_url', 'https://cloud.r-project.org'),
     group:
-        'metrics_merge'
+        'metrics_postprocess'
 
 
 use rule funkyheatmap as funkyheatmap_per_label with:
@@ -195,16 +204,19 @@ use rule funkyheatmap as funkyheatmap_per_label with:
         r_utils=workflow.source_path('../scripts/plots/r_utils.R'),
     output:
         pdf=mcfg.image_dir / 'dataset~{dataset}' / 'label~{label}' / 'funky_heatmap.pdf',
+        pdf_overall=mcfg.image_dir / 'dataset~{dataset}' / 'label~{label}' / 'funky_heatmap_overall_metrics.pdf',
         tsv=mcfg.image_dir / 'dataset~{dataset}' / 'label~{label}' / 'funky_heatmap.tsv',
     params:
         id_vars=['dataset', 'output_type', 'batch', 'label'],
         variable_var='metric',
         value_var='score',
-        weight_batch=lambda wildcards: mcfg.get_from_parameters(wildcards, 'weight_batch', default=0.4),
-        n_top=50,
+        weight_batch=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('weight_batch', 0.4),
+        n_top=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('n_top', 50),
+        group_col=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('group_col'),
+        scale=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('scale', False),
         cran_url=config.get('cran_url', 'https://cloud.r-project.org'),
     group:
-        'metrics_merge'
+        'metrics_postprocess'
 
 
 use rule funkyheatmap as funkyheatmap_per_file with:
@@ -219,11 +231,13 @@ use rule funkyheatmap as funkyheatmap_per_file with:
         id_vars=['dataset', 'output_type', 'batch', 'label'],
         variable_var='metric',
         value_var='score',
-        weight_batch=lambda wildcards: mcfg.get_from_parameters(wildcards, 'weight_batch', default=0.4),
-        n_top=50,
+        weight_batch=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('weight_batch', 0.4),
+        n_top=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('n_top', 50),
+        group_col=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('group_col'),
+        scale=lambda wildcards: mcfg.get_from_parameters(wildcards, 'funkyheatmap', default={}).get('scale', False),
         cran_url=config.get('cran_url', 'https://cloud.r-project.org'),
     group:
-        'metrics_merge'
+        'metrics_postprocess'
 
 
 rule funkyheatmap_standalone:
@@ -245,9 +259,9 @@ rule plots_all:
         # funky heatmap
         rules.funkyheatmap.output,
         mcfg.get_output_files(rules.funkyheatmap_per_dataset.output),
-        mcfg.get_output_files(rules.funkyheatmap_per_batch.output, wildcard_names=['dataset', 'batch']),
-        mcfg.get_output_files(rules.funkyheatmap_per_label.output, wildcard_names=['dataset', 'label']),
-        # # barplot
+        # mcfg.get_output_files(rules.funkyheatmap_per_batch.output, wildcard_names=['dataset', 'batch']),
+        # mcfg.get_output_files(rules.funkyheatmap_per_label.output, wildcard_names=['dataset', 'label']),
+        # barplot
         expand(
             rules.metrics_barplot.output,
             metric=['s', 'max_uss', 'score']
