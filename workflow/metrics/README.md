@@ -28,10 +28,10 @@ Configure the module under your dataset key using the `metrics` section. Common 
 - `raw_counts`: slot for raw (unnormalised) counts, only needed by metrics that use gene sets
 - `var_mask`: `.var` mask name to subset features (default `highly_variable`)
 - `recompute_neighbors`: whether to recompute neighbors even if they exist in the AnnData object (default `false`). Will only be recomputed for non kNN outputs
-- `clustering`: optional args for cluster-based metrics; supports `kwargs` and `overwrite` (see `clustering` module for more details)
+- `clustering`: optional args for cluster-based metrics; supports `kwargs`, `overwrite`, and `precomputed_key` (see `clustering` module for more details)
 - `gene_sets`: optional gene sets (dict of gene set name and gene list OR str with comma-separated keys of gene set mapping in `MARKER_GENES`) for gene-based metrics
 - `covariates`: optional covariates (str or list) used by Moran's I and PC_regression metric
-- `n_permutations`, `n_quantiles`: settings for gene-scoring utilities
+- `gene_score`: optional settings for gene-scoring utilities. Supports `n_permutations` and `n_quantiles`
 - `weight_batch`: weight in [0, 1] of aggregated batch score used in funkyheatmap. The aggregated bio score gets a weight of 1 - `weight_batch`
 - `metrics`: list of metric names to compute; must exist in `params.tsv`
 
@@ -60,6 +60,9 @@ DATASETS:
       label: bulk_labels  # cell type label
       batch: batch
       output_type: full  # will use .X as representation for metrics
+      gene_score:
+        n_permutations: 20
+        n_quantiles: 5
       metrics:  # list of metrics to be computed
         - nmi
         - ari
@@ -95,6 +98,39 @@ The different `output_type` options are:
 
 The `gene_sets` parameters is only needed by the `morans_i_genes` and `pcr_genes` metrics.
 If none of these metrics are needed, you also don't need to configure `gene_sets`.
+
+You can optionally tune gene-score preparation with:
+
+```yaml
+...
+
+DATASETS:
+  ...
+    metrics:
+      ...
+      gene_score:
+        n_permutations: 50
+        n_quantiles: 5
+```
+
+### Precomputed clustering labels
+
+For clustering-based metrics (e.g. `nmi`, `ari`, `isolated_label_f1`), you can skip the clustering prepare step and use an existing obs column instead:
+
+```yaml
+...
+
+DATASETS:
+  ...
+    metrics:
+      ...
+      clustering:
+        precomputed_key: bulk_labels
+      metrics:
+        - nmi
+        - ari
+        - graph_connectivity
+```
 
 ```yaml
 ...
