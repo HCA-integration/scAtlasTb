@@ -1,4 +1,4 @@
-metric_wildcards = mcfg.get_wildcard_names() + ['metric', 'overwrite_file_id']
+metric_wildcards = mcfg.get_wildcard_names() + ['metric', 'parse_file_id']
 
 rule merge_per_file:
     message:

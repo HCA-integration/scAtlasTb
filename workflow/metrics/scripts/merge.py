@@ -48,8 +48,8 @@ def check_existing(df, row, key):
 
 
 for row, _dict in expanded_file_ids.to_dict('index').items():
-    # skip file_id if overwrite_file_id is True
-    if not metrics_df.loc[row, 'overwrite_file_id']:
+    # skip file_id if parse_file_id is True
+    if not metrics_df.loc[row, 'parse_file_id']:
         key = 'file_name'
         metrics_df.loc[row, key] = metrics_df.loc[row, 'file_id']
         ex_columns.add(key)
@@ -96,7 +96,7 @@ with open(extra_columns, 'w') as f:
         f.write(f'{col}\n')
 
 # save metrics
-del metrics_df['overwrite_file_id']
+del metrics_df['parse_file_id']
 metrics_df.to_csv(out_tsv, sep='\t', index=False)
 
 print(
