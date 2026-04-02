@@ -40,6 +40,7 @@ mcfg = MetricsConfig(
         'gene_sets',
         'n_permutations',
         'n_quantiles',
+        'funkyheatmap',
         'parse_file_id',
     ],
     # wildcard_names=['label', 'batch'],
