@@ -278,7 +278,7 @@ max_col_name_len <- max(nchar(as.character(column_info$name)), na.rm = TRUE)
 has_row_groups <- !is.null(row_groups) && nrow(row_groups) > 0
 plot_position_args <- position_arguments(
   col_annot_offset = max(3, min(10, ceiling(max_col_name_len * 0.4))),
-  col_annot_angle = 90,
+  col_annot_angle = 90
 )
 
 # Extract dataset name if available
