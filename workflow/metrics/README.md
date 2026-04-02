@@ -32,13 +32,20 @@ Configure the module under your dataset key using the `metrics` section. Common 
 - `gene_sets`: optional gene sets (dict of gene set name and gene list OR str with comma-separated keys of gene set mapping in `MARKER_GENES`) for gene-based metrics
 - `covariates`: optional covariates (str or list) used by Moran's I and PC_regression metric
 - `n_permutations`, `n_quantiles`: settings for gene-scoring utilities
-- `weight_batch`: weight in [0, 1] of aggregated batch score used in funkyheatmap. The aggregated bio score gets a weight of 1 - `weight_batch`
+- `weight_batch`: weight in [0, 1] of aggregated batch score used in funkyheatmap. The aggregated bio score gets a weight of 1 - `weight_batch`. Can also be set under `funkyheatmap: weight_batch`
 - `metrics`: list of metric names to compute; must exist in `params.tsv`
+- `parse_file_id`: whether to parse the file_id (e.g. `model1--param=a`) into additional columns in the results table (default `false`)
+- `funkyheatmap`: optional configuration for funkyheatmap plots
+  - `group_col`: column to use for grouping rows in the heatmap
+  - `weight_batch`: weight of batch score in the overall score (overrides top-level `weight_batch`)
+  - `n_top`: number of top methods to show in the overall heatmap (default `50`)
+  - `scale`: whether to scale scores to [0, 1] per metric (default `false`)
+  - `dpi`: resolution of output PNG plots (default `300`)
 
 ### Example configuration
 
 Below is an example of a metrics workflow for the test input file `data/pbmc68k.h5ad`.
-Note that the file_id (under `input: metrics:`) can be parsed, if you set `overwrite_file_id` to `true`.
+Note that the file_id (under `input: metrics:`) can be parsed, if you set `parse_file_id` to `true`.
 
 ```yaml
 output_dir: data/out
@@ -56,10 +63,12 @@ DATASETS:
       unintegrated: layers/normcounts
       raw_counts: layers/counts
       corrected: X
-      overwrite_file_id: true  # parse file_id, so that an additional column called `example_param` gets created in results table
+      parse_file_id: true  # parse file_id, so that an additional column called `example_param` gets created in results table
       label: bulk_labels  # cell type label
       batch: batch
       output_type: full  # will use .X as representation for metrics
+      funkyheatmap:
+        group_col: batch
       metrics:  # list of metrics to be computed
         - nmi
         - ari

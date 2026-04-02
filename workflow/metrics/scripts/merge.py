@@ -48,7 +48,7 @@ def check_existing(df, row, key):
 
 
 for row, _dict in expanded_file_ids.to_dict('index').items():
-    # skip file_id if parse_file_id is True
+    # skip parsing file_id if parse_file_id is False
     if not metrics_df.loc[row, 'parse_file_id']:
         key = 'file_name'
         metrics_df.loc[row, key] = metrics_df.loc[row, 'file_id']
