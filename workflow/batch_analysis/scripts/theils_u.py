@@ -146,7 +146,7 @@ class TheilsUAnalyzer:
         """Conditional entropy H(X | Y)"""
         p_xy = pd.crosstab(x, y, normalize=True)
         p_x_given_y = p_xy.div(p_xy.sum(axis=0), axis=1)
-        log_p = p_x_given_y.map(lambda val: np.log2(val) if val > 0 else 0)
+        log_p = np.where(p_x_given_y.values > 0, np.log2(p_x_given_y.values), 0.0)
         return -np.nansum(p_xy.values * log_p)
     
     def run(self) -> tuple[pd.DataFrame, pd.DataFrame]:
