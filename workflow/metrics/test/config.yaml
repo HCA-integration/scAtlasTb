@@ -51,6 +51,7 @@ DATASETS:
       batch: louvain
       output_type: full
       overwrite_file_id: true
+      group_col: batch
 
   test_clustering_metrics:
     input:
