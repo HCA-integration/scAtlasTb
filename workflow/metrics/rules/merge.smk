@@ -1,4 +1,4 @@
-metric_wildcards = mcfg.get_wildcard_names() + ['metric', 'overwrite_file_id']
+metric_wildcards = mcfg.get_wildcard_names() + ['metric', 'parse_file_id']
 
 rule merge_per_file:
     message:
@@ -21,7 +21,7 @@ rule merge_per_file:
         mem_mb=1000,
     retries: 0
     group:
-        'metrics_merge'
+        'metrics_postprocess'
     script: '../scripts/merge.py'
 
 
@@ -41,7 +41,7 @@ use rule merge_per_file as merge with:
         wildcards=mcfg.get_wildcards(as_df=True, wildcard_names=metric_wildcards),
         wildcards_string=mcfg.get_wildcards(as_df=True, wildcard_names=metric_wildcards).to_string(index=False),
     group:
-        'metrics_merge'
+        'metrics_postprocess'
 
 
 use rule merge_per_file as merge_per_dataset with:
@@ -60,7 +60,7 @@ use rule merge_per_file as merge_per_dataset with:
         wildcards=lambda wildcards: mcfg.get_wildcards(subset_dict=wildcards, exclude='dataset', as_df=True, wildcard_names=metric_wildcards),
         wildcards_string=lambda wildcards: mcfg.get_wildcards(subset_dict=wildcards, exclude='dataset', as_df=True, wildcard_names=metric_wildcards).to_string(index=False),
     group:
-        'metrics_merge'
+        'metrics_postprocess'
 
 
 use rule merge_per_file as merge_per_batch with:
@@ -79,7 +79,7 @@ use rule merge_per_file as merge_per_batch with:
         wildcards=lambda wildcards: mcfg.get_wildcards(subset_dict=wildcards, exclude='batch', as_df=True, wildcard_names=metric_wildcards),
         wildcards_string=lambda wildcards: mcfg.get_wildcards(subset_dict=wildcards, exclude='batch', as_df=True, wildcard_names=metric_wildcards).to_string(index=False),
     group:
-        'metrics_merge'
+        'metrics_postprocess'
 
 
 use rule merge_per_file as merge_per_label with:
@@ -98,7 +98,7 @@ use rule merge_per_file as merge_per_label with:
         wildcards=lambda wildcards: mcfg.get_wildcards(subset_dict=wildcards, exclude='label', as_df=True, wildcard_names=metric_wildcards),
         wildcards_string=lambda wildcards: mcfg.get_wildcards(subset_dict=wildcards, exclude='label', as_df=True, wildcard_names=metric_wildcards).to_string(index=False),
     group:
-        'metrics_merge'
+        'metrics_postprocess'
 
 
 rule collect:
@@ -127,7 +127,7 @@ rule collect_all:
 
 rule merge_all:
     input:
-        rules.merge.output,
+        # rules.merge.output,
         mcfg.get_output_files(rules.merge_per_dataset.output, wildcard_names=['dataset']),
         mcfg.get_output_files(rules.merge_per_batch.output, wildcard_names=['dataset', 'batch']),
         mcfg.get_output_files(rules.merge_per_label.output, wildcard_names=['dataset', 'label']),

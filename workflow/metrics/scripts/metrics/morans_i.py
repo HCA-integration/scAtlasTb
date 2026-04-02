@@ -101,7 +101,7 @@ def morans_i(adata, output_type, covariate, n_bootstraps=5, bootstrap_size=None,
 
 
 def morans_i_genes(adata, output_type, gene_set, **kwargs):
-    metric = "M's I genes"
+    metric = "M's I g"
     metric_names = []
     scores = []
     

@@ -7,18 +7,21 @@ def ari(adata, output_type, batch_key, label_key, cluster_key, **kwargs):
     import scib
 
     adata = select_neighbors(adata, output_type)
-    scib.cl.cluster_optimal_resolution(
-        adata=adata,
-        label_key=label_key,
-        cluster_key=cluster_key,
-        metric=scib.me.nmi,
-        use_rep=None,
-    )
-    return scib.me.ari(
-        adata[adata.obs[label_key].notna()],
+    adata = adata[adata.obs[label_key].notna()].copy()
+    cluster_key = cluster_keys[0]
+    nmi_max = 0
+    for col in cluster_keys:
+        nmi = scib.me.nmi(adata, label_key, col)
+        if nmi > nmi_max:
+            nmi_max = nmi
+            cluster_key = col
+
+    score = scib.me.ari(
+        adata,
         label_key,
         cluster_key
     )
+    return (score, 'ARI')
 
 
 def ari_leiden_y(adata, output_type, batch_key, label_key, **kwargs):

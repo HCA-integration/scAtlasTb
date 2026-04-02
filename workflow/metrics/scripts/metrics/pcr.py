@@ -22,7 +22,7 @@ def pcr_comparison(adata, output_type, batch_key, label_key, adata_raw, n_thread
     # embed = 'X_emb' if output_type == 'embed' else 'X_pca'
     # assert embed in adata.obsm, f'Embedding {embed} missing from adata.obsm'
     
-    return scib.me.pcr_comparison(
+    score = scib.me.pcr_comparison(
         adata_pre=adata_raw,
         adata_post=adata,
         covariate=batch_key,
@@ -31,6 +31,7 @@ def pcr_comparison(adata, output_type, batch_key, label_key, adata_raw, n_thread
         linreg_method='numpy',
         recompute_pca=False,
     )
+    return (score, 'PCreg comp')
 
 
 def pcr_y(adata, output_type, batch_key, label_key, adata_raw, **kwargs):
@@ -121,7 +122,7 @@ def cell_cycle(
     #     print(f'Warning: caught error in cell cycle score: {e}')
     #     score = np.nan
 
-    return score
+    return score, 'Cell cycle conservation'
 
 
 def pcr_random(adata, output_type, **kwargs):
