@@ -4,7 +4,6 @@ logging.basicConfig(level=logging.INFO)
 import numpy as np
 import anndata as ad
 from tqdm import tqdm
-from scipy import sparse
 
 from metrics.bootstrap import get_bootstrap_adata
 from utils.io import read_anndata, write_zarr_linked
@@ -99,11 +98,17 @@ if adata.n_obs > MAX_OBS:
 
 # Extract control genes and precompute random sets
 control_genes = adata.var_names[~adata.var_names.isin(genes)].tolist()
+effective_n_random_genes = min(n_random_genes, len(control_genes))
+if effective_n_random_genes < n_random_genes:
+    logger.warning(
+        f'Only {len(control_genes)} control genes available, '
+        f'reducing n_random_genes from {n_random_genes} to {effective_n_random_genes}'
+    )
 random_gene_sets = [
-    np.random.choice(control_genes, size=n_random_genes, replace=False)
+    np.random.choice(control_genes, size=effective_n_random_genes, replace=False)
     for _ in range(n_random_permutations)
 ]
-all_random_genes = set().union(*random_gene_sets)
+all_random_genes = set().union(*random_gene_sets) if random_gene_sets else set()
 
 # Include additional control genes for validation
 n_control = min(ctrl_size, sum(1 for g in control_genes if g not in all_random_genes))
@@ -125,8 +130,9 @@ for random_genes in random_gene_sets:
         ctrl_size=ctrl_size
     )
     random_scores.append(adata.obs['score'].values)
-del adata.obs['score']
-adata.obsm['random_gene_scores'] = sparse.csr_matrix(np.vstack(random_scores).T)
+if 'score' in adata.obs.columns:
+    del adata.obs['score']
+adata.obsm['random_gene_scores'] = np.stack(random_scores, axis=1) if random_scores else np.empty((adata.n_obs, 0))
 logging.info(f'Stored {len(random_scores)} random gene score sets in obsm')
 
 # Score gene sets of interest
