@@ -11,7 +11,7 @@ def replace_last(source_string, replace_what, replace_with, cluster_key='leiden'
     if not source_string.startswith(cluster_key):
         return source_string
     if not source_string.endswith(replace_what):
-        return source_string + '_orig'
+        return source_string
     head, _sep, tail = source_string.rpartition(replace_what)
     return head + replace_with + tail
 
