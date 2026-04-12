@@ -14,12 +14,28 @@ from pandas.api.types import is_numeric_dtype
 from scipy.spatial.distance import squareform
 from scipy.cluster.hierarchy import linkage
 
+"""Compute and visualize Theil's U association matrices for AnnData obs covariates.
+
+This script performs three high-level steps:
+1. Validate and preprocess selected covariates from `obs`.
+2. Compute pairwise Theil's U on sample-level aggregated covariate values.
+3. Render either a clustered heatmap (with optional row-side bar panel) or a
+    standard heatmap fallback.
+
+The script is designed to run as a Snakemake rule script.
+"""
+
 # ============================================================================
 # Theil's U Computation
 # ============================================================================
 
 class TheilsUAnalyzer:
-    """Compute and preprocess Theil's U correlation matrix for categorical variables"""
+    """Build a Theil's U matrix from observation-level metadata.
+
+    The class encapsulates covariate filtering, sample-level aggregation, and
+    pairwise Theil's U computation. The output matrix is square with both index
+    and columns corresponding to the retained covariates.
+    """
     
     def __init__(
         self,
@@ -47,7 +63,13 @@ class TheilsUAnalyzer:
         self._theils_u_matrix: Optional[pd.DataFrame] = None
     
     def prepare_sample_key(self) -> str:
-        """Parse and prepare sample key column"""
+        """Resolve the sample identifier column used for aggregation.
+
+        Returns:
+            Name of the sample key column to use downstream. If multiple sample
+            keys are provided, a composite key is created. If missing/None, the
+            observation index is used.
+        """
         if not self.sample_key or self.sample_key == 'None':
             logging.info('Using index as sample key...')
             sample_key = 'index'
@@ -68,7 +90,16 @@ class TheilsUAnalyzer:
         return self.sample_key
     
     def filter_covariates(self) -> List[str]:
-        """Filter covariates based on validity criteria"""
+        """Filter candidate covariates to those suitable for Theil's U.
+
+        Filtering criteria:
+        - column must exist in `obs`
+        - at least two non-null unique values
+        - numeric columns with too many unique values are excluded
+
+        Returns:
+            List of retained covariate names.
+        """
         logging.info(f'Filter covariates:\n{pformat(self.covariates)}')
         valid_covariates = []
         
@@ -96,7 +127,18 @@ class TheilsUAnalyzer:
         return valid_covariates
     
     def aggregate_by_sample(self, sample_key: str) -> pd.DataFrame:
-        """Aggregate covariates by sample key using mode"""
+        """Aggregate covariates per sample using mode.
+
+        Args:
+            sample_key: Name of the sample grouping column.
+
+        Returns:
+            Aggregated dataframe with one row per sample and one column per
+            retained covariate.
+
+        Raises:
+            AssertionError: If no covariates remain after filtering.
+        """
         logging.info(f'Aggregate covariates by {sample_key}...')
         
         # Remove sample_key from covariates if present
@@ -122,7 +164,11 @@ class TheilsUAnalyzer:
         return self._aggregated_df
     
     def compute_theils_u(self) -> pd.DataFrame:
-        """Compute pairwise Theil's U matrix"""
+        """Compute the pairwise Theil's U matrix for aggregated covariates.
+
+        Returns:
+            Square dataframe where each entry `(x, y)` is `U(x|y)`.
+        """
         logging.info(f'Compute Theil\'s U matrix...')
         
         df = self._aggregated_df
@@ -146,14 +192,14 @@ class TheilsUAnalyzer:
     
     @staticmethod
     def _entropy(x: pd.Series) -> float:
-        """Shannon entropy H(X)"""
+        """Compute Shannon entropy $H(X)$ for a categorical series."""
         p_x = x.value_counts(normalize=True)
         p_x = p_x[p_x > 0]  # filter zeros
         return -(p_x * np.log2(p_x)).sum()
     
     @staticmethod
     def _conditional_entropy(x: pd.Series, y: pd.Series) -> float:
-        """Conditional entropy H(X | Y)"""
+        """Compute conditional entropy $H(X \mid Y)$ for categorical series."""
         p_xy = pd.crosstab(x, y, normalize=True)
         p_x_given_y = p_xy.div(p_xy.sum(axis=0), axis=1)
         probs = p_x_given_y.values
@@ -162,7 +208,13 @@ class TheilsUAnalyzer:
         return -np.nansum(p_xy.values * log_p)
     
     def run(self) -> tuple[pd.DataFrame, pd.DataFrame]:
-        """Run complete analysis pipeline"""
+        """Run the full analysis pipeline.
+
+        Returns:
+            Tuple of:
+            - Theil's U matrix dataframe
+            - sample-level aggregated covariate dataframe
+        """
         sample_key = self.prepare_sample_key()
         self.filter_covariates()
         self.aggregate_by_sample(sample_key)
@@ -177,7 +229,14 @@ class TheilsUAnalyzer:
 
 @dataclass
 class ClustermapConfig:
-    """Configuration for clustermap visualization"""
+    """Configuration container for heatmap/clustermap rendering.
+
+    Attributes group naturally into:
+    - sizing/typography (`min_fig_size`, `size_per_item`, font settings)
+    - color/value mapping (`cmap`, `vmin`, `vmax`, `nan_color`)
+    - panel/layout controls (margins, gaps, dendrogram and bar panel scaling)
+    - seaborn kwargs passthrough (`*_kwargs` dictionaries)
+    """
     min_fig_size: float = 6.0
     size_per_item: float = 0.6
     min_fontsize: int = 6
@@ -224,7 +283,14 @@ class ClustermapConfig:
 
 
 class ClustermapPlotter:
-    """Generalized clustermap plotter with optional dendrogram and barplot"""
+        """Render Theil's U matrices as heatmaps with optional clustering panels.
+
+        Supports:
+        - clustered heatmap with top/left dendrograms
+        - replacement of row dendrogram by a metadata bar panel
+        - automatic layout adjustments to avoid overlap with right-side labels and
+            colorbar
+        """
     
     def __init__(
         self,
@@ -257,14 +323,23 @@ class ClustermapPlotter:
         self._title_fontsize: int = 0
 
     def _get_plot_cmap(self):
-        """Return colormap with a dedicated color for NaNs."""
+        """Return a matplotlib colormap instance with explicit NaN color."""
         cmap = copy(plt.get_cmap(self.config.cmap))
         cmap.set_bad(self.config.nan_color)
         return cmap
 
     @staticmethod
     def _merge_plot_kwargs(defaults: dict[str, Any], overrides: dict[str, Any]) -> dict[str, Any]:
-        """Merge plotting kwargs, preserving nested settings where appropriate."""
+        """Merge plot kwargs, including nested dicts for selected keys.
+
+        Args:
+            defaults: Base keyword arguments.
+            overrides: User-provided keyword arguments.
+
+        Returns:
+            Merged keyword arguments with nested merge for `annot_kws` and
+            `cbar_kws`.
+        """
         merged = {**defaults, **overrides}
         for nested_key in ("annot_kws", "cbar_kws"):
             if nested_key in defaults or nested_key in overrides:
@@ -275,7 +350,7 @@ class ClustermapPlotter:
         return merged
 
     def _base_heatmap_kwargs(self) -> dict[str, Any]:
-        """Shared seaborn heatmap kwargs used by both heatmap paths."""
+        """Build shared seaborn heatmap kwargs used in both rendering paths."""
         return {
             **self.config.default_heatmap_kwargs,
             "cmap": self._get_plot_cmap(),
@@ -284,7 +359,11 @@ class ClustermapPlotter:
         }
 
     def _style_colorbar_label(self, cbar_ax: Axes) -> None:
-        """Apply consistent colorbar label placement and typography."""
+        """Apply consistent colorbar label position and typography.
+
+        Args:
+            cbar_ax: Colorbar axes to style.
+        """
         cbar_ax.yaxis.set_label_position('left')
         cbar_ax.set_ylabel(
             self._cbar_label,
@@ -295,7 +374,11 @@ class ClustermapPlotter:
         )
 
     def _get_right_label_margin(self) -> float:
-        """Compute right margin needed for visible right-side heatmap labels."""
+        """Estimate required figure margin for right-side y tick labels.
+
+        Returns:
+            Fractional figure width to reserve on the right.
+        """
         self._fig.canvas.draw()
         renderer = self._fig.canvas.get_renderer()
         yticklabels = [lab for lab in self._heatmap_ax.get_yticklabels() if lab.get_visible()]
@@ -308,7 +391,14 @@ class ClustermapPlotter:
         return max_label_w / fig_w_px + 0.03
 
     def _get_row_fraction(self, row_ax: Axes) -> float:
-        """Derive row panel width fraction from seaborn layout and scale setting."""
+        """Derive row-panel width share from seaborn layout and config scaling.
+
+        Args:
+            row_ax: Axes currently used as row dendrogram/bar panel.
+
+        Returns:
+            Width fraction for the row-side panel, clamped to sensible bounds.
+        """
         original_row_pos = row_ax.get_position()
         original_heatmap_pos = self._heatmap_ax.get_position()
         total_original_w = original_row_pos.width + original_heatmap_pos.width
@@ -319,7 +409,7 @@ class ClustermapPlotter:
         return min(0.42, max(0.12, base_fraction * self.config.bar_panel_width_scale))
 
     def _get_dendrogram_height(self, total_h: float) -> float:
-        """Compute compact dendrogram height within configured bounds."""
+        """Compute dendrogram height from total panel height with clipping."""
         scaled = total_h * self.config.dendrogram_ratio * self.config.dendrogram_height_scale
         return min(self.config.dendrogram_max_height, max(self.config.dendrogram_min_height, scaled))
 
@@ -331,7 +421,7 @@ class ClustermapPlotter:
         bar_xlabel: str = "# unique"
     ) -> None:
         """
-        Create and save the complete plot
+        Create and save the complete plot.
         
         Args:
             title: Plot title
@@ -362,7 +452,7 @@ class ClustermapPlotter:
         plt.close(self._fig)
     
     def _calculate_plot_parameters(self) -> None:
-        """Calculate figure size and fontsize"""
+        """Derive figure and text sizes from matrix dimensions and config."""
         n_items = max(self.data.shape)
 
         self._fig_size = max(self.config.min_fig_size, n_items * self.config.size_per_item)
@@ -376,7 +466,7 @@ class ClustermapPlotter:
         self._title_fontsize = self.config.title_fontsize if self.config.title_fontsize is not None else self.config.max_fontsize
     
     def _create_clustermap(self, cbar_label: str) -> None:
-        """Create clustered heatmap with dendrogram"""
+        """Create seaborn clustermap and cache core axes/ordering metadata."""
         self._cbar_label = cbar_label
         # Keep NaNs for plotting, but use a filled copy for linkage computation.
         cluster_data = self.data.fillna(0.0)
@@ -402,7 +492,11 @@ class ClustermapPlotter:
         self._reordered_labels = self.data.index[self._clustermap.dendrogram_row.reordered_ind]
 
     def _apply_clustermap_layout(self) -> None:
-        """Apply explicit clustermap layout to prevent overlap of panels and labels."""
+        """Reposition clustermap axes to avoid overlaps and preserve readability.
+
+        This method places row panel, heatmap, top dendrogram, and colorbar
+        explicitly using figure-relative coordinates.
+        """
         row_ax = self._clustermap.ax_row_dendrogram
         col_ax = self._clustermap.ax_col_dendrogram
         cbar_ax = self._clustermap.cax
@@ -460,7 +554,7 @@ class ClustermapPlotter:
         self._style_colorbar_label(cbar_ax)
     
     def _create_simple_heatmap(self, cbar_label: str) -> None:
-        """Create simple heatmap without clustering"""
+        """Create standard seaborn heatmap when clustering is disabled/unneeded."""
         self._cbar_label = cbar_label
         self._fig, self._heatmap_ax = plt.subplots(figsize=(self._fig_size, self._fig_size))
 
@@ -477,7 +571,11 @@ class ClustermapPlotter:
         self._style_colorbar_label(cbar_ax)
     
     def _add_barplot(self, bar_xlabel: str) -> None:
-        """Add barplot in place of row dendrogram"""
+        """Draw metadata bar panel in the row-dendrogram axis.
+
+        Args:
+            bar_xlabel: X-axis label for the metadata bar panel.
+        """
         # Clear the row dendrogram axis and replace with barplot
         bar_ax = self._clustermap.ax_row_dendrogram
         bar_ax.clear()
@@ -518,7 +616,7 @@ class ClustermapPlotter:
         sns.despine(ax=bar_ax, left=True, bottom=False)
     
     def _configure_heatmap_axis(self) -> None:
-        """Configure heatmap axis labels"""
+        """Apply consistent tick label rotation and font sizing for heatmap axes."""
         self._heatmap_ax.set_ylabel('')
         self._heatmap_ax.set_xticklabels(
             self._heatmap_ax.get_xticklabels(),
@@ -531,8 +629,6 @@ class ClustermapPlotter:
             rotation=0,
             fontsize=self._fontsize
         )
-        # Move y tick labels to the right so they remain readable next to the barplot.
-        self._heatmap_ax.tick_params(axis='y', labelleft=False, labelright=True)
 
 
 # ============================================================================
