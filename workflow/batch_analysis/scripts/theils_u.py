@@ -283,14 +283,14 @@ class ClustermapConfig:
 
 
 class ClustermapPlotter:
-        """Render Theil's U matrices as heatmaps with optional clustering panels.
+    """Render Theil's U matrices as heatmaps with optional clustering panels.
 
-        Supports:
-        - clustered heatmap with top/left dendrograms
-        - replacement of row dendrogram by a metadata bar panel
-        - automatic layout adjustments to avoid overlap with right-side labels and
-            colorbar
-        """
+    Supports:
+    - clustered heatmap with top/left dendrograms
+    - replacement of row dendrogram by a metadata bar panel
+    - automatic layout adjustments to avoid overlap with right-side labels and
+        colorbar
+    """
     
     def __init__(
         self,
