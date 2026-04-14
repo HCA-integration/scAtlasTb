@@ -2,6 +2,7 @@ rule theils_u:
     input:
         zarr=lambda wildcards: get_file(wildcards, 'data'),
     output:
+        tsv=mcfg.out_dir / paramspace.wildcard_pattern / 'theils_u.tsv',
         plot=mcfg.image_dir / paramspace.wildcard_pattern / 'theils_u_heatmap.png',
     params:
         covariates=lambda wildcards: mcfg.get_from_parameters(wildcards, 'covariates', default=[]),

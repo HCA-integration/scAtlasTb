@@ -645,6 +645,7 @@ from utils.io import read_anndata
 
 # Extract snakemake parameters
 input_file = snakemake.input[0]
+output_tsv = snakemake.output.tsv
 output_png = snakemake.output.plot
 
 sample_key = snakemake.params.get('sample_key')
@@ -666,6 +667,9 @@ analyzer = TheilsUAnalyzer(
     max_unique_continuous=max_unique_continuous
 )
 theils_u_matrix, aggregated_df = analyzer.run()
+
+logging.info(f"Saving Theil's U matrix to {output_tsv} ...")
+theils_u_matrix.to_csv(output_tsv, sep='\t')
 
 # Plot
 logging.info(f'Plot Theil\'s U heatmap to {output_png} ...')
