@@ -471,8 +471,14 @@ class ClustermapPlotter:
         # Keep NaNs for plotting, but use a filled copy for linkage computation.
         cluster_data = self.data.fillna(0.0)
 
-        # Convert similarity to distance (diagonal is already 0 since self-similarity = 1)
-        distances = squareform(1 - cluster_data.values, checks=False)
+        # Theil's U is directional, so symmetrize before deriving distances for clustering.
+        symmetric_similarity = (cluster_data.values + cluster_data.values.T) / 2.0
+        np.fill_diagonal(symmetric_similarity, 1.0)
+
+        # Convert symmetric similarity to distance for hierarchical clustering.
+        distance_matrix = 1 - symmetric_similarity
+        np.fill_diagonal(distance_matrix, 0.0)
+        distances = squareform(distance_matrix, checks=True)
         col_linkage = linkage(distances, method='average')
 
         clustermap_defaults: dict[str, Any] = {
@@ -644,7 +650,6 @@ output_png = snakemake.output.plot
 sample_key = snakemake.params.get('sample_key')
 covariates = snakemake.params.get('covariates', [])
 max_unique_continuous = snakemake.params.get('max_unique_continuous', 10)
-na_strings = snakemake.params.get('na_strings', ['NA', 'NaN', 'nan', ''])
 wildcards = snakemake.wildcards
 
 title = f"Theil's U Heatmap\ndataset: {wildcards['dataset']}, file_id: {wildcards['file_id']}"
