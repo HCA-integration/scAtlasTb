@@ -77,7 +77,7 @@ bash envs/install_all_environments.sh
 
 > 📝 **Notes on `install_all_environments.sh`**
 > 1. The script will create new environments for each file in the `envs` directory if they don't yet exist and update any pre-existing environments.
-> 2. The environment names correspond the their respective file names and are documented under the `name:` directive in the `envs/<env_name>.yaml` file.
+> 2. The environment names correspond to their respective file names and are documented under the `name:` directive in the `envs/<env_name>.yaml` file.
 > 3. If an environment creation fails, the script will skip that environment and you might need to troubleshoot the installation manually.
 > 4. Some environments require the channel priority to be set to `flexible`.
 > If your installation command fails, try setting `conda config --set channel_priority flexible` before restarting the command.
