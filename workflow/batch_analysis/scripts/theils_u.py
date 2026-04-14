@@ -649,7 +649,6 @@ output_png = snakemake.output.plot
 sample_key = snakemake.params.get('sample_key')
 covariates = snakemake.params.get('covariates', [])
 max_unique_continuous = snakemake.params.get('max_unique_continuous', 10)
-na_strings = snakemake.params.get('na_strings', ['NA', 'NaN', 'nan', ''])
 wildcards = snakemake.wildcards
 
 title = f"Theil's U Heatmap\ndataset: {wildcards['dataset']}, file_id: {wildcards['file_id']}"
