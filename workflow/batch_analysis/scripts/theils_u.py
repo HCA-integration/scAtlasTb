@@ -283,15 +283,14 @@ class ClustermapConfig:
 
 
 class ClustermapPlotter:
-        """Render Theil's U matrices as heatmaps with optional clustering panels.
+    """Render Theil's U matrices as heatmaps with optional clustering panels.
 
-        Supports:
-        - clustered heatmap with top/left dendrograms
-        - replacement of row dendrogram by a metadata bar panel
-        - automatic layout adjustments to avoid overlap with right-side labels and
-            colorbar
-        """
-    
+    Supports:
+    - clustered heatmap with top/left dendrograms
+    - replacement of row dendrogram by a metadata bar panel
+    - automatic layout adjustments to avoid overlap with right-side labels and
+        colorbar
+    """
     def __init__(
         self,
         data: pd.DataFrame,
@@ -471,8 +470,14 @@ class ClustermapPlotter:
         # Keep NaNs for plotting, but use a filled copy for linkage computation.
         cluster_data = self.data.fillna(0.0)
 
-        # Convert similarity to distance (diagonal is already 0 since self-similarity = 1)
-        distances = squareform(1 - cluster_data.values, checks=False)
+        # Theil's U is directional, so symmetrize before deriving distances for clustering.
+        symmetric_similarity = (cluster_data.values + cluster_data.values.T) / 2.0
+        np.fill_diagonal(symmetric_similarity, 1.0)
+
+        # Convert symmetric similarity to distance for hierarchical clustering.
+        distance_matrix = 1 - symmetric_similarity
+        np.fill_diagonal(distance_matrix, 0.0)
+        distances = squareform(distance_matrix, checks=True)
         col_linkage = linkage(distances, method='average')
 
         clustermap_defaults: dict[str, Any] = {
