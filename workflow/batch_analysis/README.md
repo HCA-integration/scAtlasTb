@@ -3,11 +3,11 @@
 This module provides an exploratory framework for understanding the technical effects of batch variables at different hierarchical levels in single-cell datasets. It quantifies the strength of technical covariates by measuring the linear variance they explain using principal component regression (PCR). This systematic evaluation helps to assess the impact of each covariate, making it easier to decide which variable should be treated as the batch for subsequent batch correction or data integration steps.
 
 ## Features
-- Automated batch effect analysis and permutation-based significance testing
+- Batch Principal regression analysis for quantififation of linear effect of technical covariates on data
+- Theil's U analysis for quantifying the association between categorical covariates and principal components
 - Optional preprocessing pipeline: normalization, gene filtering, PCA
 - Parallelized computation of batch PCR for scalability
 - Flexible configuration for covariates, permutations, and sample keys
-- Output includes per-covariate PCR scores, permutation z-scores, and summary plots
 
 ## Environments
 
@@ -84,13 +84,15 @@ The batch_analysis workflow consists of the following steps:
 4. **Collect**:
    - Aggregates per-covariate results into a single table.
 5. **Plot**:
-   - Generates barplots and violin plots summarizing PCR and permutation results.
+  - Generates barplots and violin plots summarizing PCR and permutation results.
+  - Generates Theil's U plots to visualize the association between covariates and principal components.
 
 ## Output
 
-- Per-covariate PCR results: `<output_dir>/<dataset>/batch_pcr/{covariate}.tsv`
-- Aggregated results: `<output_dir>/<dataset>/batch_pcr.tsv`
-- Plots: `<images>/<dataset>/batch_pcr_bar.png`, `<images>/<dataset>/batch_pcr_violin.png`
+### Principal regression analysis
+- Per-covariate PCR results: `<output_dir>/batch_analysis/dataset~<dataset>/file_id~<file_id>/batch_pcr/{covariate}.tsv`
+- Aggregated results: `<output_dir>/batch_analysis/dataset~<dataset>/file_id~<file_id>/batch_pcr.tsv`
+- Plots: `<images>/batch_analysis/dataset~<dataset>/file_id~<file_id>/batch_pcr_bar.png`, `<images>/<dataset>/batch_pcr_violin.png`
 
 Each result file contains columns such as:
 - `covariate`: tested covariate
@@ -98,6 +100,11 @@ Each result file contains columns such as:
 - `permuted`: whether the score is from a permutation
 - `n_covariates`: number of unique values in the covariate
 - `z_score`: z-score of observed PCR vs. permutations
+
+
+### Theil's U
+- Results: `<images>/batch_analysis/dataset~<dataset>/file_id~<file_id>/theils_u.tsv`
+- Plots: `<images>/batch_analysis/dataset~<dataset>/file_id~<file_id>/theils_u_heatmap.png`
 
 ## Testing
 
