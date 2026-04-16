@@ -17,6 +17,7 @@ mcfg = ModuleConfig(
         'n_permutations',
         'max_threads',
         'sample',
+        'na_strings',
         'raw_counts',
         'normalize',
         'highly_variable_genes',

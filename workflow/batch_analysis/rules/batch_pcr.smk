@@ -7,6 +7,7 @@ checkpoint determine_covariates:
         covariates=lambda wildcards: mcfg.get_from_parameters(wildcards, 'covariates', default=[]),
         permute_covariates=lambda wildcards: mcfg.get_from_parameters(wildcards, 'permute_covariates', default=None),
         n_permute=lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_permutations', default=10),
+        na_strings=lambda wildcards: mcfg.get_from_parameters(wildcards, 'na_strings', default=['NA', 'NaN', 'nan', '', 'unknown']),
     conda:
         get_env(config, 'scanpy')
     localrule: True
