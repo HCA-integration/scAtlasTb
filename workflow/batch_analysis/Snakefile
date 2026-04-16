@@ -33,6 +33,10 @@ module preprocessing:
     snakefile: "../../preprocessing/rules/rules.smk"
     config: config
 
+module sample_representation:
+    snakefile: "../../sample_representation/rules/rules.smk"
+    config: config
+
 module common:
     snakefile: "../common/Snakefile"
     config: config

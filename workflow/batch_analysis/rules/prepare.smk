@@ -53,7 +53,7 @@ use rule pca from preprocessing as batch_analysis_pca with:
     input:
         zarr=lambda wildcards: get_file(wildcards, 'highly_variable_genes'),
     output:
-        zarr=directory(mcfg.out_dir / 'pca' / f'{paramspace.wildcard_pattern}.zarr'),
+        zarr=directory(mcfg.out_dir / 'prepare' / paramspace.wildcard_pattern / 'pca.zarr'),
     params:
         args=lambda wildcards: mcfg.get_from_parameters(wildcards, 'pca', default={}),
     resources:
@@ -61,3 +61,21 @@ use rule pca from preprocessing as batch_analysis_pca with:
         qos=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='qos',attempt=attempt),
         mem_mb=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='mem_mb',attempt=attempt),
         gpu=lambda w, attempt: mcfg.get_resource(profile='gpu',resource_key='gpu',attempt=attempt),
+
+
+use rule pseudobulk from sample_representation as batch_analysis_prepare with:
+    input:
+        zarr=lambda wildcards: mcfg.get_input_file(**wildcards),
+    output:
+        zarr=directory(mcfg.out_dir / 'prepare' / paramspace.wildcard_pattern / 'prepare.zarr'),
+        bulks=directory(mcfg.out_dir / 'prepare' / paramspace.wildcard_pattern / 'pseudobulks.zarr'),
+    params:
+        sample_key=lambda wildcards: mcfg.get_from_parameters(wildcards, 'sample'),
+        layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'raw_counts', default='X'),
+        # aggregate=lambda wildcards: mcfg.get_from_parameters(wildcards, 'aggregate', default='sum'),
+        # dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=None),
+    resources:
+        partition=mcfg.get_resource(resource_key='partition'),
+        qos=mcfg.get_resource(profile='cpu',resource_key='qos'),
+        mem_mb=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='mem_mb', attempt=attempt),
+        gpu=mcfg.get_resource(profile='cpu',resource_key='gpu'),

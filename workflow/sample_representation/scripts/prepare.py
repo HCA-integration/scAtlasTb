@@ -17,15 +17,12 @@ output_zarr = snakemake.output.zarr
 output_bulk_zarr = snakemake.output.bulks
 
 sample_key = snakemake.params.get('sample_key')
-cell_type_key = snakemake.params.get('cell_type_key')
-aggregate = snakemake.params.get('aggregate')
-layer = snakemake.params.get('layer')
-min_cells_per_sample = snakemake.params.get('min_cells_per_sample')
-min_cells_per_cell_type = snakemake.params.get('min_cells_per_cell_type')
+aggregate = snakemake.params.get('aggregate', 'sum')
+layer = snakemake.params.get('layer', 'X')
 
 logging.info(f'Read "{input_zarr}"...')
 n_obs = read_anndata(input_zarr, X=layer, dask=True, backed=True, verbose=False).n_obs
-dask = n_obs > 5e5
+dask = snakemake.params.get('dask', n_obs > 5e5)
 
 adata = read_anndata(
     input_zarr,
@@ -36,29 +33,27 @@ adata = read_anndata(
     dask=dask,
     stride=int(n_obs / 5),
 )
-
-# # filter small samples and cell types
-# adata = pr.pp.filter_small_samples(
-#     adata,
-#     sample_key,
-#     sample_size_threshold=min_cells_per_sample,
-# )
-# if cell_type_key is not None:
-#     adata = pr.pp.filter_small_cell_types(
-#         adata,
-#         sample_key,
-#         cell_type_key,
-#         cluster_size_threshold=min_cells_per_cell_type,
-#     )
+adata.obs_names_make_unique()
 
 logging.info(f'Pseudobulk by "{sample_key}"...')
-sample_key = [x.strip() for x in sample_key.split(',')]
-adata.obs['group'] = adata.obs[sample_key].astype(str).agg('-'.join, axis=1)
-adata_bulk = get_pseudobulks(
-    adata,
-    group_key='group',
-    agg=aggregate,
-)
+if sample_key is None or not str(sample_key).strip() or sample_key == 'None':
+    logging.info('No sample_key provided. Skipping pseudobulk and keeping full cell resolution.')
+    adata.obs['group'] = adata.obs_names
+    adata_bulk = adata
+else:
+    sample_key = [x.strip() for x in str(sample_key).split(',') if x.strip()]
+    missing_keys = [key for key in sample_key if key not in adata.obs.columns]
+    if missing_keys:
+        raise KeyError(
+            f'sample_key contains columns not found in adata.obs: {missing_keys}. '
+            f'Available columns: {list(adata.obs.columns)}'
+        )
+    adata.obs['group'] = adata.obs[sample_key].astype(str).agg('-'.join, axis=1)
+    adata_bulk = get_pseudobulks(
+        adata,
+        group_key='group',
+        agg=aggregate,
+    )
 
 # preprocess pseudobulks
 sc.pp.normalize_total(adata_bulk)

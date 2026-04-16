@@ -18,18 +18,54 @@ input_file = snakemake.input[0]
 setup_file = snakemake.input.setup
 output_file = snakemake.output.tsv
 covariate = snakemake.wildcards.covariate
-sample_key = snakemake.params.get('sample_key')
-n_threads = np.max([snakemake.threads, 1])
+sample_key = 'group'
+n_threads = max(snakemake.threads, 1)
 
-print('Read anndata file...', flush=True)
+logging.info(f'Read setup file "{setup_file}"...')
+with open(setup_file, 'r') as f:
+    setup = yaml.safe_load(f)
+n_permute = setup['n_permute']
+is_numeric = setup['is_numeric']
+na_strings = setup.get('na_strings', [])
+
+
+logging.info('Read anndata file...')
 adata = read_anndata(
     input_file,
     X='obsm/X_pca',
     obs='obs',
     uns='uns',
 )
-assert 'pca' in adata.uns, f'.uns["pca"] is missing, please make sure PCA is computed and PC loadings are saved in adata.uns as provided by scanpy'
-adata.uns = {'pca': adata.uns['pca']}
+
+logging.info('Prepare PCA representation...')
+if 'pca' not in adata.uns:
+    raise KeyError('.uns["pca"] is missing, please make sure PCA is computed and PC loadings are saved in adata.uns as provided by scanpy')
+pca_info = adata.uns['pca']
+if 'variance' not in pca_info:
+    raise KeyError('.uns["pca"]["variance"] is missing, please make sure PCA variance is available in AnnData uns metadata')
+
+logging.info('Filter adata for non-NA covariate...')
+adata = adata[
+    ~adata.obs[covariate].isin(na_strings) &
+    adata.obs[covariate].notna()
+].copy()
+
+pca_var = np.asarray(pca_info['variance'], dtype=np.float32)
+if pca_var.ndim != 1:
+    raise ValueError(f'Expected .uns["pca"]["variance"] to be 1D, got shape {pca_var.shape}')
+
+n_pcs = adata.X.shape[1]
+if pca_var.shape[0] != n_pcs:
+    raise ValueError(
+        f'PCA variance length mismatch: .uns["pca"]["variance"] has length {pca_var.shape[0]}, '
+        f'but PCA matrix has {n_pcs} components'
+    )
+
+obs = adata.obs[list({sample_key, covariate})].copy()
+n_covariate = obs[covariate].nunique()
+if sample_key not in obs.columns:
+    raise KeyError(f'Missing required "{sample_key}" column in obs.')
+logging.info(f'Using sample_key="{sample_key}" with {obs[sample_key].nunique()} unique samples')
 
 # make sure the PCA embedding is an array
 if not isinstance(adata.X, np.ndarray):
