@@ -1,8 +1,13 @@
 output_dir: test/out
 images: test/images
 
+defaults:
+  dataset:
+    - large
+    - simple
+
 DATASETS:
-  blood_pca:
+  large:
     input:
       batch_analysis: test/input/blood_pca.zarr
     batch_analysis:
@@ -15,6 +20,7 @@ DATASETS:
         - self_reported_ethnicity
         # - development_stage
       permute_covariates:
+        - donor_id
         - assay
         - sex
         - disease
@@ -31,6 +37,7 @@ DATASETS:
         - assay
       highly_variable_genes:
       pca:
+      n_permutations: 10
 
   small:
     input:
@@ -42,6 +49,12 @@ DATASETS:
         - bulk_labels
         - batch
         - is_cd14_mono
+        - n_genes
+        - n_counts
+        - percent_mito
+        - S_score
+        - G2M_score
+        - phase
       normalize:
       highly_variable_genes:
       pca:
