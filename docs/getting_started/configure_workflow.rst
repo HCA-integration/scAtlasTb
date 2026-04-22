@@ -33,25 +33,10 @@ The directories will be created if they don't yet exist.
    output_dir: data/out
    images: images
 
-Another setting is the output file pattern map.
-By default, the final output pattern of a rule follows the pattern of
-``<out_dir>/<module>/<wildcard>~{<wildcard>}/<more wildcards>.zarr``.
-For some modules, the final output pattern differs from that default and needs to be specified explicitly in the ``output_map``.
-In future, this shouldn't be necessary.
 
-.. code-block:: yaml
+The default output settings should work out of the box.
 
-   output_map:
-     sample_representation: data/out/sample_representation/dataset~{dataset}/file_id~{file_id}/pseudobulk.h5ad
-     subset: data/out/subset/dataset~{dataset}/file_id~{file_id}/by_sample.zarr
-     pca: data/out/preprocessing/dataset~{dataset}/file_id~{file_id}/pca.zarr
-     neighbors: data/out/preprocessing/dataset~{dataset}/file_id~{file_id}/neighbors.zarr
-     preprocessing: data/out/preprocessing/dataset~{dataset}/file_id~{file_id}/preprocessed.zarr
-     metrics: data/out/metrics/results/per_dataset/{dataset}_metrics.tsv
-
-The default output settings under ``configs/outputs.yaml`` should work out of the box.
-
-2. Global configuration: Computational settings
+1. Global configuration: Computational settings
 -----------------------------------------------
 
 Depending on the hardware you have available, you can configure the workflow to make use of them.
@@ -70,12 +55,13 @@ In the backend, this affects which conda environment Snakemake uses, whenever ha
 You can select and combine modules to create a custom workflow by specifying the input and module configuration in a YAML file.
 Each instance of a workflow needs a unique task name and it can take any number of inputs consisting of modules.
 
+Under each task, the `input` section lists module names, and each module is mapped to either its input files or the output of a previous module.
+
 .. code-block:: yaml
 
    DATASETS: # TODO: rename to TASKS
 
-     task_name: # custom task/workflow name
-       # input specification: map of module name to map of input file name to input file path
+     task_name: # custom task/workflow name # TODO: make this understandable so that people know they can take any name here - add it in the text as well
        input:
          preprocessing:
            file_1: data/pbmc68k.h5ad
@@ -85,6 +71,8 @@ Each instance of a workflow needs a unique task name and it can take any number 
 
      another_dataset:
        ...
+
+..  maybe reference configuration/inputfilemappingblahblah
 
 .. warning::
    There can only be one instance of a module as a key in the input mapping (in the backend this is a dictionary). But you can reuse the same module output as input for multiple other modules. The order of the entries in the input mapping doesn't matter.
