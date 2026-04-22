@@ -2,6 +2,7 @@
 # Global settings
 # =============================================================================
 
+# Note: relative paths must be relative to the project root, not the directory of the config file.
 output_dir: data/out   # large/intermediate files
 images: images         # plots and smaller outputs
 
