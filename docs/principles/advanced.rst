@@ -7,7 +7,7 @@
 Set defaults
 ------------
 
-You can set module-specific defaults that will be used for all tasks (under ``configs['DATASETS']``), if the parameters have not been specified for those tasks.
+You can set module-specific defaults that will be used for all tasks (under ``configs['TASKS']``), if the parameters have not been specified for those tasks.
 This can shorten the configuration file, make it more readable and help avoid misconfiguration if you want to reuse the same configurations for multiple tasks.
 
 Under the ``defaults`` directive, you can set the defaults in the same way as the task-specific configuration.
@@ -46,7 +46,7 @@ Under the ``defaults`` directive, you can set the defaults in the same way as th
             - nmi
             - graph_connectivity
 
-Additionally to the module defaults, you can set which datasets you want to include in your workflow, without having to remove or comment out any entries in ``configs['DATASETS']``.
+Additionally to the module defaults, you can set which datasets you want to include in your workflow, without having to remove or comment out any entries in ``configs['TASKS']``.
 
 .. code-block:: yaml
 

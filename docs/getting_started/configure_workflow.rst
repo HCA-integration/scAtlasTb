@@ -36,7 +36,7 @@ The directories will be created if they don't yet exist.
 
 The default output settings should work out of the box.
 
-1. Global configuration: Computational settings
+2. Global configuration: Computational settings
 -----------------------------------------------
 
 Depending on the hardware you have available, you can configure the workflow to make use of them.
@@ -53,15 +53,15 @@ In the backend, this affects which conda environment Snakemake uses, whenever ha
 ----------------------
 
 You can select and combine modules to create a custom workflow by specifying the input and module configuration in a YAML file.
-Each instance of a workflow needs a unique task name and it can take any number of inputs consisting of modules.
+Each instance of a workflow needs an user-defined task name and it can take any number of inputs consisting of modules.
 
 Under each task, the `input` section lists module names, and each module is mapped to either its input files or the output of a previous module.
 
 .. code-block:: yaml
 
-   DATASETS: # TODO: rename to TASKS
+   TASKS:
 
-     task_name: # custom task/workflow name # TODO: make this understandable so that people know they can take any name here - add it in the text as well
+     my_task:
        input:
          preprocessing:
            file_1: data/pbmc68k.h5ad
@@ -72,20 +72,20 @@ Under each task, the `input` section lists module names, and each module is mapp
      another_dataset:
        ...
 
-..  maybe reference configuration/inputfilemappingblahblah
+See :doc:`documentation <docs/principles/input_file_mapping.rst>` for more details on how to specify input mappings and the different formats you can use, as well as how they are resolved to file ids for downstream modules.
 
 .. warning::
    There can only be one instance of a module as a key in the input mapping (in the backend this is a dictionary). But you can reuse the same module output as input for multiple other modules. The order of the entries in the input mapping doesn't matter.
 
-4. Module configuration
+1. Module configuration
 -----------------------
 
 You can configure the behaviour of each module by specifying their parameters under the same dataset name.
 
 .. code-block:: yaml
 
-   DATASETS:
-     task_name:
+   TASKS:
+     my_task:
        input:
          ...
 
