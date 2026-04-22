@@ -46,10 +46,9 @@ In the backend, this affects which conda environment Snakemake uses, whenever ha
 
 .. code-block:: yaml
 
-   env_mode: local
    use_gpu: true
 
-3. Input configuration
+1. Input configuration
 ----------------------
 
 You can select and combine modules to create a custom workflow by specifying the input and module configuration in a YAML file.
