@@ -1,6 +1,6 @@
 .. _input-file-mapping:
 
-📥 Input file mapping principles
+📥 Input file mapping guideline
 ================================
 
 Input mappings define how each module receives its input files for a dataset.
