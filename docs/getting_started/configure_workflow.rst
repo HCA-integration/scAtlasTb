@@ -58,7 +58,7 @@ Under each task, the `input` section lists module names, and each module is mapp
 
 .. code-block:: yaml
 
-   TASKS:
+   DATASETS:
 
      my_task:
        input:
