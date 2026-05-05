@@ -83,7 +83,7 @@ You can configure the behaviour of each module by specifying their parameters un
 
 .. code-block:: yaml
 
-   TASKS:
+   DATASETS:
      my_task:
        input:
          ...
