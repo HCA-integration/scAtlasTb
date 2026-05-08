@@ -18,37 +18,30 @@ You can find example configuration files under ``configs/``.
       :language: yaml
       :caption: configs/quickstart.yaml
 
+1. Global configuration
+-----------------------
 
-1. Global configuration: Output settings
-----------------------------------------
+These settings define your project's output structure and hardware utilization.
+The directories will be created automatically if they do not already exist.
 
-You can specify pipeline output as follows.
-Intermediate and large files will be stored under ``output_dir``, while images and smaller outputs used for understanding the outputs will be stored under ``images``.
-If you use relative paths, make them relative to where you call the pipeline (not the config file itself).
-The directories will be created if they don't yet exist.
+**Output & Computational Settings**
+
+* **Output Paths:** Intermediate and large files are stored under ``output_dir``, while images and summary files are stored under ``images``.
+* **Hardware Acceleration:** If you have a GPU or an Intel CPU, set ``use_gpu`` to ``true``. In the backend, this ensures Snakemake utilizes hardware-accelerated conda environments for supported rules.
+
+.. note:: 
+   Relative paths must be relative to the project root (where you call the pipeline), not the directory of the configuration file itself.
 
 .. code-block:: yaml
 
-   # Note: relative paths must be relative to the project root, not the directory of the config file.
+   # Output locations
    output_dir: data/out
    images: images
 
-
-The default output settings should work out of the box.
-
-2. Global configuration: Computational settings
------------------------------------------------
-
-Depending on the hardware you have available, you can configure the workflow to make use of them.
-If you have a GPU, set ``use_gpu`` to ``true`` and the pipeline will try to use the GPU for all modules that support it.
-The same applies if you have an Intel CPU.
-In the backend, this affects which conda environment Snakemake uses, whenever hardware-accelerated environments are specified in a rule.
-
-.. code-block:: yaml
-
+   # Hardware settings
    use_gpu: true
 
-1. Input configuration
+2. Input configuration
 ----------------------
 
 You can select and combine modules to create a custom workflow by specifying the input and module configuration in a YAML file.
@@ -76,7 +69,7 @@ See :doc:`documentation <docs/principles/input_file_mapping.rst>` for more detai
 .. warning::
    There can only be one instance of a module as a key in the input mapping (in the backend this is a dictionary). But you can reuse the same module output as input for multiple other modules. The order of the entries in the input mapping doesn't matter.
 
-1. Module configuration
+3. Module configuration
 -----------------------
 
 You can configure the behaviour of each module by specifying their parameters under the same dataset name.
