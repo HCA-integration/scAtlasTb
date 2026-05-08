@@ -42,7 +42,7 @@ Use a dictionary when you want stable, readable downstream file ids.
 
 .. code-block:: yaml
 
-   TASKS:
+   DATASETS:
      my_task:
        input:
          preprocessing:
@@ -85,14 +85,14 @@ So initial file ids are short hashes of the input strings.
 
 .. code-block:: yaml
 
-   TASKS:
+   DATASETS:
      my_task:
        input:
          preprocessing: data/pbmc68k.h5ad  # single file
 
 .. code-block:: yaml
 
-   TASKS:
+   DATASETS:
      my_task:
        input:
          merge:
@@ -101,7 +101,7 @@ So initial file ids are short hashes of the input strings.
 
 .. code-block:: yaml
 
-   TASKS:
+   DATASETS:
      my_task:
       input:
         preprocessing: data/pbmc68k.h5ad  # single file
@@ -128,7 +128,7 @@ The string is split on commas only when all conditions are true:
 
 .. code-block:: yaml
 
-   TASKS:
+   DATASETS:
      my_task:
        input:
          preprocessing:
@@ -161,7 +161,7 @@ resolved module outputs, and direct file paths.
 
 .. code-block:: yaml
 
-   TASKS:
+   DATASETS:
      my_task:
        input:
          reference_mapping:
@@ -183,7 +183,7 @@ If ``reference_mapping`` had multiple outputs, ``query`` would expand to
 
 .. code-block:: yaml
 
-   TASKS:
+   DATASETS:
      my_task:
        input:
          preprocessing:
@@ -224,7 +224,7 @@ Below is an example for the ``split_data`` module:
 
 .. code-block:: yaml
 
-   TASKS:
+   DATASETS:
      my_task:
        input:
          split_data:

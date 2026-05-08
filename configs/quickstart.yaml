@@ -14,7 +14,7 @@ env_mode: local
 # Tasks: define one or more named workflows, each with input and module config
 # =============================================================================
 
-TASKS:
+DATASETS:
 
   my_task: # ---------- custom task name (rename as needed) ----------
 
