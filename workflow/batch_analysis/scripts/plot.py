@@ -36,7 +36,7 @@ class PCRPlotConfig:
     plot_sizing: tuple[float, float, float] = (4.0, 0.45, 1.2)
     min_width: float = 4.0
     panel_fraction: float = 0.14
-    min_gap_inches: float = 0.7
+    min_gap_inches: float = 0.5
     label_char_width_inches: float = 0.08
     label_gap_padding_inches: float = 0.2
     main_xlabel: str = 'Principal component regression $R^2$'
@@ -44,7 +44,15 @@ class PCRPlotConfig:
     right_margin: float = 0.02
     bottom_margin: float = 0.11
     top_margin: float = 0.93
-    dpi: int = 300
+    dpi: int = 150
+    # Font sizes
+    title_fontsize: int = 16
+    legend_title_fontsize: int = 13
+    legend_fontsize: int = 12
+    tick_fontsize: int = 12
+    label_fontsize: int = 13
+    bar_label_fontsize: int = 12
+    perm_text_fontsize: int = 12
 
 
 class PCRPlotter:
@@ -86,8 +94,12 @@ class PCRPlotter:
 
     def _style_main_axis(self, ax_main: Axes, title: str) -> None:
         """Apply shared styling for the main plotting axis."""
-        ax_main.set(title=title, ylabel='', xlabel=self.config.main_xlabel)
-        ax_main.tick_params(axis='x', labelrotation=90)
+        cfg = self.config
+        ax_main.set_title(title, fontsize=cfg.title_fontsize)
+        ax_main.set_ylabel('', fontsize=cfg.label_fontsize)
+        ax_main.set_xlabel(cfg.main_xlabel, fontsize=cfg.label_fontsize)
+        ax_main.tick_params(axis='x', labelrotation=90, labelsize=cfg.tick_fontsize)
+        ax_main.tick_params(axis='y', labelsize=cfg.tick_fontsize)
         sns.despine(ax=ax_main, top=True, right=True, left=False, bottom=False)
 
     def _annotate_permuted_std(self, ax_main: Axes) -> None:
@@ -107,17 +119,21 @@ class PCRPlotter:
                 label,
                 va='center',
                 ha='left',
-                fontsize=10,
+                fontsize=self.config.perm_text_fontsize,
                 clip_on=False,
             )
 
     def _add_right_summary_twin_axis(self, ax_main: Axes) -> None:
         """Attach right-side summary labels aligned to y-ticks."""
+        cfg = self.config
         ax_right = ax_main.twinx()
         ax_right.set_ylim(ax_main.get_ylim())
         ax_right.set_yticks(ax_main.get_yticks())
-        ax_right.set_yticklabels([self._covariate_bar_labels.get(c, '') for c in self._covariate_order])
-        ax_right.tick_params(left=False, right=False, length=0)
+        ax_right.set_yticklabels(
+            [self._covariate_bar_labels.get(c, '') for c in self._covariate_order],
+            fontsize=cfg.label_fontsize
+        )
+        ax_right.tick_params(left=False, right=False, length=0, labelsize=cfg.tick_fontsize)
         ax_right.spines['top'].set_visible(False)
         ax_right.spines['right'].set_visible(False)
 
@@ -131,10 +147,19 @@ class PCRPlotter:
             err_kws={'linewidth': 1}, capsize=0.1,
             ax=ax_main,
         )
+        cfg = self.config
         _, x_max = ax_main.get_xlim()
         ax_main.set_xlim(0, x_max * 1.25)
         logging.info(self._covariate_bar_labels)
-        ax_main.bar_label(ax_main.containers[0], labels=self._covariate_bar_labels, padding=10)
+        ax_main.bar_label(ax_main.containers[0], labels=self._covariate_bar_labels, padding=10, fontsize=cfg.bar_label_fontsize)
+        legend = ax_main.get_legend()
+        if legend is not None:
+            try:
+                legend.get_title().set_fontsize(cfg.legend_title_fontsize)
+            except Exception:
+                pass
+            for text in legend.get_texts():
+                text.set_fontsize(cfg.legend_fontsize)
         self._annotate_permuted_std(ax_main)
 
         self._draw_left_panel(ax_left, ax_main.get_ylim())
@@ -157,6 +182,17 @@ class PCRPlotter:
             ax=ax_main,
         )
 
+        # Adjust legend fonts if a legend was created
+        cfg = self.config
+        legend = ax_main.get_legend()
+        if legend is not None:
+            try:
+                legend.get_title().set_fontsize(cfg.legend_title_fontsize+2)
+            except Exception:
+                pass
+            for text in legend.get_texts():
+                text.set_fontsize(cfg.legend_fontsize+2)
+
         self._add_right_summary_twin_axis(ax_main)
 
         self._draw_left_panel(ax_left, ax_main.get_ylim())
@@ -164,6 +200,7 @@ class PCRPlotter:
 
     def _draw_left_panel(self, ax: Axes, y_lim: tuple, xlabel: str = '# covariates') -> None:
         """Draw the left marginal panel with inverted horizontal bar labels."""
+        cfg = self.config
         values = pd.Series(self._n_covariates_values, dtype=float)
         is_categorical = self._covariate_is_categorical.reindex(self._covariate_order).fillna(True).to_numpy()
         max_value = max(float(values.max()), 1.0)
@@ -177,7 +214,7 @@ class PCRPlotter:
 
         ax.set_xlim(max_value * 1.2, 0)
         ax.set_ylim(y_lim)
-        ax.set_xlabel(xlabel)
+        ax.set_xlabel(xlabel, fontsize=cfg.label_fontsize)
         ax.set_yticks([])
 
         for y, v, is_cat in zip(y_positions, values.values, is_categorical):
@@ -189,7 +226,7 @@ class PCRPlotter:
                 # Non-categorical covariates are shown as text-only values in the margin.
                 x_pos = max_value * 0.06
                 ha = 'right'
-            ax.text(x_pos, y, label, va='center', ha=ha, color='black', clip_on=False)
+            ax.text(x_pos, y, label, va='center', ha=ha, color='black', clip_on=False, fontsize=cfg.label_fontsize)
 
         sns.despine(ax=ax, top=True, right=False, left=True, bottom=False)
 
@@ -264,7 +301,7 @@ if df.shape[0] == 0:
     for output in [output_bar, output_violin]:
         fig, ax = plt.subplots()
         ax.axis('off')
-        fig.savefig(output, bbox_inches='tight', dpi=300)
+        fig.savefig(output, bbox_inches='tight')
         plt.close(fig)
     exit(0)
 
