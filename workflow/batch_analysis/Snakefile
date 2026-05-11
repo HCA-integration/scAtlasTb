@@ -54,10 +54,10 @@ include: 'rules/theils_u.smk'
 
 rule all:
     input:
+        rules.pseudobulk_all.input,
+        mcfg.get_output_files(rules.theils_u.output),
         mcfg.get_output_files(rules.batch_pcr_collect.output),
         mcfg.get_output_files(rules.batch_pcr_plot.output),
-        mcfg.get_output_files(rules.theils_u.output),
-        rules.pseudobulk_all.input,
     default_target: True
     localrule: True
 
