@@ -7,6 +7,15 @@ from joblib import Parallel, delayed
 
 import logging
 logging.basicConfig(level=logging.INFO)
+import warnings
+
+# Workaround: suppress deprecation warning raised by some multiprocessing backends
+# calling a now-deprecated `_destroy` helper (appears on Python 3.12+).
+warnings.filterwarnings(
+    "ignore",
+    message=r"Call to deprecated function \(or staticmethod\) _destroy",
+    category=DeprecationWarning,
+)
 
 from utils.io import read_anndata
 
