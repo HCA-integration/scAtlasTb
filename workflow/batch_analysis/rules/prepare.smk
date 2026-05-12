@@ -65,7 +65,7 @@ use rule pca from preprocessing as batch_analysis_pca with:
 
 use rule pseudobulk from sample_representation as batch_analysis_prepare with:
     input:
-        zarr=lambda wildcards: mcfg.get_input_file(**wildcards),
+        zarr=lambda wildcards: get_file(wildcards, 'pca'),
     output:
         zarr=directory(mcfg.out_dir / 'prepare' / paramspace.wildcard_pattern / 'prepare.zarr'),
         bulks=directory(mcfg.out_dir / 'prepare' / paramspace.wildcard_pattern / 'pseudobulks.zarr'),
@@ -73,7 +73,11 @@ use rule pseudobulk from sample_representation as batch_analysis_prepare with:
         sample_key=lambda wildcards: mcfg.get_from_parameters(wildcards, 'sample'),
         layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'raw_counts', default='X'),
         # aggregate=lambda wildcards: mcfg.get_from_parameters(wildcards, 'aggregate', default='sum'),
-        # dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=None),
+        dask=True,
+    threads:
+        lambda w: max(
+            1, mcfg.get_from_parameters(w, 'max_threads', check_query_keys=False, default=1),
+        )
     resources:
         partition=mcfg.get_resource(resource_key='partition'),
         qos=mcfg.get_resource(profile='cpu',resource_key='qos'),
