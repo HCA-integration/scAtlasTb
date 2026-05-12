@@ -46,20 +46,27 @@ module sample_representation:
     snakefile: "rules.smk"
     config: config
 
-include: "rules/rules.smk"
 include: "rules/prepare.smk"
 include: "rules/methods.smk"
 include: "rules/plots.smk"
 
 
 rule plots_all:
+    """
+    Collect all sample representation plots for all datasets and methods
+    """
     input:
         mcfg.get_output_files(rules.plot_distances.output),
         # mcfg.get_output_files(rules.sample_representation_plot_mds.output),
         mcfg.get_output_files(rules.sample_representation_plot_umap.output),
         mcfg.get_output_files(rules.sample_representation_plot_emb.output),
+    localrule: True
 
 rule all:
+    message:
+        """
+        Collect all sample representation analyses for all datasets and methods
+        """
     input:
         mcfg.get_output_files(rules.prepare.output),
         mcfg.get_output_files(rules.run_method.output),

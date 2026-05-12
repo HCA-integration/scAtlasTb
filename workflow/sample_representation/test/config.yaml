@@ -1,10 +1,10 @@
 output_dir: test/out
 images: test/images
 
-defaults:
-  datasets:
-    - test_minimal
-    - test
+# defaults:
+#   datasets:
+#     - test_minimal
+#     - test
 
 DATASETS:
   blood:

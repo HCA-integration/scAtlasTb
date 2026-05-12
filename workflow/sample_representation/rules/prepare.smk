@@ -13,7 +13,7 @@ use rule pseudobulk from sample_representation as prepare with:
         aggregate=lambda wildcards: mcfg.get_from_parameters(wildcards, 'aggregate', default='sum'),
         dask=lambda wildcards: mcfg.get_from_parameters(wildcards, 'dask', default=None),
     conda:
-        get_env(config, 'sample_representation')
+        get_env(config, 'scanpy')
     resources:
         partition=mcfg.get_resource(resource_key='partition'),
         qos=mcfg.get_resource(profile='cpu',resource_key='qos'),

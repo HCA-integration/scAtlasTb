@@ -4,7 +4,6 @@ import warnings
 warnings.simplefilter("ignore", UserWarning)
 import logging
 logging.basicConfig(level=logging.INFO)
-# import patpy as pr
 
 from utils.io import read_anndata, write_zarr, write_zarr_linked, ALL_SLOTS
 from utils.misc import dask_compute
@@ -61,10 +60,9 @@ sc.pp.log1p(adata_bulk)
 logging.info(adata_bulk.__str__())
 
 logging.info(f'Write "{output_bulk_zarr}"...')
-write_zarr(adata_bulk, output_bulk_zarr)
+write_zarr(adata_bulk, output_bulk_zarr, compute=True)
 
 logging.info(f'Write "{output_zarr}"...')
-
 if Path(input_zarr).suffix == '.h5ad':
     obs = adata.obs
     del adata
