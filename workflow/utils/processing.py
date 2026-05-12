@@ -192,7 +192,7 @@ def get_pseudobulks(adata, group_key, agg='sum', dtype='float32', sep='--', grou
         )
 
     # call pseudobulk function
-    pbulks, groups = _get_pseudobulk_matrix(adata, group_key=group_key, agg=agg)
+    pbulks, groups = _get_pseudobulk_matrix(adata, group_key=group_key, agg=agg, dtype=dtype)
 
     # aggregate metadata
     obs = aggregate_obs(adata, group_key, groups, include_cols=group_cols)
