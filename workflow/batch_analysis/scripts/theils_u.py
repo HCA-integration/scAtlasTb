@@ -653,7 +653,7 @@ covariates = snakemake.params.get('covariates', [])
 max_unique_continuous = snakemake.params.get('max_unique_continuous', 10)
 wildcards = snakemake.wildcards
 
-title = f"Theil's U Heatmap\ndataset: {wildcards['dataset']}, file_id: {wildcards['file_id']}"
+title = f"Theil's U Heatmap\ndataset: {wildcards['dataset']}\nfile_id: {wildcards['file_id']}"
 
 # Read data
 logging.info(f'Read {input_file}...')

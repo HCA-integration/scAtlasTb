@@ -22,6 +22,7 @@ use rule plots from preprocessing as batch_analysis_pb_pca_plot with:
         plot_centroids=lambda w: mcfg.get_from_parameters(w, 'pca_plot', default={}).get('plot_centroids', []),
         gene_chunk_size=lambda w: mcfg.get_from_parameters(w, 'pca_plot', default={}).get('plot_gene_chunk_size', 12),
         basis='X_pca',
+        size=10,
     resources:
         partition=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='partition',attempt=attempt),
         qos=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='qos',attempt=attempt),
