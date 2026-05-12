@@ -32,6 +32,6 @@ use rule plots from preprocessing as batch_analysis_pb_pca_plot with:
 
 rule pseudobulk_all:
     input:
-        mcfg.get_output_files(rules.pseudobulk.output),
+        mcfg.get_output_files(rules.batch_analysis_prepare.output),
         mcfg.get_output_files(rules.batch_analysis_pb_pca_plot.output),
     localrule: True
