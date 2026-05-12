@@ -39,9 +39,8 @@ def covariate_valid(obs, covariate, na_strings):
     
     nonunique_map = (
         obs.groupby(sample_key, observed=False)[covariate]
-        .unique()
-        .apply(sorted)
-        .loc[lambda x: x.str.len() > 1]
+        .apply(lambda s: s.dropna().unique())
+        .loc[lambda x: x.map(len) > 1]
     )
     if nonunique_map.shape[0] > 0:
         logging.warning(f'Skipping covariate "{covariate}" because only one value per sample "{sample_key}" allowed')
