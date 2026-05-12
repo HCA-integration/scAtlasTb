@@ -109,7 +109,7 @@ flowchart TD
 ## Output
 
 ### Pseudobulk
-- Pseudobulk AnnData/Zarr output: `<output_dir>/batch_analysis/dataset~<dataset>/file_id~<file_id>/prepare/dataset~<dataset>/file_id~<file_id>/pseudobulks.zarr`
+- Pseudobulk AnnData/Zarr output: `<output_dir>/batch_analysis/prepare/dataset~<dataset>/file_id~<file_id>/pseudobulks.zarr`
 - Pseudobulk PCA plots: `<images>/batch_analysis/dataset~<dataset>/file_id~<file_id>/pca_plots`
 
 ### Principal regression analysis
