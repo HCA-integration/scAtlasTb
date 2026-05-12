@@ -67,10 +67,10 @@ if pca_var.shape[0] != n_pcs:
         f'but PCA matrix has {n_pcs} components'
     )
 
+if sample_key not in adata.obs.columns:
+    raise KeyError(f'Missing required "{sample_key}" column in obs.')
 obs = adata.obs[list({sample_key, covariate})].copy()
 n_covariate = obs[covariate].nunique()
-if sample_key not in obs.columns:
-    raise KeyError(f'Missing required "{sample_key}" column in obs.')
 logging.info(f'Using sample_key="{sample_key}" with {obs[sample_key].nunique()} unique samples')
 
 # make sure the PCA embedding is an array
