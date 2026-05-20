@@ -18,11 +18,11 @@ use rule plots from preprocessing as batch_analysis_pb_pca_plot with:
     output:
         plots=directory(mcfg.image_dir / paramspace.wildcard_pattern / 'pca_plots'),
     params:
+        basis='X_pca',
         color=lambda wildcards: mcfg.get_from_parameters(wildcards, 'covariates', default=[]),
         plot_centroids=lambda w: mcfg.get_from_parameters(w, 'pca_plot', default={}).get('plot_centroids', []),
         gene_chunk_size=lambda w: mcfg.get_from_parameters(w, 'pca_plot', default={}).get('plot_gene_chunk_size', 12),
-        basis='X_pca',
-        size=10,
+        size=lambda w: mcfg.get_from_parameters(w, 'pca_plot', default={}).get('size', 50),
     resources:
         partition=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='partition',attempt=attempt),
         qos=lambda w, attempt: mcfg.get_resource(profile='cpu',resource_key='qos',attempt=attempt),
