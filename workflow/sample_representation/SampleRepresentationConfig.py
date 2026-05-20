@@ -66,6 +66,11 @@ class SampleRepresentationConfig(IntegrationConfig, ModuleConfig):
             'None'
         )
         
+        # set dtype of wildcard columns
+        wildcard_names = self.parameters.wildcard_names
+        for col in wildcard_names:
+            wildcards_df[col] = wildcards_df[col].astype(str)
+
         # drop duplicates
         wildcards_df = wildcards_df.drop_duplicates(
             ['dataset', 'file_id', 'method', 'input_type', 'use_rep', 'var_mask', 'hyperparams']
@@ -81,7 +86,7 @@ class SampleRepresentationConfig(IntegrationConfig, ModuleConfig):
             paramspace_kwargs = {}
         self.update_parameters(
             wildcards_df=wildcards_df,
-            wildcard_names=self.parameters.wildcard_names + ['hyperparams'],
+            wildcard_names=wildcard_names + ['hyperparams'],
             **paramspace_kwargs,
         )
 

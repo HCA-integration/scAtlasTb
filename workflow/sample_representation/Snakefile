@@ -23,6 +23,7 @@ mcfg = SampleRepresentationConfig(
         'min_cells_per_sample',
         'min_cells_per_cell_type',
         'colors',
+        'dask',
     ],
     wildcard_names=['method', 'input_type', 'use_rep', 'var_mask'],
     rename_config_params={'methods': 'method'},
@@ -30,8 +31,19 @@ mcfg = SampleRepresentationConfig(
 )
 paramspace = mcfg.get_paramspace()
 
+
+module common:
+    snakefile: "../common/Snakefile"
+    config: config
+
+use rule * from common as common_ *
+
 module preprocessing:
     snakefile: "../../preprocessing/rules/rules.smk"
+    config: config
+
+module sample_representation:
+    snakefile: "rules.smk"
     config: config
 
 include: "rules/prepare.smk"
@@ -40,26 +52,27 @@ include: "rules/plots.smk"
 
 
 rule plots_all:
+    """
+    Collect all sample representation plots for all datasets and methods
+    """
     input:
         mcfg.get_output_files(rules.plot_distances.output),
         # mcfg.get_output_files(rules.sample_representation_plot_mds.output),
         mcfg.get_output_files(rules.sample_representation_plot_umap.output),
         mcfg.get_output_files(rules.sample_representation_plot_emb.output),
+    localrule: True
 
 rule all:
+    message:
+        """
+        Collect all sample representation analyses for all datasets and methods
+        """
     input:
         mcfg.get_output_files(rules.prepare.output),
         mcfg.get_output_files(rules.run_method.output),
         rules.plots_all.input,
     default_target: True
     localrule: True
-
-
-module common:
-    snakefile: "../common/Snakefile"
-    config: config
-
-use rule * from common as common_ *
 
 
 rule dependency_graph:

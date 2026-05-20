@@ -130,31 +130,38 @@ def get_pseudobulks(adata, group_key, agg='sum', dtype='float32', sep='--', grou
         else:
             raise ValueError(f'invalid aggregation method "{agg}"')
     
-    def _get_pseudobulk_matrix(adata, group_key, agg, dtype=dtype):
+    def _get_pseudobulk_matrix(adata, group_key, agg, dtype=None):
+        dtype = dtype or np.float32
         X = adata.X
         value_counts = adata.obs[group_key].value_counts()
-        
-        # filter groups for at least 2 replicates
         value_counts = value_counts[value_counts >= 2]
         groups = value_counts.index
-        
+
         print(f'Aggregate {len(groups)} pseudobulks...', flush=True)
-        
+
         if isinstance(X, da.Array):
             from dask import config as dask_config
             from tqdm.dask import TqdmCallback
-            
-            df = adata.obs[[group_key]].reset_index(drop=True).query(f'{group_key} in @groups')
+
+            df = adata.obs[[group_key]].reset_index(drop=True).query(f'`{group_key}` in @groups')
             df[group_key] = pd.Categorical(df[group_key], categories=groups, ordered=True)
-            
+
+            sorted_df = df.sort_values(by=group_key)
+
+            # Derive chunk sizes from the sorted order — NOT from value_counts() which is
+            # sorted by count descending and would silently assign cells to wrong groups
+            sorted_group_sizes = (
+                sorted_df[group_key]
+                .value_counts()
+                .reindex(sorted_df[group_key].cat.categories)
+            )
+
             print(f'Sort and rechunk dask array by "{group_key}"...', flush=True)
             with dask_config.set(**{'array.slicing.split_large_chunks': False}):
-                # sort dask array by group_key and rechunk by size of groups
-                # the result should be a dask chunk per pseudobulk group
-                X = X[df.sort_values(by=group_key).index.values] # also subsets for exclued groups
-                X = X.rechunk((tuple(value_counts.values), -1))
+                X = X[sorted_df.index.values]
+                X = X.rechunk((tuple(sorted_group_sizes.values), -1))
                 pseudobulks = X.map_blocks(lambda x: aggregate(x, agg), dtype=dtype)
-            
+
             print(f'Compute aggregation...', flush=True)
             with TqdmCallback(
                 bar_format='{percentage:3.0f}% |{bar}| {elapsed}<{remaining}\n',
@@ -162,28 +169,17 @@ def get_pseudobulks(adata, group_key, agg='sum', dtype='float32', sep='--', grou
                 delay=10,
             ):
                 pseudobulks = pseudobulks.compute()
-                        
+
         elif isinstance(X, (scipy.sparse.spmatrix, np.ndarray)):
             import scanpy as sc
-
-            pbulk_adata = sc.get.aggregate(
-                adata,
-                by=group_key,
-                func=[agg]
-            )
+            pbulk_adata = sc.get.aggregate(adata, by=group_key, func=[agg])
             pbulk_adata = pbulk_adata[pbulk_adata.obs[group_key].isin(groups)].copy()
             pseudobulks = pbulk_adata.layers[agg]
             groups = pbulk_adata.obs_names
-            # miniters = max(10, len(value_counts) // 100)
-            # pseudobulks = []
-            # for group in tqdm(value_counts.index, desc='Aggregate groups', miniters=miniters):
-            #     row_agg = aggregate(adata[adata.obs[group_key] == group].X, agg)
-            #     row_agg = row_agg.A1 if isinstance(row_agg, np.matrix) else row_agg
-            #     pseudobulks.append(row_agg)
-            # pseudobulks = np.stack(pseudobulks, axis=0)
+
         else:
             raise ValueError(f'invalid type "{type(X)}"')
-        
+
         pseudobulks = scipy.sparse.csr_matrix(pseudobulks, dtype='float32')
         return pseudobulks, groups
 
@@ -196,7 +192,7 @@ def get_pseudobulks(adata, group_key, agg='sum', dtype='float32', sep='--', grou
         )
 
     # call pseudobulk function
-    pbulks, groups = _get_pseudobulk_matrix(adata, group_key=group_key, agg=agg)
+    pbulks, groups = _get_pseudobulk_matrix(adata, group_key=group_key, agg=agg, dtype=dtype)
 
     # aggregate metadata
     obs = aggregate_obs(adata, group_key, groups, include_cols=group_cols)

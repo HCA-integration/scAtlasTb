@@ -1,13 +1,13 @@
 checkpoint determine_covariates:
     input:
-        zarr=lambda wildcards: get_file(wildcards, 'pca'),
+        zarr=rules.batch_analysis_prepare.output.zarr,
     output:
         covariate_setup=directory(mcfg.out_dir / paramspace.wildcard_pattern / 'batch_pcr' / 'covariate_setup'),
     params:
         covariates=lambda wildcards: mcfg.get_from_parameters(wildcards, 'covariates', default=[]),
         permute_covariates=lambda wildcards: mcfg.get_from_parameters(wildcards, 'permute_covariates', default=None),
-        sample_key=lambda wildcards: mcfg.get_from_parameters(wildcards, 'sample', check_query_keys=False),
         n_permute=lambda wildcards: mcfg.get_from_parameters(wildcards, 'n_permutations', default=10),
+        na_strings=lambda wildcards: mcfg.get_from_parameters(wildcards, 'na_strings', default=['NA', 'NaN', 'nan', '', 'unknown']),
     conda:
         get_env(config, 'scanpy')
     localrule: True
@@ -32,12 +32,10 @@ def get_from_checkpoint(wildcards, pattern=None):
 
 rule batch_pcr:
     input:
-        zarr=lambda wildcards: get_file(wildcards, 'pca'),
+        zarr=rules.batch_analysis_prepare.output.zarr,
         setup=get_checkpoint_output,
     output:
         tsv=mcfg.out_dir / paramspace.wildcard_pattern / 'batch_pcr' / '{covariate}.tsv',
-    params:
-        sample_key=lambda wildcards: mcfg.get_from_parameters(wildcards, 'sample', check_query_keys=False),
     conda:
         get_env(config, 'scib')
     threads:

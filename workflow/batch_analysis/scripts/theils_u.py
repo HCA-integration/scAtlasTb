@@ -239,7 +239,7 @@ class ClustermapConfig:
     """
     min_fig_size: float = 6.0
     size_per_item: float = 0.6
-    min_fontsize: int = 6
+    min_fontsize: int = 9
     max_fontsize: int = 12
     fontsize_multiplier: float = 12.0
     bar_width: float = 0.1
@@ -356,6 +356,7 @@ class ClustermapPlotter:
             "cmap": self._get_plot_cmap(),
             "vmin": self.config.vmin,
             "vmax": self.config.vmax,
+            "annot_kws": {"size": self._fontsize},
         }
 
     def _style_colorbar_label(self, cbar_ax: Axes) -> None:
@@ -653,7 +654,7 @@ covariates = snakemake.params.get('covariates', [])
 max_unique_continuous = snakemake.params.get('max_unique_continuous', 10)
 wildcards = snakemake.wildcards
 
-title = f"Theil's U Heatmap\ndataset: {wildcards['dataset']}, file_id: {wildcards['file_id']}"
+title = f"Theil's U Heatmap\ndataset: {wildcards['dataset']}\nfile_id: {wildcards['file_id']}"
 
 # Read data
 logging.info(f'Read {input_file}...')

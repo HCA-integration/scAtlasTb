@@ -17,10 +17,12 @@ mcfg = ModuleConfig(
         'n_permutations',
         'max_threads',
         'sample',
+        'na_strings',
         'raw_counts',
         'normalize',
         'highly_variable_genes',
         'pca',
+        'pca_plot',
     ],
     dtypes={
         'max_threads': int,
@@ -33,6 +35,10 @@ module preprocessing:
     snakefile: "../../preprocessing/rules/rules.smk"
     config: config
 
+module sample_representation:
+    snakefile: "../../sample_representation/rules/rules.smk"
+    config: config
+
 module common:
     snakefile: "../common/Snakefile"
     config: config
@@ -41,15 +47,17 @@ use rule * from common as common_ *
 
 
 include: 'rules/prepare.smk'
+include: 'rules/pseudobulk.smk'
 include: 'rules/batch_pcr.smk'
 include: 'rules/theils_u.smk'
 
 
 rule all:
     input:
+        rules.pseudobulk_all.input,
+        mcfg.get_output_files(rules.theils_u.output),
         mcfg.get_output_files(rules.batch_pcr_collect.output),
         mcfg.get_output_files(rules.batch_pcr_plot.output),
-        mcfg.get_output_files(rules.theils_u.output),
     default_target: True
     localrule: True
 
