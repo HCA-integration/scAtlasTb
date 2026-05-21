@@ -39,7 +39,7 @@ def ari_leiden_y(adata, output_type, batch_key, label_key, **kwargs):
 
 
 def ari_kmeans_y(adata, output_type, batch_key, label_key, **kwargs):
-    from scib_metrics import nmi_ari_cluster_labels_kmeans
+    import scib_metrics
     
     labels = rename_categories(adata, label_key)
     adata = select_neighbors(adata, output_type)
