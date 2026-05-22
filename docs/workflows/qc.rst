@@ -115,38 +115,38 @@ Joint plots
 ===========
 
 .. code-block:: bash
-    
-    $ ls -l images/qc/dataset~example_qc_analysis/file_id~test1/
-    
-    total 16
-    drwxr-xr-x@ 3 michaela.mueller  2125895594   96 Jun 30 16:08 joint_plots
-    -rw-r--r--@ 1 michaela.mueller  2125895594   46 Jun 30 16:06 qc_stats.tsv
-    drwxr-xr-x@ 5 michaela.mueller  2125895594  160 Jun 30 16:07 removed
-    -rw-r--r--@ 1 michaela.mueller  2125895594  498 Jun 30 16:06 thresholds.tsv
+
+    $ ls images/qc/dataset~example_qc_analysis/file_id~test1/
+
+    joint_plots  qc_stats.tsv  removed  thresholds.tsv
 
 
 .. code-block:: bash
-    
-    $ ls -l images/qc/dataset\~example_qc_analysis/file_id\~test1/joint_plots
-    
-    total 0
-    drwxr-xr-x@ 6 michaela.mueller  2125895594  192 Jun 30 16:22 hue=batch
-    drwxr-xr-x@ 6 michaela.mueller  2125895594  192 Jun 30 16:22 hue=bulk_labels
-    drwxr-xr-x@ 6 michaela.mueller  2125895594  192 Jun 30 16:22 hue=percent_mito
-    drwxr-xr-x@ 6 michaela.mueller  2125895594  192 Jun 30 16:22 hue=phase
-    drwxr-xr-x@ 6 michaela.mueller  2125895594  192 Jun 30 16:22 hue=qc_status
+
+    $ ls images/qc/dataset\~example_qc_analysis/file_id\~test1/joint_plots
+
+    'hue=batch.svg'  'hue=bulk_labels.svg'  'hue=phase.svg'  'hue=qc_status.svg'
 
 
-Each of the plot outputs contains all the hues that you have defined in the config.
-For `joint_plots`, additional hues have been added for mitochondrial percent and qc status, as inferred by the QC metric computation stage.
-For each hue, there are different joint plots that combine either the number of UMI counts per cell against number of expressed genes or the number of expressed genes against mitochondrial percentage.
+Each scatter plot output is now a single SVG file containing all configured QC metric pairs, with linear-scale and log-scale panels arranged side by side.
+The workflow writes one scatter plot per configured hue and always adds `hue=qc_status.svg`.
+If no valid hue columns are available, the workflow writes `main.svg` instead of hue-specific scatter plots.
+The density plots are also combined into a single `density.svg` file rather than separate files per metric pair.
 
-.. image:: ../_static/images/qc/dataset~example_qc_analysis/file_id~test1/joint_plots/hue=bulk_labels/n_genes_vs_percent_mito.png
-   :alt: bulk_labels_mito
+The `removed` directory contains the QC summary plots for the same `file_id`:
 
+.. code-block:: bash
 
-.. image:: ../_static/images/qc/dataset~example_qc_analysis/file_id~test1/joint_plots/hue=bulk_labels/log_10_n_counts_vs_log_10_n_genes.png
-   :alt: bulk_labels_counts
+    $ ls images/qc/dataset\~example_qc_analysis/file_id\~test1/removed
+
+    'by=batch.svg'  'by=bulk_labels.svg'  'by=phase.svg'   cells_passed_all.svg   per_metric_violin.svg
+
+The `by={hue}.svg` plots summarise removed cells per annotation, `cells_passed_all.svg` shows the overall QC status counts, and `per_metric_violin.svg` shows the per-metric distributions split by QC status.
+
+Example outputs are shown below:
+
+.. image:: ../_static/images/qc/dataset~example_qc_analysis/file_id~test1/joint_plots/hue=bulk_labels.svg
+   :alt: bulk_labels_joint_plot
 
 
 TL;DR Full Configuration

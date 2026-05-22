@@ -73,8 +73,14 @@ The output of the QC workflow is a set of plots and tables that visualise the qu
 
 ### Outputs include:
 
-* Joint scatter plots of QC metrics stratified by `hues` and joint density plots in log scale and regular scale
-* Barplots of removed cells, stratified by `hues`
+* Joint QC plots under `<images_dir>/dataset~{dataset}/file_id~{file_id}/joint_plots/`
+  * `main.svg`: scatter plots for all configured QC metric pairs without hue stratification
+  * `hue={hue}.svg`: scatter plots for all configured QC metric pairs colored by each configured hue and by `qc_status`
+  * `density.svg`: one combined density figure covering all configured QC metric pairs, with regular-scale and log-scale panels side by side
+* QC removal plots under `<images_dir>/dataset~{dataset}/file_id~{file_id}/removed/`
+  * `by={hue}.svg`: removed-cell summaries stratified by each configured hue
+  * `cells_passed_all.svg`: overall counts of passed, failed, and ambiguous cells
+  * `per_metric_violin.svg`: per-metric QC distributions split by QC status
 * Table of thresholds used for filtering cells at the dataset and file level
 * Thresholds TSV containing the autoQC, user-provided, alternative and updated thresholds
   * Updated thresholds are based on the autoQC thresholds, overwritten by the user-provided thresholds (alternative thresholds are not considered in this case)
@@ -82,7 +88,7 @@ The output of the QC workflow is a set of plots and tables that visualise the qu
   * The combined thresholds are stored under `<images_dir>/dataset~{dataset}/thresholds.tsv`
 * QC status summary table
   * Table that contains the number of cells of the QC status categories 'passed', 'failed', 'ambiguous' on a per file_id basis
-  * The combined summary is stored under `<images_dir>/dataset~{dataset}/qc_summary.tsv`
+  * The combined summary is stored under `<images_dir>/dataset~{dataset}/qc_stats.tsv`
 * An anndata file in zarr format containing the QC metrics and status of each cell
   * The metrics are stored under `adata.obs[['n_counts', 'n_genes', 'percent_mito']]`
   * The QC status is stored under `adata.obs['qc_status']`
