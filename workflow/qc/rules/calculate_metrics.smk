@@ -11,6 +11,7 @@ rule autoqc:
         unpack(get_input)
     output:
         zarr=directory(mcfg.out_dir / 'autoqc' / f'{params.wildcard_pattern}.zarr'),
+        qc_metrics=mcfg.out_dir / params.wildcard_pattern / 'qc_metrics.parquet',
     params:
         layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'counts', default='X'),
         metrics_params=lambda wildcards: mcfg.get_from_parameters(wildcards, 'scautoqc_metrics_params'),
