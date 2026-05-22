@@ -1,4 +1,6 @@
 import ast
+from types import SimpleNamespace
+
 import numpy as np
 import pandas as pd
 import anndata as ad
@@ -142,10 +144,18 @@ def plot_qc_joint(
     marginal_hue=None,
     x_threshold=None,
     y_threshold=None,
-    threshold_color='red',
+    x_threshold2=None,
+    y_threshold2=None,
+    threshold_color='black',
+    threshold_color2='black',
+    threshold_linestyle='-',
+    threshold_linestyle2='--',
     title='',
     return_df=False,
-    marginal_kwargs: dict=None,
+    marginal_kwargs: dict = None,
+    fig=None,
+    subplot_spec=None,
+    sharey=None,
     **kwargs,
 ):
     """
@@ -154,26 +164,29 @@ def plot_qc_joint(
     :param df: observation dataframe
     :param x: df column for x axis
     :param y: df column for y axis
-    :param log: log base for transforming values. Default 1, no transformation
+    :param log_x: log base for transforming x values. Default 1, no transformation
+    :param log_y: log base for transforming y values. Default 1, no transformation
     :param hue: df column with annotations for color coding scatter plot points
     :param marginal_hue: df column with annotations for color coding marginal plot distributions
-    :param x_threshold: tuple of upper and lower filter thresholds for x axis
-    :param y_threshold: tuple of upper and lower filter thresholds for y axis
-    :param title: Title text for plot
-    :return:
-        seaborn plot (and df dataframe with updated values, if `return_df=True`)
+    :param x_threshold: tuple of (min, max) filter thresholds for x axis
+    :param y_threshold: tuple of (min, max) filter thresholds for y axis
+    :param sharey: existing Axes to share y axis with (subplot_spec mode only)
+    :param title: title text for plot
+    :return: seaborn plot (and df dataframe with updated values, if `return_df=True`)
     """
+    import matplotlib.pyplot as plt
     import seaborn as sns
-    
+
+    df = df.copy()  # prevent in-place mutation of caller's dataframe
+
     if main_plot_function is None:
         main_plot_function = sns.scatterplot
-    if not x_threshold:
-        x_threshold=(0, np.inf)
-    if not y_threshold:
-        y_threshold=(0, np.inf)
 
-    log_x = 1 if log_x is None else log_x
-    log_y = 1 if log_y is None else log_y
+    # Use `is None` to avoid falsiness issues with tuples containing 0
+    x_threshold  = (0, np.inf) if x_threshold  is None else x_threshold
+    y_threshold  = (0, np.inf) if y_threshold  is None else y_threshold
+    x_threshold2 = (0, np.inf) if x_threshold2 is None else x_threshold2
+    y_threshold2 = (0, np.inf) if y_threshold2 is None else y_threshold2
 
     def log1p_base(_x, base):
         return np.log1p(_x) / np.log(base)
@@ -181,91 +194,167 @@ def plot_qc_joint(
     if log_x > 1:
         x_log = f'log{log_x} {x}'
         df[x_log] = log1p_base(df[x], log_x)
-        x_threshold = log1p_base(x_threshold, log_x)
+        x_threshold  = log1p_base(x_threshold,  log_x)
+        x_threshold2 = log1p_base(x_threshold2, log_x)
         x = x_log
-    
+
     if log_y > 1:
         y_log = f'log{log_y} {y}'
         df[y_log] = log1p_base(df[y], log_y)
-        y_threshold = log1p_base(y_threshold, log_y)
+        y_threshold  = log1p_base(y_threshold,  log_y)
+        y_threshold2 = log1p_base(y_threshold2, log_y)
         y = y_log
-        
+
+    def thresholds_equal(a, b):
+        a, b = np.asarray(a, dtype=float), np.asarray(b, dtype=float)
+        return a.shape == b.shape and np.allclose(a, b, equal_nan=True)
+
+    # Avoid plotting duplicate autoQC lines when they match user thresholds
+    if thresholds_equal(x_threshold, x_threshold2):
+        x_threshold2 = (0, np.inf)
+    if thresholds_equal(y_threshold, y_threshold2):
+        y_threshold2 = (0, np.inf)
+
     if marginal_kwargs is None:
         marginal_kwargs = dict(legend=False)
-    
+
     if marginal_hue in df.columns:
         marginal_hue = None if df[marginal_hue].nunique() > 100 else marginal_hue
     use_marg_hue = marginal_hue is not None
-    
+
     if not use_marg_hue:
-         marginal_kwargs.pop('palette', None)
-    
-    g = sns.JointGrid(
-        data=df,
-        x=x,
-        y=y,
-        xlim=(0, df[x].max()),
-        ylim=(0, df[y].max()),
-    )
+        marginal_kwargs.pop('palette', None)
 
-    # x threshold
-    for t, t_def in zip(x_threshold, (0, np.inf)):
-        if t != t_def:
-            g.ax_joint.axvline(x=t, color=threshold_color)
-            g.ax_marg_x.axvline(x=t, color=threshold_color)
-
-    # y threshold
-    for t, t_def in zip(y_threshold, (0, np.inf)):
-        if t != t_def:
-            g.ax_joint.axhline(y=t, color=threshold_color)
-            g.ax_marg_y.axhline(y=t, color=threshold_color)
-    
-    # main plot
     if hue in df.columns and pd.api.types.is_categorical_dtype(df[hue]):
         # sort so smaller groups are plotted on top of larger groups
         hue_order = df[hue].value_counts(ascending=False).index
     else:
         hue_order = None
-    
-    g.plot_joint(
-        main_plot_function,
-        data=df,
-        hue=hue,
-        hue_order=hue_order,
-        **kwargs
-    )
-    
-    # marginal hist plot
-    g.plot_marginals(
-        sns.histplot,
-        data=df,
-        hue=marginal_hue,
-        hue_order=hue_order if use_marg_hue else None,
-        element='step' if use_marg_hue else 'bars',
-        fill=False,
-        bins=100,
-        **marginal_kwargs,
-    )
 
-    # Hide shared axes ticks
-    g.ax_marg_x.tick_params(axis='x', bottom=False, labelbottom=False)
-    g.ax_marg_y.tick_params(axis='y', left=False, labelleft=False)
+    def _draw_thresholds(ax_joint, ax_marg_x, ax_marg_y):
+        # Plot autoQC (2) first, then user/updated (1) on top
+        for t, t_def in zip(x_threshold2, (0, np.inf)):
+            if t != t_def:
+                ax_joint.axvline(x=t, color=threshold_color2, linestyle=threshold_linestyle2)
+                ax_marg_x.axvline(x=t, color=threshold_color2, linestyle=threshold_linestyle2)
+        for t, t_def in zip(x_threshold, (0, np.inf)):
+            if t != t_def:
+                ax_joint.axvline(x=t, color=threshold_color, linestyle=threshold_linestyle)
+                ax_marg_x.axvline(x=t, color=threshold_color, linestyle=threshold_linestyle)
+        for t, t_def in zip(y_threshold2, (0, np.inf)):
+            if t != t_def:
+                ax_joint.axhline(y=t, color=threshold_color2, linestyle=threshold_linestyle2)
+                ax_marg_y.axhline(y=t, color=threshold_color2, linestyle=threshold_linestyle2)
+        for t, t_def in zip(y_threshold, (0, np.inf)):
+            if t != t_def:
+                ax_joint.axhline(y=t, color=threshold_color, linestyle=threshold_linestyle)
+                ax_marg_y.axhline(y=t, color=threshold_color, linestyle=threshold_linestyle)
 
-    g.fig.suptitle(title, fontsize=14)
-    # workaround for patchworklib
-    g._figsize = g.fig.get_size_inches()
+    def _plot_on_axes(ax_joint, ax_marg_x, ax_marg_y):
+        main_plot_function(
+            data=df, x=x, y=y, hue=hue, hue_order=hue_order, ax=ax_joint, **kwargs,
+        )
 
-    if hue is not None:
-        # handles, labels = g.ax_joint.get_legend_handles_labels()
-        markerscale = (60 / kwargs.get('s', 20)) ** 0.5
-        if kwargs.get("legend", True):
-            handles, labels = g.ax_joint.get_legend_handles_labels()
+        if hue is not None and kwargs.get('legend', True):
+            handles, labels = ax_joint.get_legend_handles_labels()
             if handles:
-                g.ax_joint.legend(
-                    markerscale=markerscale,
-                    fontsize=g.ax_joint.xaxis.label.get_size(),
+                ax_joint.legend(
+                    handles=handles,
+                    labels=labels,
+                    markerscale=(60 / kwargs.get('s', 20)) ** 0.5,
+                    fontsize=ax_joint.xaxis.label.get_size(),
                 )
 
+        hist_kwargs = dict(
+            data=df,
+            hue=marginal_hue,
+            hue_order=hue_order if use_marg_hue else None,
+            element='step' if use_marg_hue else 'bars',
+            fill=False,
+            bins=100,
+            **marginal_kwargs,
+        )
+        sns.histplot(x=x, ax=ax_marg_x, **hist_kwargs)
+        sns.histplot(y=y, ax=ax_marg_y, **hist_kwargs)
+        _draw_thresholds(ax_joint, ax_marg_x, ax_marg_y)
+
+        ax_marg_x.tick_params(axis='x', bottom=False, labelbottom=False)
+        ax_marg_y.tick_params(axis='y', left=False, labelleft=False)
+        ax_marg_x.spines['top'].set_visible(False)
+        ax_marg_x.spines['right'].set_visible(False)
+        ax_marg_y.spines['top'].set_visible(False)
+        ax_marg_y.spines['right'].set_visible(False)
+        for ax in (ax_marg_x, ax_marg_y):
+            ax.set_xlabel('')
+            ax.set_ylabel('')
+
+        x_max = float(np.nanmax(df[x]))
+        y_max = float(np.nanmax(df[y]))
+        if x_max >= 1e4:
+            ax_joint.ticklabel_format(axis='x', style='sci', scilimits=(4, 4))
+            ax_marg_x.ticklabel_format(axis='x', style='sci', scilimits=(4, 4))
+        if y_max >= 1e4:
+            ax_joint.ticklabel_format(axis='y', style='sci', scilimits=(4, 4))
+            ax_marg_y.ticklabel_format(axis='y', style='sci', scilimits=(4, 4))
+
+        ax_joint.set_xlim(0, x_max)
+        ax_joint.set_ylim(0, y_max)
+        ax_joint.set_xlabel(x)
+        ax_joint.set_ylabel(y)
+        ax_joint.spines['top'].set_visible(False)
+        ax_joint.spines['right'].set_visible(False)
+
+        return SimpleNamespace(
+            fig=ax_joint.figure,
+            ax_joint=ax_joint,
+            ax_marg_x=ax_marg_x,
+            ax_marg_y=ax_marg_y,
+            _figsize=ax_joint.figure.get_size_inches(),
+        )
+
+    if subplot_spec is not None:
+        if fig is None:
+            fig = getattr(subplot_spec, 'figure', None)
+            if fig is None:
+                fig = subplot_spec.get_gridspec().figure
+        inner = subplot_spec.subgridspec(
+            2, 2,
+            height_ratios=[1, 4],
+            width_ratios=[4, 1],
+            hspace=0,
+            wspace=0,
+        )
+        ax_joint  = fig.add_subplot(inner[1, 0], sharey=sharey)
+        ax_marg_x = fig.add_subplot(inner[0, 0], sharex=ax_joint)
+        ax_marg_y = fig.add_subplot(inner[1, 1], sharey=ax_joint)
+        fig.add_subplot(inner[0, 1]).set_axis_off()
+
+        # Hide tick labels at the shared boundary
+        plt.setp(ax_marg_x.get_xticklabels(), visible=False)
+        plt.setp(ax_marg_y.get_yticklabels(), visible=False)
+        ax_marg_x.tick_params(axis='x', bottom=False)
+        ax_marg_y.tick_params(axis='y', left=False)
+
+        # When sharing y with an external axis, hide the y tick labels to avoid duplication
+        if sharey is not None:
+            plt.setp(ax_joint.get_yticklabels(), visible=False)
+            ax_joint.set_ylabel('')
+
+        # Remove facing spines so marginal and joint look connected
+        ax_marg_x.spines['bottom'].set_visible(False)
+        ax_marg_y.spines['left'].set_visible(False)
+
+        g = _plot_on_axes(ax_joint, ax_marg_x, ax_marg_y)
+        g.fig.suptitle(title, fontsize=14)
+        if return_df:
+            return g, df
+        return g
+
+    # JointGrid handles sharex/sharey internally
+    g = sns.JointGrid(data=df, x=x, y=y, xlim=(0, df[x].max()), ylim=(0, df[y].max()))
+    g = _plot_on_axes(g.ax_joint, g.ax_marg_x, g.ax_marg_y)
+    g.fig.suptitle(title, fontsize=14)
+    g._figsize = g.fig.get_size_inches()
     if return_df:
         return g, df
     return g
