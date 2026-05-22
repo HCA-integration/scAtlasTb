@@ -50,14 +50,28 @@ def parse_parameters(adata: ad.AnnData, params: dict, filter_hues: bool = False)
 def parse_autoqc(autoqc_thresholds: pd.DataFrame, thresholds: dict = None):
     if thresholds is None:
         thresholds = {}
-    thresholds |= {
-        f'{key}_min': autoqc_thresholds.loc[key, 'low']
-        for key in autoqc_thresholds.index
-    }
-    thresholds |={
-        f'{key}_max': autoqc_thresholds.loc[key, 'high']
-        for key in autoqc_thresholds.index
-    }
+    if autoqc_thresholds is None or autoqc_thresholds.empty:
+        return thresholds
+
+    has_side = 'side' in autoqc_thresholds.columns
+    for key in autoqc_thresholds.index:
+        low = autoqc_thresholds.loc[key, 'low']
+        high = autoqc_thresholds.loc[key, 'high']
+        side = autoqc_thresholds.loc[key, 'side'] if has_side else None
+
+        low = None if pd.isna(low) else low
+        high = None if pd.isna(high) else high
+
+        if isinstance(side, str):
+            side = side.lower()
+            if side == 'max_only':
+                low = None
+            elif side == 'min_only':
+                high = None
+
+        thresholds[f'{key}_min'] = low
+        thresholds[f'{key}_max'] = high
+
     return thresholds
 
 
@@ -129,8 +143,16 @@ def apply_thresholds(
     if adata.n_obs == 0:
         return
     for key in threshold_keys:
-        adata.obs[column_name] = adata.obs[column_name] \
-            & adata.obs[key].between(*thresholds[key])
+        lower, upper = thresholds[key]
+        if lower is None and upper is None:
+            continue
+        if lower is None:
+            passed = adata.obs[key] <= upper
+        elif upper is None:
+            passed = adata.obs[key] >= lower
+        else:
+            passed = adata.obs[key].between(lower, upper)
+        adata.obs[column_name] = adata.obs[column_name] & passed.fillna(False)
 
 
 def plot_qc_joint(
@@ -170,6 +192,9 @@ def plot_qc_joint(
     :param marginal_hue: df column with annotations for color coding marginal plot distributions
     :param x_threshold: tuple of (min, max) filter thresholds for x axis
     :param y_threshold: tuple of (min, max) filter thresholds for y axis
+    :param fig: existing matplotlib Figure used when `subplot_spec` is provided
+    :param subplot_spec: optional matplotlib SubplotSpec to draw into an existing grid layout.
+        When provided, creates joint/marginal axes inside this slot instead of creating a new JointGrid figure.
     :param sharey: existing Axes to share y axis with (subplot_spec mode only)
     :param title: title text for plot
     :return: seaborn plot (and df dataframe with updated values, if `return_df=True`)
@@ -182,11 +207,19 @@ def plot_qc_joint(
     if main_plot_function is None:
         main_plot_function = sns.scatterplot
 
-    # Use `is None` to avoid falsiness issues with tuples containing 0
-    x_threshold  = (0, np.inf) if x_threshold  is None else x_threshold
-    y_threshold  = (0, np.inf) if y_threshold  is None else y_threshold
-    x_threshold2 = (0, np.inf) if x_threshold2 is None else x_threshold2
-    y_threshold2 = (0, np.inf) if y_threshold2 is None else y_threshold2
+    def _normalize_threshold_pair(threshold):
+        # None/NaN bounds mean open interval on that side.
+        if threshold is None:
+            return (0, np.inf)
+        lower, upper = threshold
+        lower = 0 if lower is None or pd.isna(lower) else lower
+        upper = np.inf if upper is None or pd.isna(upper) else upper
+        return (lower, upper)
+
+    x_threshold = _normalize_threshold_pair(x_threshold)
+    y_threshold = _normalize_threshold_pair(y_threshold)
+    x_threshold2 = _normalize_threshold_pair(x_threshold2)
+    y_threshold2 = _normalize_threshold_pair(y_threshold2)
 
     def log1p_base(_x, base):
         return np.log1p(_x) / np.log(base)

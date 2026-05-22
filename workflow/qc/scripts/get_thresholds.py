@@ -41,7 +41,17 @@ def thresholds_to_df(df, wildcards, qc_type=None, **kwargs):
     # apply thresholds
     df['passed_qc'] = True
     for key in kwargs['threshold_keys']:
-        df['passed_qc'] = df['passed_qc'] & df[key].between(thresholds[f'{key}_min'], thresholds[f'{key}_max'])
+        lower = thresholds[f'{key}_min']
+        upper = thresholds[f'{key}_max']
+        if lower is None and upper is None:
+            passed = True
+        elif lower is None:
+            passed = df[key] <= upper
+        elif upper is None:
+            passed = df[key] >= lower
+        else:
+            passed = df[key].between(lower, upper)
+        df['passed_qc'] = df['passed_qc'] & pd.Series(passed, index=df.index).fillna(False)
     passed_qc = pd.Categorical(df['passed_qc'], categories=[True, False]).value_counts()
     
     thresholds = dict(
@@ -150,7 +160,7 @@ adata.obs.loc[~(user_status | alt_status), 'qc_status'] = 'failed'
 # convert QC status to ordered categorical
 adata.obs['qc_status'] = pd.Categorical(
     adata.obs['qc_status'],
-    categories=['ambiguous', 'failed', 'passed'],
+    categories=['passed', 'failed', 'ambiguous'],
     ordered=True
 )
 
