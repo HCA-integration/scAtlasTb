@@ -391,3 +391,251 @@ def plot_qc_joint(
     if return_df:
         return g, df
     return g
+
+
+class DatashaderKDE:
+    """Fast KDE for JointGrid with outlier sensitivity and scale awareness."""
+
+    def __init__(
+        self,
+        sigma=5,
+        plot_width=400,
+        plot_height=400,
+        outlier_boost=1.0,
+        outlier_quantile=0.95,
+    ):
+        self.sigma = sigma
+        self.plot_width = plot_width
+        self.plot_height = plot_height
+        self.outlier_boost = outlier_boost
+        self.outlier_quantile = outlier_quantile
+
+    def plot(
+        self,
+        x_data,
+        y_data,
+        ax=None,
+        cmap='plasma',
+        alpha=0.8,
+        levels=5,
+        thresh=0.05,
+        padding=0.05,
+        **kwargs,
+    ):
+        """Plot KDE density. Usage: g.plot_joint(kde.plot, ...)"""
+        import matplotlib.pyplot as plt
+
+        if ax is None:
+            ax = plt.gca()
+
+        # Process data pipeline
+        x_clean, y_clean = self._clean_data(x_data, y_data)
+        if len(x_clean) == 0:
+            return ax
+
+        if self.outlier_boost > 1.0:
+            x_clean, y_clean = self._boost_outliers(x_clean, y_clean)
+
+        x_range, y_range = self._compute_ranges(x_clean, y_clean, padding)
+        agg = self._rasterize(x_clean, y_clean, x_range, y_range)
+
+        sigma_data = self._compute_sigma(ax, x_range)
+        smoothed = self._smooth(agg.values, sigma_data)
+
+        # Render
+        self._render(ax, smoothed, x_range, y_range, cmap, alpha, thresh, levels)
+        return ax
+
+    def _clean_data(self, x, y):
+        """Remove NaN/Inf values."""
+        x, y = np.asarray(x), np.asarray(y)
+        mask = np.isfinite(x) & np.isfinite(y)
+        return x[mask], y[mask]
+
+    def _boost_outliers(self, x, y):
+        """Amplify low-density outliers by replication."""
+        from sklearn.neighbors import KDTree
+
+        xy = np.column_stack([x, y])
+        tree = KDTree(xy)
+        densities = tree.query(xy, k=20, return_distance=False).shape[1] / 20
+
+        outlier_mask = densities < np.quantile(densities, self.outlier_quantile)
+        n_outliers = outlier_mask.sum()
+
+        if n_outliers == 0:
+            return x, y
+
+        boost_factor = int(self.outlier_boost)
+        outlier_points = np.repeat(xy[outlier_mask], boost_factor, axis=0)
+        main_points = xy[~outlier_mask]
+        xy_boosted = np.vstack([main_points, outlier_points])
+
+        return xy_boosted[:, 0], xy_boosted[:, 1]
+
+    def _compute_ranges(self, x, y, padding):
+        """Compute padded data limits."""
+        x_range = [
+            x.min() - padding * (x.max() - x.min()),
+            x.max() + padding * (x.max() - x.min()),
+        ]
+        y_range = [
+            y.min() - padding * (y.max() - y.min()),
+            y.max() + padding * (y.max() - y.min()),
+        ]
+        return x_range, y_range
+
+    def _rasterize(self, x, y, x_range, y_range):
+        """Rasterize points to density aggregate."""
+        import datashader as ds
+
+        df = pd.DataFrame({"x": x, "y": y})
+        canvas = ds.Canvas(self.plot_width, self.plot_height, x_range, y_range)
+        return canvas.points(df, "x", "y")
+
+    def _compute_sigma(self, ax, x_range):
+        """Scale-aware sigma calculation."""
+        x_is_log = ax.get_xscale() == 'log'
+        y_is_log = ax.get_yscale() == 'log'
+
+        pixel_size = (x_range[1] - x_range[0]) / self.plot_width
+        base_sigma = max(0.1, min(self.sigma * pixel_size, 50))
+
+        log_factor = (
+            0.3
+            if (x_is_log and y_is_log)
+            else (0.5 if (x_is_log or y_is_log) else 1.0)
+        )
+        outlier_factor = 0.8 if self.outlier_boost > 1.0 else 1.0
+
+        return base_sigma * log_factor * outlier_factor
+
+    def _smooth(self, data, sigma):
+        """Apply gaussian smoothing with error handling."""
+        from scipy.ndimage import gaussian_filter
+
+        try:
+            return gaussian_filter(data, sigma=sigma)
+        except OverflowError:
+            return gaussian_filter(data, sigma=2.0)
+
+    def _render(
+        self,
+        ax,
+        smoothed,
+        x_range,
+        y_range,
+        cmap,
+        alpha,
+        thresh,
+        levels,
+        **kwargs,
+    ):
+        """Render smoothed density with masking and contours."""
+        smoothed_norm = (
+            smoothed / smoothed.max() if smoothed.max() > 0 else smoothed
+        )
+        masked = np.ma.masked_where(smoothed_norm < thresh, smoothed_norm)
+
+        extent = [*x_range, *y_range]
+        ax.imshow(
+            masked,
+            origin="lower",
+            extent=extent,
+            aspect="auto",
+            cmap=cmap,
+            alpha=alpha,
+            interpolation="bilinear",
+            **kwargs,
+        )
+
+
+def plot_density(
+    df,
+    x,
+    y,
+    thresholds,
+    auto_thresholds=None,
+    log_x=1,
+    log_y=1,
+    large_threshold=500_000,
+    kde_plot_kwargs: dict=None,
+    datashader_kwargs: dict=None,
+    force_kde=False,
+    threshold_color='black',
+    threshold_color2='black',
+    threshold_linestyle='-',
+    threshold_linestyle2='--',
+    title='',
+    fig=None,
+    subplot_spec=None,
+    sharey=None,
+):
+    """
+    Plots bivariate density using seaborn KDE for small datasets
+    and Datashader for large datasets, integrated with plot_qc_joint.
+    
+    Parameters
+    ----------
+    df : pd.DataFrame
+    x, y : str
+        Columns to plot
+    thresholds : dict
+        Optional thresholds for joint QC plotting
+    log_x, log_y : bool
+        Whether to log-transform x or y
+    large_threshold : int
+        Dataset size above which Datashader is used
+    """
+    import seaborn as sns
+    from matplotlib import pyplot as plt
+
+    if kde_plot_kwargs is None:
+        kde_plot_kwargs = {}
+    kde_plot_kwargs = dict(fill=True, cmap='plasma', alpha=0.8, **kde_plot_kwargs)
+
+    force_kde |= 100_000 < df.shape[0] < large_threshold
+    if force_kde:
+        # subset to max of 300k cells due to high computational cost
+        df = df.sample(n=int(min(300_000, df.shape[0])), random_state=42)
+
+    df_plot = df.copy()
+
+    if len(df_plot) > large_threshold:
+        if datashader_kwargs is None:
+            datashader_kwargs = {}
+        datashader_kwargs = dict(
+            plot_width=800,
+            plot_height=800,
+            outlier_boost=2,
+            outlier_quantile=0.95,
+        ) | datashader_kwargs
+        kde = DatashaderKDE(**datashader_kwargs)
+        kde_plot_func = kde.plot
+    else:
+        kde_plot_func = sns.kdeplot
+        if len(df_plot) > 5e4:
+            # heuristic for faster fitting
+            kde_plot_kwargs.update(bw_adjust=4, gridsize=75, thresh=0.2, levels=5)
+
+    plot_qc_joint(
+        df_plot,
+        x=x,
+        y=y,
+        main_plot_function=kde_plot_func,
+        log_x=log_x,
+        log_y=log_y,
+        x_threshold=thresholds.get(x),
+        y_threshold=thresholds.get(y),
+        x_threshold2=(auto_thresholds.get(x) if auto_thresholds else None),
+        y_threshold2=(auto_thresholds.get(y) if auto_thresholds else None),
+        threshold_color=threshold_color,
+        threshold_color2=threshold_color2,
+        threshold_linestyle=threshold_linestyle,
+        threshold_linestyle2=threshold_linestyle2,
+        title=title,
+        fig=fig,
+        subplot_spec=subplot_spec,
+        sharey=sharey,
+        **kde_plot_kwargs,
+    )
