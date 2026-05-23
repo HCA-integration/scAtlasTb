@@ -8,7 +8,9 @@ import anndata as ad
 
 QC_FLAGS = [
     'n_counts',
+    'log1p_n_counts',
     'n_genes',
+    'log1p_n_genes',
     'percent_mito',
     'n_counts_mito',
     'percent_ribo',

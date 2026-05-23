@@ -35,18 +35,17 @@ adata = read_anndata(
     dask=True,
     backed=True,
 )
+qc_metric_columns = list(dict.fromkeys(QC_FLAGS + metrics_params.index.tolist()))
 
 if adata.n_obs == 0:
     logging.info(f'Write empty zarr file to {output_file}...')
-    columns = list(dict.fromkeys(QC_FLAGS + metrics_params.index.tolist()))
-    adata.obs = pd.DataFrame(columns=list(dict.fromkeys(columns)))
+    columns = list(dict.fromkeys(adata.obs.columns.tolist() + qc_metric_columns))
+    adata.obs = pd.DataFrame(columns=columns)
     if qc_metrics_file:
         logging.info(f'Write empty QC metrics parquet file to {qc_metrics_file}...')
         adata.obs[columns].to_parquet(qc_metrics_file)
     write_zarr_linked(adata, input_file, output_file, files_to_keep=files_to_keep)
     exit(0)
-
-obs_columns_before_qc = set(adata.obs.columns)
 
 print('Calculate QC stats...')
 if 'feature_name' in adata.var.columns:
@@ -75,16 +74,11 @@ sctk.cellwise_qc(
 adata.uns['scautoqc_ranges'] = adata.uns['scautoqc_ranges'].astype('float32')
 logging.info(f"\n{adata.uns['scautoqc_ranges']}")
 
-qc_metric_columns = [
-    col for col in adata.obs.columns
-    if col not in obs_columns_before_qc
-]
-logging.info(f'QC metric columns written to parquet ({len(qc_metric_columns)}): {qc_metric_columns}')
-
 # sctk.generate_qc_clusters(adata, metrics=["log1p_n_counts", "log1p_n_genes", "percent_mito"])
 # adata.obs['qc_cell'] = np.where(adata.obs['consensus_passed_qc'], 'pass', 'fail')
 
 logging.info(f'Write zarr file to {output_file}...')
+logging.info(adata.__str__())
 write_zarr_linked(
     adata,
     input_file,
@@ -93,5 +87,7 @@ write_zarr_linked(
 )
 
 if qc_metrics_file:
+    qc_metric_columns = [col for col in qc_metric_columns if col in adata.obs.columns]
+    logging.info(f'QC metric columns written to parquet ({len(qc_metric_columns)}): {qc_metric_columns}')
     logging.info(f'Write QC metrics parquet file to {qc_metrics_file}...')
     adata.obs[qc_metric_columns].to_parquet(qc_metrics_file)
