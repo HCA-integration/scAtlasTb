@@ -72,11 +72,12 @@ def _make_legend_section(title, handles, labels):
 
 def _make_figure():
     panel_size = 4.0
+    n = len(coordinates)
     fig = plt.figure(
-        figsize=(2.4 * panel_size, len(coordinates) * panel_size),
+        figsize=(2 * panel_size, n * panel_size),
         constrained_layout=True,
     )
-    outer = GridSpec(len(coordinates), 2, figure=fig)
+    outer = GridSpec(n, 2, figure=fig, height_ratios=[1] * n, width_ratios=[1, 1])
     return fig, outer
 
 
@@ -161,10 +162,18 @@ def create_facet_figure(df, out_file, hue, joint_title, scatter_plot_kwargs, dpi
         all_handles += h
         all_labels  += l
 
-    fig.legend(all_handles, all_labels, loc='outside right center', frameon=False, fontsize=10)
-    fig.suptitle(joint_title, fontsize=16)
-    fig.savefig(out_file, dpi=dpi)
-    plt.close(fig)
+    leg = fig.legend(
+        all_handles,
+        all_labels,
+        loc='center left',
+        bbox_to_anchor=(1.02, 0.5),
+        bbox_transform=fig.transFigure,
+        frameon=False,
+        fontsize=10
+    )
+    leg.set_in_layout(False)
+    title = fig.suptitle(joint_title, fontsize=16)
+    fig.savefig(out_file, dpi=dpi, bbox_inches='tight', bbox_extra_artists=[leg, title])
 
 
 def create_density_figure(df, out_file, joint_title, dpi=150):
