@@ -58,8 +58,8 @@ if adata.obs.shape[0] == 0:
 def _thresholds_equal(threshold_a, threshold_b):
     if threshold_a is None or threshold_b is None:
         return False
-    a = np.asarray(threshold_a, dtype=float)
-    b = np.asarray(threshold_b, dtype=float)
+    a = np.asarray([np.nan if value is None else value for value in threshold_a], dtype=float)
+    b = np.asarray([np.nan if value is None else value for value in threshold_b], dtype=float)
     return a.shape == b.shape and np.allclose(a, b, equal_nan=True)
 
 
