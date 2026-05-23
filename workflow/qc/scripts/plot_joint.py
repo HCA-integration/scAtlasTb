@@ -30,7 +30,7 @@ from qc_utils import parse_parameters, get_thresholds, plot_qc_joint, plot_densi
 input_zarr = snakemake.input.zarr
 output_joint = Path(snakemake.output.joint)
 output_joint.mkdir(parents=True, exist_ok=True)
-max_groups = snakemake.params.get('max_groups', 100)
+max_groups = min(snakemake.params.get('max_groups', 100), 102)
 dpi = snakemake.params.get('dpi', 150)
 plot_density_enabled = snakemake.params.get('plot_density', True)
 threshold_color = snakemake.params.get('threshold_color', 'black')

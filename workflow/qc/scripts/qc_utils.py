@@ -32,7 +32,7 @@ def parse_parameters(adata: ad.AnnData, params: dict, filter_hues: bool = False)
         hues = [hues]
     hues = [hue for hue in hues if hue in adata.obs.columns]
     if filter_hues:
-        max_groups = params.get('max_groups', 100)
+        max_groups = min(params.get('max_groups', 100), 102)
         hues = {
             hue for hue in hues
             if (
