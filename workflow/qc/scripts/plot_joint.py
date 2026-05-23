@@ -71,7 +71,7 @@ def _make_legend_section(title, handles, labels):
 
 
 def _make_figure():
-    panel_size = 5.0
+    panel_size = 4.0
     fig = plt.figure(
         figsize=(2.4 * panel_size, len(coordinates) * panel_size),
         constrained_layout=True,
@@ -243,10 +243,28 @@ if plot_density_enabled and coordinates:
         dpi=dpi,
     )
 
-batch_size = max(1, len(hues) // threads)
-results = Parallel(n_jobs=threads, batch_size=batch_size, return_as='generator')(
-    delayed(call_plot)(hue=hue, scatter_plot_kwargs=scatter_plot_kwargs)
-    for hue in hues
-)
-for _ in tqdm(results, total=len(hues), desc=f'Plotting all coordinates faceted by hue using {threads=}, {batch_size=}'):
-    pass
+# Skip hues that don't have at least 2 unique non-NA values
+hues_to_plot = []
+for hue in hues:
+    if hue is None:
+        hues_to_plot.append(hue)
+        continue
+    if hue not in adata.obs.columns:
+        logging.info(f"Skipping hue {hue}: not present in data columns")
+        continue
+    n_unique = int(adata.obs[hue].dropna().nunique())
+    if n_unique < 2:
+        logging.info(f"Skipping hue {hue}: fewer than 2 unique values after NA removal ({n_unique})")
+        continue
+    hues_to_plot.append(hue)
+
+if len(hues_to_plot) == 0:
+    logging.info('No hues to plot after filtering; exiting.')
+else:
+    batch_size = max(1, len(hues_to_plot) // threads)
+    results = Parallel(n_jobs=threads, batch_size=batch_size, return_as='generator')(
+        delayed(call_plot)(hue=hue, scatter_plot_kwargs=scatter_plot_kwargs)
+        for hue in hues_to_plot
+    )
+    for _ in tqdm(results, total=len(hues_to_plot), desc=f'Plotting all coordinates faceted by hue using {threads=}, {batch_size=}'):
+        pass
