@@ -56,7 +56,7 @@ rule plot_summary:
     output:
         plots=directory(mcfg.image_dir / 'dataset~{dataset}' / 'summary'),
     params:
-        max_groups=lambda wildcards: mcfg.get_from_parameters(wildcards, 'plot_params', default={}).get('max_groups', 100),
+        scautoqc_metrics=lambda wildcards: mcfg.get_from_parameters(wildcards, 'scautoqc_metrics', default=['n_counts', 'n_genes', 'percent_mito']),
         dpi=lambda wildcards: mcfg.get_from_parameters(wildcards, 'plot_params', default={}).get('dpi', 200),
     conda:
         get_env(config, 'scanpy')
@@ -82,5 +82,8 @@ rule summary_plots:
 
 
 rule plots_all:
-    input: rules.joint_plots.input, rules.removed_plots.input #, rules.summary_plots.input
+    input:
+        rules.joint_plots.input,
+        rules.removed_plots.input,
+        rules.summary_plots.input,
     localrule: True
