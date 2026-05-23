@@ -13,8 +13,7 @@ Install dependencies
 For this workflow, make sure you install the following environments:
 
 * `envs/scanpy.yaml`
-* `envs/qc.yaml` for `qc` module
-* `envs/doublets.yaml` for `doublets` module
+* `envs/qc.yaml` for `qc` and `doublets` modules
 
 
 Configuring a basic QC workflow
@@ -59,7 +58,7 @@ You should get the following dry-run output:
     Using profile .profiles/local for setting default command line arguments.
     WARNING: Duplicated columns: {'metric': ['methods', 'metrics']}
     Building DAG of jobs...
-    Job stats:                                                                                                                                                                                                                                                                                            "login-02" 04:47 23-May-26
+    Job stats:
     job                    count
     -------------------  -------
     qc_all                     1
