@@ -2,4 +2,6 @@ file_id	threshold_type	percent_mito_min	percent_mito_max	n_genes_min	n_genes_max
 Lee2020	sctk_autoqc	0.02	7.8	1000	3000	2500	16000
 Lee2020	user	0.02	7.8	1000	3000	2500	16000
 Lee2020	alternative	0	10	100	5000		
-test	user	0	10	200		250	
+test1--split_data_value=1	user	0	10	200		250	
+test1--split_data_value=2	user	0	15	200		50	
+test1--split_data_value=3	user	0	10	300		50	

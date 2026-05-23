@@ -148,6 +148,10 @@ def ridge_plot(
         for v in (vmin, vmax):
             if pd.notna(v):
                 v = np.log1p(float(v)) if log_transform else float(v)
+                xlim = ax.get_xlim()
+                # Only draw threshold if it falls within the current plot x-limits
+                if v < xlim[0] or v > xlim[1]:
+                    continue
                 x, y_bot = to_fig(ax, v, 0)
                 _, y_top = to_fig(ax, v, 1 - abs(hspace))
                 overlay.vlines(x, y_bot, y_top, colors=threshold_color, linestyles=linestyle, linewidth=1)
