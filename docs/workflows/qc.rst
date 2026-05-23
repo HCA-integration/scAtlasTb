@@ -24,26 +24,10 @@ Even for published studies, where you would usually obtain already filtered data
 In the following is an example on test data for setting up a first iteration of QC plots.
 Start creating a config file called `configs/qc/qc_config.yaml` (see example under `configs`):
 
-.. code-block:: yaml
+.. literalinclude:: ../../configs/qc/qc_config.yaml
+   :language: yaml
+   :caption: configs/qc/qc_config.yaml
 
-    output_dir: data/out
-    images: images
-    user_gpu: false
-
-    DATASETS:
-
-      example_qc_analysis:
-        input:
-          qc:
-            test1: data/pbmc68k.h5ad # adjust to custom file path
-            test2: data/pbmc68k.h5ad # adjust to custom file path
-          merge: qc
-        qc:
-          counts: X  # raw counts slot
-          hue: # obs columns you want in your plot
-            - bulk_labels
-            - batch
-            - phase
 
 Call the pipeline with either your runner script (e. g. called `configs/qc/run.sh`)
 
@@ -196,8 +180,8 @@ The heatmaps summarise absolute and relative cell removal across the dataset.
    :alt: removed_fraction_heatmap
 
 
-TL;DR Full Configuration
-************************
+Full Configuration
+******************
 
 You can find the complete configuration file and runner script under `configs/qc/`.
 Here's the final workflow configuration:
@@ -207,6 +191,6 @@ Here's the final workflow configuration:
    :caption: configs/qc/qc_config.yaml
 
 .. literalinclude:: ../../configs/qc/run.sh
-   :language: yaml
+   :language: bash
    :caption: configs/qc/run.sh
 
