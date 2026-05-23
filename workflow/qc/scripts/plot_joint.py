@@ -30,7 +30,7 @@ from qc_utils import parse_parameters, get_thresholds, plot_qc_joint, plot_densi
 input_zarr = snakemake.input.zarr
 output_joint = Path(snakemake.output.joint)
 output_joint.mkdir(parents=True, exist_ok=True)
-max_groups = snakemake.params.get('max_groups', 100)
+max_groups = min(snakemake.params.get('max_groups', 100), 102)
 dpi = snakemake.params.get('dpi', 150)
 plot_density_enabled = snakemake.params.get('plot_density', True)
 threshold_color = snakemake.params.get('threshold_color', 'black')
@@ -58,8 +58,8 @@ if adata.obs.shape[0] == 0:
 def _thresholds_equal(threshold_a, threshold_b):
     if threshold_a is None or threshold_b is None:
         return False
-    a = np.asarray(threshold_a, dtype=float)
-    b = np.asarray(threshold_b, dtype=float)
+    a = np.asarray([np.nan if value is None else value for value in threshold_a], dtype=float)
+    b = np.asarray([np.nan if value is None else value for value in threshold_b], dtype=float)
     return a.shape == b.shape and np.allclose(a, b, equal_nan=True)
 
 
