@@ -1,0 +1,4 @@
+file_id	threshold_type	percent_mito_min	percent_mito_max	n_genes_min	n_genes_max	n_counts_min	n_counts_max
+test1--split_data_value=1	user	0	10	200		250	
+test1--split_data_value=2	user	0	15	200		50	
+test1--split_data_value=3	user	0	10	300		50	

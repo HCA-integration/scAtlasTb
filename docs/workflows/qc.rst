@@ -56,21 +56,20 @@ You should get the following dry-run output:
 
 .. code-block::
 
-    Config file configs/outputs.yaml is extended by additional config specified via the command line.
-    Config file configs/load_data/config.yaml is extended by additional config specified via the command line.
-    Config file configs/exploration/config.yaml is extended by additional config specified via the command line.
+    Using profile .profiles/local for setting default command line arguments.
     WARNING: Duplicated columns: {'metric': ['methods', 'metrics']}
     Building DAG of jobs...
-    Job stats:
+    Job stats:                                                                                                                                                                                                                                                                                            "login-02" 04:47 23-May-26
     job                    count
     -------------------  -------
     qc_all                     1
-    qc_autoqc                  2
-    qc_get_thresholds          2
+    qc_autoqc                  8
+    qc_get_thresholds          8
     qc_merge_thresholds        1
-    qc_plot_joint              2
-    qc_plot_removed            2
-    total 
+    qc_plot_joint              8
+    qc_plot_removed            8
+    qc_plot_summary            1
+    total                     35
 
 Execute the QC workflow as follows:
 
@@ -88,13 +87,19 @@ Check the outputs under `images/qc`.
 
 .. code-block:: bash
 
-    $ ls -l images/qc/dataset\~example_qc_analysis/
+      $ ls images/qc/dataset\~example_qc_analysis/
 
-    total 16
-    drwxr-xr-x@ 6 michaela.mueller  2125895594  192 Jun 30 16:07 file_id~test1
-    drwxr-xr-x@ 6 michaela.mueller  2125895594  192 Jun 30 16:08 file_id~test2
-    -rw-r--r--@ 1 michaela.mueller  2125895594   60 Jun 30 16:06 qc_stats.tsv
-    -rw-r--r--@ 1 michaela.mueller  2125895594  829 Jun 30 16:06 thresholds.tsv
+      file_id~test--split_data_value=empty
+      file_id~test1--split_data_value=1
+      file_id~test1--split_data_value=2
+      file_id~test1--split_data_value=3
+      file_id~test1--split_data_value=4
+      file_id~test2--split_data_value=1
+      file_id~test2--split_data_value=2
+      file_id~test2--split_data_value=3
+      qc_stats.tsv
+      summary
+      thresholds.tsv
 
 There are per dataset and per file outputs.
 The `thresholds.tsv` contains the estimated thresholds for both input files `test1` and `test2`, while `qc_stats.tsv` contains the overall statistics of cells that passed or failed the QC thresholds.
@@ -109,21 +114,21 @@ The `thresholds.tsv` contains the estimated thresholds for both input files `tes
    :caption: thresholds.tsv
 
 
-There are also separate outputs per original input file, which contains per `file_id` threshold files as well as `joint_plots` and `removed` directories.
+There are also separate outputs per original input file and split, which contains per `file_id` threshold files as well as `joint_plots` and `removed` directories.
 
 Joint plots
 ===========
 
 .. code-block:: bash
 
-    $ ls images/qc/dataset~example_qc_analysis/file_id~test1/
+    $ ls images/qc/dataset~example_qc_analysis/file_id~test1--split_data_value=1/
 
     joint_plots  qc_stats.tsv  removed  thresholds.tsv
 
 
 .. code-block:: bash
 
-    $ ls images/qc/dataset\~example_qc_analysis/file_id\~test1/joint_plots
+    $ ls images/qc/dataset\~example_qc_analysis/file_id\~test1--split_data_value=1/joint_plots
 
     'hue=batch.svg'  'hue=bulk_labels.svg'  'hue=phase.svg'  'hue=qc_status.svg'
 
@@ -133,20 +138,63 @@ The workflow writes one scatter plot per configured hue and always adds `hue=qc_
 If no valid hue columns are available, the workflow writes `main.svg` instead of hue-specific scatter plots.
 The density plots are also combined into a single `density.svg` file rather than separate files per metric pair.
 
+
+Example outputs are shown below:
+
+.. image:: ../_static/images/qc/dataset~example_qc_analysis/file_id~test1--split_data_value=1/joint_plots/hue=bulk_labels.svg
+   :alt: bulk_labels_joint_plot
+
+Removed plots
+=============
+
 The `removed` directory contains the QC summary plots for the same `file_id`:
 
 .. code-block:: bash
 
-    $ ls images/qc/dataset\~example_qc_analysis/file_id\~test1/removed
+    $ ls images/qc/dataset\~example_qc_analysis/file_id\~test1--split_data_value=1/removed
 
     'by=batch.svg'  'by=bulk_labels.svg'  'by=phase.svg'   cells_passed_all.svg   per_metric_violin.svg
 
 The `by={hue}.svg` plots summarise removed cells per annotation, `cells_passed_all.svg` shows the overall QC status counts, and `per_metric_violin.svg` shows the per-metric distributions split by QC status.
 
-Example outputs are shown below:
+Example removed-plot outputs:
 
-.. image:: ../_static/images/qc/dataset~example_qc_analysis/file_id~test1/joint_plots/hue=bulk_labels.svg
-   :alt: bulk_labels_joint_plot
+.. image:: ../_static/images/qc/dataset~example_qc_analysis/file_id~test1--split_data_value=1/removed/by=bulk_labels.svg
+   :alt: by_bulk_labels_removed_plot
+
+.. image:: ../_static/images/qc/dataset~example_qc_analysis/file_id~test1--split_data_value=1/removed/cells_passed_all.svg
+   :alt: cells_passed_all_removed_plot
+
+.. image:: ../_static/images/qc/dataset~example_qc_analysis/file_id~test1--split_data_value=1/removed/per_metric_violin.svg
+   :alt: per_metric_violin_removed_plot
+
+
+Summary plots
+=============
+
+The dataset-level `summary` directory aggregates QC behaviour across all files and splits.
+It contains removed-cell heatmaps and ridge plots for each configured QC metric.
+
+.. code-block:: bash
+
+   $ ls images/qc/dataset\~example_qc_analysis/summary
+
+   n_removed_heatmap.svg  removed_frac_heatmap.svg  ridge_plots
+
+.. code-block:: bash
+
+   $ ls images/qc/dataset\~example_qc_analysis/summary/ridge_plots
+
+   log1p_n_counts.svg  log1p_n_genes.svg  n_counts.svg  n_genes.svg  percent_mito.svg
+
+The ridge plots show the metric distributions per input file and split, with the configured thresholds overlaid.
+The heatmaps summarise absolute and relative cell removal across the dataset.
+
+.. image:: ../_static/images/qc/dataset~example_qc_analysis/summary/ridge_plots/percent_mito.svg
+   :alt: percent_mito_ridge_plot
+
+.. image:: ../_static/images/qc/dataset~example_qc_analysis/summary/removed_frac_heatmap.svg
+   :alt: removed_fraction_heatmap
 
 
 TL;DR Full Configuration
