@@ -5,7 +5,7 @@ def read_threshold_file(file: str):
     """
     Read user threshold file in TSV format
     """
-    df = pd.read_table(file)
+    df = pd.read_table(file, comment='#')
     assert 'file_id' in df.columns
     prefixes = ['percent_mito', 'n_genes', 'n_counts']
     if all(not col.startswith(prefix) for col in df.columns for prefix in prefixes):
