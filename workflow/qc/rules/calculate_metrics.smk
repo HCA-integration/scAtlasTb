@@ -42,6 +42,7 @@ rule get_thresholds:
         scautoqc_metrics=lambda wildcards: mcfg.get_from_parameters(wildcards, 'scautoqc_metrics', default=['n_counts', 'n_genes', 'percent_mito']),
         thresholds=lambda wildcards: mcfg.get_from_parameters(wildcards, 'thresholds', default={}),
         alternative_thresholds=lambda wildcards: mcfg.get_from_parameters(wildcards, 'alternative_thresholds', default={}),
+        metrics_params=lambda wildcards: mcfg.get_from_parameters(wildcards, 'scautoqc_metrics_params'),
     conda:
         get_env(config, 'qc')
     localrule: True

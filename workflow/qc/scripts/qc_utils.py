@@ -48,31 +48,27 @@ def parse_parameters(adata: ad.AnnData, params: dict, filter_hues: bool = False)
 
     return dataset, hues
 
-
-def parse_autoqc(autoqc_thresholds: pd.DataFrame, thresholds: dict = None):
-    if thresholds is None:
-        thresholds = {}
-    if autoqc_thresholds is None or autoqc_thresholds.empty:
-        return thresholds
-
-    has_side = 'side' in autoqc_thresholds.columns
+def parse_autoqc(autoqc_thresholds: pd.DataFrame):
+    if autoqc_thresholds is None or autoqc_thresholds.empty or not 'side' in autoqc_thresholds.columns:
+        return autoqc_thresholds
+    
     for key in autoqc_thresholds.index:
-        low = autoqc_thresholds.loc[key, 'low']
-        high = autoqc_thresholds.loc[key, 'high']
-        side = autoqc_thresholds.loc[key, 'side'] if has_side else None
+        side = autoqc_thresholds.loc[key, 'side'].lower()
+        if side == 'max_only':
+            autoqc_thresholds.loc[key, 'low'] = None
+        elif side == 'min_only':
+            autoqc_thresholds.loc[key, 'high'] = None
 
-        low = None if pd.isna(low) else low
-        high = None if pd.isna(high) else high
+    return autoqc_thresholds
 
-        if isinstance(side, str):
-            side = side.lower()
-            if side == 'max_only':
-                low = None
-            elif side == 'min_only':
-                high = None
 
-        thresholds[f'{key}_min'] = low
-        thresholds[f'{key}_max'] = high
+def update_thresholds(thresholds: dict, autoqc_thresholds: pd.DataFrame):
+    if autoqc_thresholds.empty:
+        return thresholds
+    
+    for key in autoqc_thresholds.index:
+        thresholds[f'{key}_min'] = autoqc_thresholds.loc[key, 'low']
+        thresholds[f'{key}_max'] = autoqc_thresholds.loc[key, 'high']
 
     return thresholds
 
@@ -105,7 +101,7 @@ def get_thresholds(
         thresholds |= {f'{key}_max': np.inf for key in threshold_keys}
 
     if autoqc_thresholds is not None:
-        thresholds = parse_autoqc(autoqc_thresholds, thresholds)
+        thresholds = update_thresholds(thresholds, autoqc_thresholds)
 
     # update to user thresholds
     if user_thresholds is None:
@@ -132,29 +128,40 @@ def get_thresholds(
 
 
 def apply_thresholds(
-    adata: ad.AnnData,
+    data,
     thresholds: dict,
     threshold_keys: list,
-    column_name='passed_qc'
+    column_name='passed_qc',
+    inplace=True,
 ):
     """
-    :param adata: AnnData object
+    :param data: AnnData object or obs DataFrame
     :param thresholds: dict of key: thresholds tuple as returned by get_thresholds
+    :param inplace: if True, write the result back to the provided object/Frame
+    :return: boolean Series with pass/fail status
     """
-    adata.obs[column_name] = True
-    if adata.n_obs == 0:
-        return
+    if isinstance(data, pd.DataFrame):
+        obs = data if inplace else data.copy()
+    elif hasattr(data, 'obs'):
+        obs = data.obs if inplace else data.obs.copy()
+    else:
+        raise TypeError('data must be an AnnData-like object with .obs or a pandas DataFrame')
+
+    obs[column_name] = True
+    if obs.shape[0] == 0:
+        return obs[column_name]
     for key in threshold_keys:
         lower, upper = thresholds[key]
-        if lower is None and upper is None:
+        if pd.isna(lower) and pd.isna(upper):
             continue
-        if lower is None:
-            passed = adata.obs[key] <= upper
-        elif upper is None:
-            passed = adata.obs[key] >= lower
+        if pd.isna(lower):
+            passed = obs[key] <= upper
+        elif pd.isna(upper):
+            passed = obs[key] >= lower
         else:
-            passed = adata.obs[key].between(lower, upper)
-        adata.obs[column_name] = adata.obs[column_name] & passed.fillna(False)
+            passed = obs[key].between(lower, upper)
+        obs[column_name] = obs[column_name] & passed.fillna(False)
+    return obs[column_name]
 
 
 def plot_qc_joint(

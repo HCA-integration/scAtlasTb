@@ -1,10 +1,11 @@
+import sctk
 import numpy as np
 import pandas as pd
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from utils.io import read_anndata, write_zarr_linked
-from qc_utils import get_thresholds, apply_thresholds, parse_autoqc
+from qc_utils import get_thresholds, apply_thresholds, parse_autoqc, update_thresholds
 
 
 def thresholds_to_df(df, wildcards, qc_type=None, **kwargs):
@@ -20,6 +21,10 @@ def thresholds_to_df(df, wildcards, qc_type=None, **kwargs):
     
     # get thresholds
     thresholds = get_thresholds(**kwargs, transform=False)
+    qc_thresholds = {
+        key: (thresholds[f'{key}_min'], thresholds[f'{key}_max'])
+        for key in kwargs['threshold_keys']
+    }
     
     # sort threshold columns
     threshold_keys = sorted(list(thresholds.keys()), reverse=True)
@@ -38,20 +43,12 @@ def thresholds_to_df(df, wildcards, qc_type=None, **kwargs):
         ) | thresholds
         return pd.DataFrame(thresholds, index=[0])
     
-    # apply thresholds
-    df['passed_qc'] = True
-    for key in kwargs['threshold_keys']:
-        lower = thresholds[f'{key}_min']
-        upper = thresholds[f'{key}_max']
-        if lower is None and upper is None:
-            passed = True
-        elif lower is None:
-            passed = df[key] <= upper
-        elif upper is None:
-            passed = df[key] >= lower
-        else:
-            passed = df[key].between(lower, upper)
-        df['passed_qc'] = df['passed_qc'] & pd.Series(passed, index=df.index).fillna(False)
+    passed_qc = apply_thresholds(
+        df,
+        thresholds=qc_thresholds,
+        threshold_keys=kwargs['threshold_keys'],
+        column_name='passed_qc',
+    )
     passed_qc = pd.Categorical(df['passed_qc'], categories=[True, False]).value_counts()
     
     thresholds = dict(
@@ -72,6 +69,7 @@ input_file = snakemake.input[0]
 output_file = snakemake.output[0]
 output_tsv = snakemake.output.tsv
 output_qc_stats = snakemake.output.qc_stats
+metrics_params_file = snakemake.input.get('metrics_params')
 
 adata = read_anndata(input_file, obs='obs', uns='uns', verbose=False)
 
@@ -81,6 +79,20 @@ alternative_thresholds = snakemake.params.get('alternative_thresholds')
 autoqc_thresholds = adata.uns.get('scautoqc_ranges')
 if autoqc_thresholds is None:
     autoqc_thresholds = pd.DataFrame()
+
+# Add metric_params to autoqc_thresholds
+metrics_params = sctk.default_metric_params_df
+if metrics_params_file:
+    user_params = pd.read_table(metrics_params_file, index_col=0)
+    metrics_params.update(user_params)
+autoqc_thresholds = autoqc_thresholds.merge(
+    metrics_params,
+    left_index=True,
+    right_index=True,
+    how='left',
+)
+autoqc_thresholds = parse_autoqc(autoqc_thresholds)
+adata.uns['scautoqc_ranges'] = autoqc_thresholds
 
 # Calculate threshold stats
 df = pd.concat(
@@ -138,7 +150,8 @@ apply_thresholds(
 )
 
 # set defaults for alternative thresholds
-alternative_thresholds = parse_autoqc(autoqc_thresholds) | user_thresholds | alternative_thresholds
+updated_thresholds = update_thresholds(user_thresholds, autoqc_thresholds)
+alternative_thresholds = updated_thresholds | alternative_thresholds
 apply_thresholds(
     adata,
     thresholds=get_thresholds(
