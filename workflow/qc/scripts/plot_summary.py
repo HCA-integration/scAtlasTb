@@ -60,6 +60,31 @@ def _extract_bounds(df, study, lineage, lineage_key, thresh_type, metrics):
     return {m: (row.get(f"{m}_min"), row.get(f"{m}_max")) for m in metrics}
 
 
+def _infer_right_tail_clip_max(values, clip_quantile=0.999, tail_ratio=10.0):
+    """Return clipped max for long right tails, else full max."""
+    values = pd.to_numeric(values, errors='coerce')
+    values = values[np.isfinite(values)]
+    if len(values) == 0:
+        return None, False
+
+    x_max = float(values.max())
+    if len(values) < 20:
+        return x_max, False
+
+    q50 = float(values.quantile(0.50))
+    q75 = float(values.quantile(0.75))
+    q99 = float(values.quantile(0.99))
+    q_clip = float(values.quantile(clip_quantile))
+
+    body_scale = q75 - q50
+    if body_scale <= 0:
+        body_scale = max(float(values.quantile(0.95) - q50), 1e-12)
+    tail_span = x_max - q99
+
+    use_tail_clip = (tail_span > tail_ratio * body_scale) and (q_clip < x_max)
+    return (q_clip if use_tail_clip else x_max), use_tail_clip
+
+
 def ridge_plot(
     df,
     row_group,
@@ -69,8 +94,10 @@ def ridge_plot(
     dpi=100,
     thresholds_df=None,
     threshold_color='black',
-    hspace=-0.5,
+    hspace=-0.7,
     linewidth=1.5,
+    long_tail_clip_quantile=0.999,
+    long_tail_ratio=3.0,
 ):
     THRESHOLD_TYPES = [
         ('sctk_autoqc', '--', 'sctk scAutoQC'),
@@ -86,17 +113,34 @@ def ridge_plot(
         row=row_group,
         col=col_group,
         hue=row_group,
-        aspect=6,
-        height=0.7,
+        aspect=4,
+        height=0.5,
         palette=sns.cubehelix_palette(df[row_group].nunique(), rot=-.25, light=.7),
         margin_titles=False,
     )
 
     # ── KDE layers ───────────────────────────────────────────────────────────
-    kde_kwargs = dict(bw_adjust=1, clip_on=False)
-    grid.map(sns.kdeplot, metric, fill=True, alpha=0.9, **kde_kwargs)
+    x_clip_max, use_tail_clip = _infer_right_tail_clip_max(
+        df[metric],
+        clip_quantile=long_tail_clip_quantile,
+        tail_ratio=long_tail_ratio,
+    )
+
+    # Only clip when a long right tail is detected.
+    kde_kwargs = dict(bw_adjust=1)
+    if use_tail_clip and x_clip_max is not None:
+        kde_kwargs['cut'] = 0
+        # Keep lower side open; only constrain the right side.
+        kde_kwargs['clip'] = (-np.inf, x_clip_max)
+
+    grid.map(sns.kdeplot, metric, fill=True, alpha=1, **kde_kwargs)
     grid.map(sns.kdeplot, metric, color='white', linewidth=linewidth, **kde_kwargs)
     grid.refline(y=0, linewidth=linewidth, linestyle="-", color=None, clip_on=False)
+
+    if use_tail_clip and x_clip_max is not None:
+        xlim_min, _ = grid.axes.flat[0].get_xlim()
+        if x_clip_max > xlim_min:
+            grid.set(xlim=(xlim_min, x_clip_max))
 
     # ── Layout ───────────────────────────────────────────────────────────────
     grid.set(yticks=[], ylabel='')
@@ -141,11 +185,20 @@ def ridge_plot(
         _, y_fig = to_display(ax.transAxes.transform((0, y_axes)))
         return x_fig, y_fig
 
-    def draw_threshold(ax, study_name, lineage_name, thresh_type, linestyle):
+    def _same_value(x, y):
+        if pd.isna(x) and pd.isna(y):
+            return True
+        if pd.isna(x) or pd.isna(y):
+            return False
+        return np.isclose(float(x), float(y), rtol=0, atol=1e-12)
+
+    def draw_threshold(ax, study_name, lineage_name, thresh_type, linestyle, skip_bounds=None):
         bounds = _extract_bounds(thresholds_df, study_name, lineage_name, 'lineage', thresh_type, [base_metric])
         vmin, vmax = bounds.get(base_metric, (None, None))
         drawn = False
-        for v in (vmin, vmax):
+        for bound_name, v in (('min', vmin), ('max', vmax)):
+            if skip_bounds is not None and bound_name in skip_bounds:
+                continue
             if pd.notna(v):
                 v = np.log1p(float(v)) if log_transform else float(v)
                 xlim = ax.get_xlim()
@@ -162,7 +215,23 @@ def ridge_plot(
         for j, c_name in enumerate(grid.col_names):
             study, lineage = (str(r_name), str(c_name)) if study_first else (str(c_name), str(r_name))
             for thresh_type, linestyle, _ in THRESHOLD_TYPES:
-                if draw_threshold(grid.axes[i, j], study, lineage, thresh_type, linestyle):
+                skip_bounds = None
+                if thresh_type == 'updated':
+                    updated_bounds = _extract_bounds(thresholds_df, study, lineage, 'lineage', 'updated', [base_metric])
+                    autoqc_bounds = _extract_bounds(thresholds_df, study, lineage, 'lineage', 'sctk_autoqc', [base_metric])
+                    updated_min, updated_max = updated_bounds.get(base_metric, (None, None))
+                    autoqc_min, autoqc_max = autoqc_bounds.get(base_metric, (None, None))
+                    skip_bounds = {
+                        bound_name
+                        for bound_name, updated_value, autoqc_value in (
+                            ('min', updated_min, autoqc_min),
+                            ('max', updated_max, autoqc_max),
+                        )
+                        if _same_value(updated_value, autoqc_value)
+                    }
+                    if len(skip_bounds) == 2:
+                        continue
+                if draw_threshold(grid.axes[i, j], study, lineage, thresh_type, linestyle, skip_bounds=skip_bounds):
                     seen_types.add(thresh_type)
 
     # ── Threshold legend ──────────────────────────────────────────────────────
@@ -188,21 +257,78 @@ def ridge_plot(
 
 
 def plot_heatmap(data_df, title, filename, out_dir, annot=False, dpi=200):
-    """Write a heatmap SVG; kept near `ridge_plot` for shared presentation defaults."""
-    plot_df = data_df.copy()
-    transposed = plot_df.shape[0] < plot_df.shape[1]
-    if transposed:
-        plot_df = plot_df.T
+    import textwrap
+    import matplotlib.cm as cm
 
-    figsize = (3, 5) if not transposed else (5, 3)
-    fig, ax = plt.subplots(figsize=figsize, constrained_layout=True)
-    sns.heatmap(plot_df, cmap='Blues', annot=annot, ax=ax)
+    plot_df = data_df.copy()
+    if plot_df.shape[0] < plot_df.shape[1]:
+        plot_df = plot_df.T
+    
+    n_rows, n_cols = plot_df.shape
+    base_cell_size = 0.4
+    label_scale = 0.08
+    min_dim = 2.0
+    col_label_pad = max(str(v) for v in plot_df.columns)
+    row_label_pad = max((str(v) for v in plot_df.index), key=len)
+    row_label_width = len(row_label_pad) * label_scale
+    col_label_height = len(col_label_pad) * label_scale
+    cell_size = max(
+        base_cell_size,
+        max(0, min_dim - row_label_width) / max(n_cols, 1),
+        max(0, min_dim - col_label_height) / max(n_rows, 1),
+    )
+    fig, (ax, cb_ax) = plt.subplots(
+        1, 2,
+        figsize=(
+            row_label_width + n_cols * cell_size,
+            col_label_height + n_rows * cell_size
+        ),
+        gridspec_kw={'width_ratios': [1, 0.05]},
+    )
+    sns.heatmap(
+        plot_df,
+        cmap='Blues',
+        annot=annot,
+        fmt='.2f' if annot else '',
+        ax=ax,
+        square=True,
+        linewidths=0.5,
+        linecolor=cm.Blues(0.3),
+        cbar_ax=cb_ax,
+    )
+    
+    # adjust ticks
     ax.xaxis.tick_top()
     ax.xaxis.set_label_position('top')
     ax.set_xlabel('')
     ax.set_ylabel('')
-    plt.xticks(rotation=90)
-    fig.suptitle(title)
+    ax.tick_params(axis='x', rotation=90, length=0)
+    ax.tick_params(axis='y', rotation=0)
+
+    # adjust legend
+    colorbar = ax.collections[0].colorbar
+    colorbar.ax.yaxis.set_label_position('right')
+    cb_pos = colorbar.ax.get_position()
+    colorbar.ax.set_position([
+        cb_pos.x0,
+        cb_pos.y0 + cb_pos.height * 0.25,
+        cb_pos.width,
+        cb_pos.height * 0.5,
+    ])
+    
+    # adjust colorbar label to wrap based on its width
+    fig.canvas.draw()
+    cbar_height = colorbar.ax.get_window_extent().height
+    chars_per_line = max(1, int(cbar_height / fig.dpi / 0.09))
+    wrapped = "\n".join(textwrap.wrap(title, chars_per_line))
+    n_lines = wrapped.count('\n') + 1
+    colorbar.set_label("\n".join(
+        textwrap.wrap(title, chars_per_line)),
+        rotation=270,
+        labelpad=n_lines * 10,
+        fontsize=10,
+    )
+    
     out_file = out_dir / filename
     fig.savefig(out_file, dpi=dpi, bbox_inches='tight')
     plt.close(fig)
@@ -230,6 +356,7 @@ output_ridge = output_dir / 'ridge_plots'
 output_ridge.mkdir(parents=True, exist_ok=True)
 written_files = []
 
+## Read data
 
 frames = []
 if len(input_files) == 0:
@@ -283,6 +410,42 @@ if len(threshold_frames) > 0:
 else:
     thresholds_df = None
 
+## Removed-cell heatmaps
+
+logging.info('Creating removed-cell heatmaps...')
+if thresholds_df is not None:
+    thresholds = thresholds_df.query('threshold_type == "updated"')
+    if thresholds.shape[0] == 0:
+        logging.info('No updated thresholds found. Skipping removed-cell heatmaps.')
+    else:
+        thresholds = thresholds.drop_duplicates(subset=['study', 'lineage'])
+        removed_df = thresholds.pivot(index=['study'], columns='lineage', values='n_removed')
+        removed_frac_df = thresholds.pivot(index=['study'], columns='lineage', values='removed_frac')
+
+        plot_heatmap(
+            removed_df,
+            'Cells removed',
+            'n_removed_heatmap.svg',
+            output_dir,
+            annot=False,
+            dpi=dpi
+        )
+        
+        plot_heatmap(
+            removed_frac_df,
+            'Fraction of cells removed',
+            'removed_frac_heatmap.svg',
+            output_dir,
+            annot=True,
+            dpi=dpi
+        )
+        logging.info(f'Created removed-cell heatmaps in {output_dir}')
+else:
+    logging.info('No thresholds TSV rows found, skipping removed-cell heatmaps.')
+
+
+## Ridge plots for numeric QC metrics
+
 if qc_df is not None:
     metric_columns = [
         col for col in qc_metric_columns
@@ -329,35 +492,3 @@ if len(written_files) > 0:
     logging.info(f'Created {len(written_files)} ridge plots in {output_ridge}')
 elif qc_df is not None:
     logging.info('No ridge plots were created after metric filtering.')
-
-
-logging.info('Creating removed-cell heatmaps...')
-if thresholds_df is not None:
-    thresholds = thresholds_df.query('threshold_type == "updated"')
-    if thresholds.shape[0] == 0:
-        logging.info('No updated thresholds found. Skipping removed-cell heatmaps.')
-    else:
-        thresholds = thresholds.drop_duplicates(subset=['study', 'lineage'])
-        removed_df = thresholds.pivot(index=['study'], columns='lineage', values='n_removed')
-        removed_frac_df = thresholds.pivot(index=['study'], columns='lineage', values='removed_frac')
-
-        plot_heatmap(
-            removed_df,
-            'Cells removed from semi-automated QC',
-            'n_removed_heatmap.svg',
-            output_dir,
-            annot=False,
-            dpi=dpi
-        )
-        
-        plot_heatmap(
-            removed_frac_df,
-            'Fraction removed from semi-automated QC',
-            'removed_frac_heatmap.svg',
-            output_dir,
-            annot=True,
-            dpi=dpi
-        )
-        logging.info(f'Created removed-cell heatmaps in {output_dir}')
-else:
-    logging.info('No thresholds TSV rows found, skipping removed-cell heatmaps.')

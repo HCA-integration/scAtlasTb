@@ -50,7 +50,8 @@ DATASETS:
       qc:
         test1--split_data_value=1: test/input/pbmc68k.h5ad
         test1--split_data_value=2: test/input/pbmc68k.h5ad
-        # test1--split_data_value=3: test/input/pbmc68k.h5ad
+        test1--split_data_value=3: test/input/pbmc68k.h5ad
+        test1--split_data_value=4: test/input/pbmc68k.h5ad
         test2--split_data_value=1: test/input/pbmc68k.h5ad
         test2--split_data_value=2: test/input/pbmc68k.h5ad
         test2--split_data_value=3: test/input/pbmc68k.h5ad
