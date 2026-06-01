@@ -7,8 +7,14 @@ DATASETS:
   example_qc_analysis:
     input:
       qc:
-        test1: data/pbmc68k.h5ad # adjust to custom file path
-        test2: data/pbmc68k.h5ad
+        test1--split_data_value=1: data/pbmc68k.h5ad
+        test1--split_data_value=2: data/pbmc68k.h5ad
+        test1--split_data_value=3: data/pbmc68k.h5ad
+        test1--split_data_value=4: data/pbmc68k.h5ad
+        test2--split_data_value=1: data/pbmc68k.h5ad
+        test2--split_data_value=2: data/pbmc68k.h5ad
+        test2--split_data_value=3: data/pbmc68k.h5ad
+        test--split_data_value=empty: workflow/qc/test/input/empty.zarr
       merge: qc
     qc:
       counts: X  # raw counts slot
@@ -16,3 +22,9 @@ DATASETS:
         - bulk_labels
         - batch
         - phase
+      thresholds:
+        test2--split_data_value=1:
+          n_counts_max: 500
+          n_genes_min: 200
+          percent_mito_max: 0.5
+      thresholds_file: configs/qc/user_thresholds.tsv

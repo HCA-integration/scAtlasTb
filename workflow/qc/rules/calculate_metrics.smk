@@ -11,6 +11,7 @@ rule autoqc:
         unpack(get_input)
     output:
         zarr=directory(mcfg.out_dir / 'autoqc' / f'{params.wildcard_pattern}.zarr'),
+        qc_metrics=mcfg.out_dir / params.wildcard_pattern / 'qc_metrics.parquet',
     params:
         layer=lambda wildcards: mcfg.get_from_parameters(wildcards, 'counts', default='X'),
         metrics_params=lambda wildcards: mcfg.get_from_parameters(wildcards, 'scautoqc_metrics_params'),
@@ -41,6 +42,7 @@ rule get_thresholds:
         scautoqc_metrics=lambda wildcards: mcfg.get_from_parameters(wildcards, 'scautoqc_metrics', default=['n_counts', 'n_genes', 'percent_mito']),
         thresholds=lambda wildcards: mcfg.get_from_parameters(wildcards, 'thresholds', default={}),
         alternative_thresholds=lambda wildcards: mcfg.get_from_parameters(wildcards, 'alternative_thresholds', default={}),
+        metrics_params=lambda wildcards: mcfg.get_from_parameters(wildcards, 'scautoqc_metrics_params'),
     conda:
         get_env(config, 'qc')
     localrule: True

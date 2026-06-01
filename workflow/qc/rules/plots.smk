@@ -9,11 +9,14 @@ rule plot_joint:
         thresholds=lambda wildcards: mcfg.get_from_parameters(wildcards, 'thresholds', default={}),
         scautoqc_metrics=lambda wildcards: mcfg.get_from_parameters(wildcards, 'scautoqc_metrics', default=['n_counts', 'n_genes', 'percent_mito']),
         max_groups=lambda wildcards: mcfg.get_from_parameters(wildcards, 'plot_params', default={}).get('max_groups', 100),
+        plot_density=lambda wildcards: mcfg.get_from_parameters(wildcards, 'plot_params', default={}).get('plot_density', False),
         dpi=lambda wildcards: mcfg.get_from_parameters(wildcards, 'plot_params', default={}).get('dpi', 200),
     threads:
-        lambda wildcards: max(1, min(10, len(mcfg.get_from_parameters(wildcards, 'hue', default=[]))))
+        lambda wildcards: max(1, min(5, len(mcfg.get_from_parameters(wildcards, 'hue', default=[]))))
     conda:
         get_env(config, 'scanpy')
+    resources:
+        mem_mb=lambda wildcards: mcfg.get_resource(profile='cpu',resource_key='mem_mb', factor=0.5),
     script:
         '../scripts/plot_joint.py'
 
@@ -31,11 +34,36 @@ rule plot_removed:
         max_groups=lambda wildcards: mcfg.get_from_parameters(wildcards, 'plot_params', default={}).get('max_groups', 100),
         dpi=lambda wildcards: mcfg.get_from_parameters(wildcards, 'plot_params', default={}).get('dpi', 200),
     threads:
-        lambda wildcards: max(1, min(10, len(mcfg.get_from_parameters(wildcards, 'hue', default=[]))))
+        lambda wildcards: max(1, min(5, len(mcfg.get_from_parameters(wildcards, 'hue', default=[]))))
     conda:
         get_env(config, 'scanpy')
+    resources:
+        mem_mb=lambda wildcards: mcfg.get_resource(profile='cpu',resource_key='mem_mb', factor=0.5),
     script:
         '../scripts/plot_removed.py'
+
+
+rule plot_summary:
+    input:
+        qc_metrics=lambda wildcards: mcfg.get_output_files(
+            rules.autoqc.output.qc_metrics,
+            subset_dict=wildcards,
+        ),
+        tsv=lambda wildcards: mcfg.get_output_files(
+            rules.merge_thresholds.output.tsv,
+            subset_dict=wildcards,
+        ),
+    output:
+        plots=directory(mcfg.image_dir / 'dataset~{dataset}' / 'summary'),
+    params:
+        scautoqc_metrics=lambda wildcards: mcfg.get_from_parameters(wildcards, 'scautoqc_metrics', default=['n_counts', 'n_genes', 'percent_mito']),
+        dpi=lambda wildcards: mcfg.get_from_parameters(wildcards, 'plot_params', default={}).get('dpi', 200),
+    conda:
+        get_env(config, 'scanpy')
+    resources:
+        mem_mb=lambda wildcards: mcfg.get_resource(profile='cpu',resource_key='mem_mb', factor=0.5),
+    script:
+        '../scripts/plot_summary.py'
 
 
 rule joint_plots:
@@ -48,6 +76,14 @@ rule removed_plots:
     localrule: True
 
 
+rule summary_plots:
+    input: mcfg.get_output_files(rules.plot_summary.output)
+    localrule: True
+
+
 rule plots_all:
-    input: rules.joint_plots.input, rules.removed_plots.input
+    input:
+        rules.joint_plots.input,
+        rules.removed_plots.input,
+        rules.summary_plots.input,
     localrule: True

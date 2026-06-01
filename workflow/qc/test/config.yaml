@@ -6,9 +6,10 @@ images: test/images
 #     - Lee2020_autoqc
 
 DATASETS:
-  Lee2020_autoqc:
+  large_autoqc:
     input:
       qc:
+        organ: test/input/load_data/merged/organ/blood.zarr
         Lee2020: test/input/load_data/harmonize_metadata/Lee2020.zarr
     qc:
       counts: X
@@ -26,6 +27,10 @@ DATASETS:
       scautoqc_gaussian_kwargs:
         n_components: [1, 2, 3, 4]
         threshold: 0.1
+      plot_params:
+        plot_density: false
+        max_groups: 50
+        dpi: 100
 
   Lee2020_user_thresholds:
     input:
@@ -39,17 +44,18 @@ DATASETS:
         - development_stage
         - cell_type
       thresholds_file: test/input/user_thresholds.tsv
-      plot_params:
-        max_groups: 50
-        dpi: 300
 
   test:
     input:
       qc:
-        test: test/input/pbmc68k.h5ad
-        test2: test/input/pbmc68k.h5ad
-        test3: test/input/pbmc68k.h5ad
-        empty: test/input/empty.zarr
+        test1--split_data_value=1: test/input/pbmc68k.h5ad
+        test1--split_data_value=2: test/input/pbmc68k.h5ad
+        test1--split_data_value=3: test/input/pbmc68k.h5ad
+        test1--split_data_value=4: test/input/pbmc68k.h5ad
+        test2--split_data_value=1: test/input/pbmc68k.h5ad
+        test2--split_data_value=2: test/input/pbmc68k.h5ad
+        test2--split_data_value=3: test/input/pbmc68k.h5ad
+        test--split_data_value=empty: test/input/empty.zarr
     qc:
       counts: layers/counts
       hue:
@@ -61,3 +67,5 @@ DATASETS:
           n_genes_min: 200
           percent_mito_max: 0.5
       thresholds_file: test/input/user_thresholds.tsv
+      plot_params:
+        plot_density: true

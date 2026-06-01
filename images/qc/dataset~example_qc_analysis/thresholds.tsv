@@ -1,9 +1,33 @@
 dataset	file_id	threshold_type	passed_frac	removed_frac	n_passed	n_removed	n_total	percent_mito_min	percent_mito_max	n_genes_min	n_genes_max	n_counts_min	n_counts_max
-example_qc_analysis	test1	sctk_autoqc	0.0	1.0	0	700	700	0.0	0.08410688	201.73354	764.9998	1948.412	2086.3728
-example_qc_analysis	test1	user	0.0	1.0	0	700	700						
-example_qc_analysis	test1	alternative	0.0	1.0	0	700	700						
-example_qc_analysis	test1	updated	0.0	1.0	0	700	700	0.0	0.08410688	201.73354	764.9998	1948.412	2086.3728
-example_qc_analysis	test2	sctk_autoqc	0.0	1.0	0	700	700	0.0	0.08410688	201.73354	764.9998	1948.412	2086.3728
-example_qc_analysis	test2	user	0.0	1.0	0	700	700						
-example_qc_analysis	test2	alternative	0.0	1.0	0	700	700						
-example_qc_analysis	test2	updated	0.0	1.0	0	700	700	0.0	0.08410688	201.73354	764.9998	1948.412	2086.3728
+example_qc_analysis	test1--split_data_value=1	sctk_autoqc	0.0	1.0	0	700	700	0.0	0.1076309010386467	762.8945922851562	764.9998168945312	1886.2825927734373	2086.372802734375
+example_qc_analysis	test1--split_data_value=1	user	0.0	1.0	0	700	700	0.0	10.0	200.0		250.0	
+example_qc_analysis	test1--split_data_value=1	alternative	0.0	1.0	0	700	700						
+example_qc_analysis	test1--split_data_value=1	updated	0.3557142857142857	0.6442857142857142	249	451	700	0.0	10.0	200.0	764.9998168945312	250.0	2086.372802734375
+example_qc_analysis	test1--split_data_value=2	sctk_autoqc	0.0	1.0	0	700	700	0.0	0.1076309010386467	762.8945922851562	764.9998168945312	1886.2825927734373	2086.372802734375
+example_qc_analysis	test1--split_data_value=2	user	0.0	1.0	0	700	700	0.0	15.0	200.0		50.0	
+example_qc_analysis	test1--split_data_value=2	alternative	0.0	1.0	0	700	700						
+example_qc_analysis	test1--split_data_value=2	updated	0.3557142857142857	0.6442857142857142	249	451	700	0.0	15.0	200.0	764.9998168945312	50.0	2086.372802734375
+example_qc_analysis	test1--split_data_value=3	sctk_autoqc	0.0	1.0	0	700	700	0.0	0.1076309010386467	762.8945922851562	764.9998168945312	1886.2825927734373	2086.372802734375
+example_qc_analysis	test1--split_data_value=3	user	0.0	1.0	0	700	700	0.0	10.0	300.0		50.0	
+example_qc_analysis	test1--split_data_value=3	alternative	0.0	1.0	0	700	700						
+example_qc_analysis	test1--split_data_value=3	updated	0.0242857142857142	0.9757142857142858	17	683	700	0.0	10.0	300.0	764.9998168945312	50.0	2086.372802734375
+example_qc_analysis	test1--split_data_value=4	sctk_autoqc	0.0	1.0	0	700	700	0.0	0.1076309010386467	762.8945922851562	764.9998168945312	1886.2825927734373	2086.372802734375
+example_qc_analysis	test1--split_data_value=4	user	0.0	1.0	0	700	700						
+example_qc_analysis	test1--split_data_value=4	alternative	0.0	1.0	0	700	700						
+example_qc_analysis	test1--split_data_value=4	updated	0.0	1.0	0	700	700	0.0	0.1076309010386467	762.8945922851562	764.9998168945312	1886.2825927734373	2086.372802734375
+example_qc_analysis	test2--split_data_value=1	sctk_autoqc	0.0	1.0	0	700	700	0.0	0.1076309010386467	762.8945922851562	764.9998168945312	1886.2825927734373	2086.372802734375
+example_qc_analysis	test2--split_data_value=1	user	0.0	1.0	0	700	700		0.5	200.0			500.0
+example_qc_analysis	test2--split_data_value=1	alternative	0.0	1.0	0	700	700						
+example_qc_analysis	test2--split_data_value=1	updated	0.0	1.0	0	700	700	0.0	0.5	200.0	764.9998168945312	1886.2825927734373	500.0
+example_qc_analysis	test2--split_data_value=2	sctk_autoqc	0.0	1.0	0	700	700	0.0	0.1076309010386467	762.8945922851562	764.9998168945312	1886.2825927734373	2086.372802734375
+example_qc_analysis	test2--split_data_value=2	user	0.0	1.0	0	700	700						
+example_qc_analysis	test2--split_data_value=2	alternative	0.0	1.0	0	700	700						
+example_qc_analysis	test2--split_data_value=2	updated	0.0	1.0	0	700	700	0.0	0.1076309010386467	762.8945922851562	764.9998168945312	1886.2825927734373	2086.372802734375
+example_qc_analysis	test2--split_data_value=3	sctk_autoqc	0.0	1.0	0	700	700	0.0	0.1076309010386467	762.8945922851562	764.9998168945312	1886.2825927734373	2086.372802734375
+example_qc_analysis	test2--split_data_value=3	user	0.0	1.0	0	700	700						
+example_qc_analysis	test2--split_data_value=3	alternative	0.0	1.0	0	700	700						
+example_qc_analysis	test2--split_data_value=3	updated	0.0	1.0	0	700	700	0.0	0.1076309010386467	762.8945922851562	764.9998168945312	1886.2825927734373	2086.372802734375
+example_qc_analysis	test--split_data_value=empty	sctk_autoqc	0.0	0.0	0	0	0						
+example_qc_analysis	test--split_data_value=empty	user	0.0	0.0	0	0	0						
+example_qc_analysis	test--split_data_value=empty	alternative	0.0	0.0	0	0	0						
+example_qc_analysis	test--split_data_value=empty	updated	0.0	0.0	0	0	0						

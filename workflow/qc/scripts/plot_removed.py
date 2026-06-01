@@ -7,8 +7,12 @@ from pprint import pformat
 import logging
 from tqdm import tqdm
 import traceback
+import gc
 from joblib import Parallel, delayed
+import matplotlib
+matplotlib.use('Agg')  # Non-interactive backend to reduce memory overhead
 
+plt.rcParams['svg.fonttype'] = 'none'
 logging.basicConfig(level=logging.INFO)
 
 from utils.io import read_anndata
@@ -38,7 +42,6 @@ if adata.obs.shape[0] == 0:
     exit(0)
 
 # get parameters
-file_id = snakemake.wildcards.file_id
 dataset, hues = parse_parameters(adata, snakemake.params, filter_hues=True)
 scautoqc_metrics = snakemake.params.get('scautoqc_metrics', QC_FLAGS)
 
@@ -61,8 +64,9 @@ plt.xlabel('Cell QC Status')
 plt.ylabel('Count')
 plt.title(f'Counts of cells QC\'d\n{dataset}')
 plt.tight_layout()
-plt.savefig(output_plots / 'cells_passed_all.png', bbox_inches='tight', dpi=dpi)
+plt.savefig(output_plots / 'cells_passed_all.svg', bbox_inches='tight', dpi=dpi)
 plt.close()
+gc.collect()
 
 
 def plot_composition(df, group_key, plot_dir):
@@ -92,7 +96,8 @@ def plot_composition(df, group_key, plot_dir):
         width_ratios=[0.85, 0.1, 0.05],
         wspace=0.1,
         hspace=0,
-        top=0.95,
+        # Reserve vertical room for the figure-level title so it never overlaps bars.
+        top=0.86,
         bottom=0.02
     )
     
@@ -121,6 +126,7 @@ def plot_composition(df, group_key, plot_dir):
     ax_main.set_xlabel('% Cells')
     ax_main.set_ylabel(group_key)
     ax_main.set_xlim([0, 100])
+    ax_main.margins(y=0)
     
     # Add detailed labels for main plot
     fontsize = 8
@@ -189,10 +195,10 @@ def plot_composition(df, group_key, plot_dir):
     handles, labels = ax_main.get_legend_handles_labels()
     fig.legend(handles, labels, title='QC Status', loc='center left', bbox_to_anchor=(0.88, 0.5), frameon=False, fontsize=9)
     
-    fig.suptitle(f'Cells that passed QC\n{dataset=}, {file_id=}', fontsize=12, y=0.98)
-    fig.tight_layout()
-    fig.savefig(plot_dir / f'by={group_key}.png', bbox_inches='tight', dpi=dpi)
-    plt.close()
+    fig.suptitle(f'Cells that passed QC\n{dataset}', fontsize=12, y=0.98)
+    fig.savefig(plot_dir / f'by={group_key}.svg', bbox_inches='tight', dpi=dpi)
+    plt.close(fig)
+    del fig, ax_main, ax_margin
 
 
 logging.info('Plot compositions...')
@@ -207,16 +213,21 @@ def safe_call_plot(*args, **kwargs):
         return e
 
 # Filter out None hue before creating composition plots
-hues_for_composition = [h for h in hues if h is not None]
+hues_for_composition = [h for h in hues if h is not None and adata.obs[h].dtype == 'category']
+logging.info(f'Plotting compositions for hues: {hues_for_composition}')
 
 # run in parallel using joblib; results is a list of return values (None or Exception)
-results = Parallel(n_jobs=threads)(
+# Use threading backend to avoid copying data across processes (memory-efficient)
+results = Parallel(n_jobs=threads, backend='threading', pre_dispatch='2*n_jobs')(
     delayed(safe_call_plot)(
         adata.obs,
         group_key=g,
         plot_dir=output_plots
     ) for g in tqdm(hues_for_composition)
 )
+gc.collect()
+plt.close('all')
+plt.rcdefaults()  # Reset matplotlib state
 
 # log any errors
 errors = [(g, r) for g, r in zip(hues_for_composition, results) if r is not None]
@@ -250,4 +261,4 @@ for i, qc_metric in enumerate(scautoqc_metrics):
 
 plt.suptitle(f'Cells that passed QC\n{dataset}', fontsize=12)
 fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-plt.savefig(output_plots / 'per_metric_violin.png', bbox_inches='tight', dpi=dpi)
+plt.savefig(output_plots / 'per_metric_violin.svg', bbox_inches='tight', dpi=dpi)
