@@ -14,6 +14,7 @@ import logging
 from matplotlib.colors import to_rgba
 from matplotlib.lines import Line2D
 
+plt.rcParams['svg.fonttype'] = 'none'
 logging.basicConfig(level=logging.INFO)
 warnings.filterwarnings(
     'ignore',

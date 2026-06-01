@@ -12,6 +12,7 @@ from joblib import Parallel, delayed
 import matplotlib
 matplotlib.use('Agg')  # Non-interactive backend to reduce memory overhead
 
+plt.rcParams['svg.fonttype'] = 'none'
 logging.basicConfig(level=logging.INFO)
 
 from utils.io import read_anndata

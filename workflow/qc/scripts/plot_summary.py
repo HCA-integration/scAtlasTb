@@ -14,7 +14,7 @@ from matplotlib.lines import Line2D
 
 from qc_utils import QC_FLAGS
 
-
+plt.rcParams['svg.fonttype'] = 'none'
 warnings.simplefilter("ignore", UserWarning)
 logging.basicConfig(level=logging.INFO)
 sns.set_theme(style='white', context='paper')
