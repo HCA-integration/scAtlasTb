@@ -25,21 +25,39 @@ def thresholds_to_df(df, wildcards, qc_type=None, **kwargs):
         key: (thresholds[f'{key}_min'], thresholds[f'{key}_max'])
         for key in kwargs['threshold_keys']
     }
+    has_defined_thresholds = any(
+        not (pd.isna(lower) and pd.isna(upper))
+        for lower, upper in qc_thresholds.values()
+    )
     
     # sort threshold columns
     threshold_keys = sorted(list(thresholds.keys()), reverse=True)
     thresholds = {key: thresholds[key] for key in threshold_keys}
     
     if df.shape[0] == 0:
+        thresholds = {key: np.nan for key in thresholds}
         thresholds = dict(
             dataset=wildcards.dataset,
             file_id=wildcards.file_id,
             threshold_type=qc_type,
-            passed_frac=0,
-            removed_frac=0,
-            n_passed=0,
-            n_removed=0,
-            n_total=0,
+            passed_frac=np.nan,
+            removed_frac=np.nan,
+            n_passed=np.nan,
+            n_removed=np.nan,
+            n_total=np.nan,
+        ) | thresholds
+        return pd.DataFrame(thresholds, index=[0])
+
+    if not has_defined_thresholds:
+        thresholds = dict(
+            dataset=wildcards.dataset,
+            file_id=wildcards.file_id,
+            threshold_type=qc_type,
+            passed_frac=np.nan,
+            removed_frac=np.nan,
+            n_passed=np.nan,
+            n_removed=np.nan,
+            n_total=np.nan,
         ) | thresholds
         return pd.DataFrame(thresholds, index=[0])
     
@@ -76,6 +94,7 @@ adata = read_anndata(input_file, obs='obs', uns='uns', verbose=False)
 threshold_keys = snakemake.params.get('scautoqc_metrics')
 user_thresholds = snakemake.params.get('thresholds')
 alternative_thresholds = snakemake.params.get('alternative_thresholds')
+has_alternative_thresholds = bool(alternative_thresholds)
 autoqc_thresholds = adata.uns.get('scautoqc_ranges')
 if autoqc_thresholds is None:
     autoqc_thresholds = pd.DataFrame()
@@ -95,25 +114,36 @@ autoqc_thresholds = parse_autoqc(autoqc_thresholds)
 adata.uns['scautoqc_ranges'] = autoqc_thresholds
 
 # Calculate threshold stats
-df = pd.concat(
-    [
-        # autoqc thresholds
-        thresholds_to_df(
-            df=adata.obs,
-            wildcards=snakemake.wildcards,
-            threshold_keys=threshold_keys,
-            autoqc_thresholds=autoqc_thresholds,
-            init_nan=True,
-        ),
-        # user thresholds
-        thresholds_to_df(
-            df=adata.obs,
-            wildcards=snakemake.wildcards,
-            threshold_keys=threshold_keys,
-            user_thresholds=user_thresholds,
-            init_nan=True,
-        ), 
-        # alternative thresholds
+threshold_frames = [
+    # autoqc thresholds
+    thresholds_to_df(
+        df=adata.obs,
+        wildcards=snakemake.wildcards,
+        threshold_keys=threshold_keys,
+        autoqc_thresholds=autoqc_thresholds,
+        init_nan=True,
+    ),
+    # user thresholds
+    thresholds_to_df(
+        df=adata.obs,
+        wildcards=snakemake.wildcards,
+        threshold_keys=threshold_keys,
+        user_thresholds=user_thresholds,
+        init_nan=True,
+    ),
+    # updated thresholds
+    thresholds_to_df(
+        df=adata.obs,
+        wildcards=snakemake.wildcards,
+        threshold_keys=threshold_keys,
+        autoqc_thresholds=autoqc_thresholds,
+        user_thresholds=user_thresholds,
+        init_nan=True,
+    ),
+]
+
+if has_alternative_thresholds:
+    threshold_frames.append(
         thresholds_to_df(
             df=adata.obs,
             wildcards=snakemake.wildcards,
@@ -121,18 +151,10 @@ df = pd.concat(
             threshold_keys=threshold_keys,
             user_thresholds=alternative_thresholds,
             init_nan=True,
-        ),
-        # updated thresholds
-        thresholds_to_df(
-            df=adata.obs,
-            wildcards=snakemake.wildcards,
-            threshold_keys=threshold_keys,
-            autoqc_thresholds=autoqc_thresholds,
-            user_thresholds=user_thresholds,
-            init_nan=True,
-        ),
-    ]
-)
+        )
+    )
+
+df = pd.concat(threshold_frames)
 adata.uns['qc'] = df
 
 df.to_csv(output_tsv, sep='\t', index=False)
@@ -149,26 +171,30 @@ apply_thresholds(
     column_name='user_qc_status',
 )
 
-# set defaults for alternative thresholds
-updated_thresholds = update_thresholds(user_thresholds, autoqc_thresholds)
-alternative_thresholds = updated_thresholds | alternative_thresholds
-apply_thresholds(
-    adata,
-    thresholds=get_thresholds(
-        threshold_keys,
-        user_thresholds=alternative_thresholds,
-        autoqc_thresholds=autoqc_thresholds,
-    ),
-    threshold_keys=threshold_keys,
-    column_name='alternative_qc_status',
-)
-
-# get 'passed' if user_qc_status and alternative_qc_status are both True
 user_status = adata.obs['user_qc_status']
-alt_status = adata.obs['alternative_qc_status']
-adata.obs['qc_status'] = 'ambiguous'
-adata.obs.loc[user_status & alt_status, 'qc_status'] = 'passed'
-adata.obs.loc[~(user_status | alt_status), 'qc_status'] = 'failed'
+
+if has_alternative_thresholds:
+    # set defaults for alternative thresholds
+    updated_thresholds = update_thresholds(user_thresholds, autoqc_thresholds)
+    alternative_thresholds = updated_thresholds | alternative_thresholds
+    apply_thresholds(
+        adata,
+        thresholds=get_thresholds(
+            threshold_keys,
+            user_thresholds=alternative_thresholds,
+            autoqc_thresholds=autoqc_thresholds,
+        ),
+        threshold_keys=threshold_keys,
+        column_name='alternative_qc_status',
+    )
+
+    # get 'passed' if user_qc_status and alternative_qc_status are both True
+    alt_status = adata.obs['alternative_qc_status']
+    adata.obs['qc_status'] = 'ambiguous'
+    adata.obs.loc[user_status & alt_status, 'qc_status'] = 'passed'
+    adata.obs.loc[~(user_status | alt_status), 'qc_status'] = 'failed'
+else:
+    adata.obs['qc_status'] = np.where(user_status, 'passed', 'failed')
 
 # convert QC status to ordered categorical
 adata.obs['qc_status'] = pd.Categorical(
