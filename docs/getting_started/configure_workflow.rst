@@ -47,7 +47,7 @@ The directories will be created automatically if they do not already exist.
 You can select and combine modules to create a custom workflow by specifying the input and module configuration in a YAML file.
 Each instance of a workflow needs a user-defined task name and it can take any number of inputs consisting of modules.
 
-Under each task, the `input` section lists module names, and each module is mapped to either its input files or the output of a previous module.
+Under each task, the ``input`` section lists module names, and each module is mapped to either its input files or the output of a previous module.
 
 .. code-block:: yaml
 
