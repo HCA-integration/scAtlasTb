@@ -105,15 +105,8 @@ rule assemble:
 
 ### Plots ###
 
-rule plots:
-    input:
-        anndata='{dataset}.h5ad',
-    output:
-        plots=directory('{dataset}_plot'),
-    params:
-        basis='X_pca'
-    threads: 10
-    conda:
-        get_env(config, 'scanpy')
-    script:
-        '../scripts/plot.py'
+module plotting:
+    snakefile: "../../plotting/Snakefile"
+    config: config
+
+use rule plotting_plots from plotting as plots

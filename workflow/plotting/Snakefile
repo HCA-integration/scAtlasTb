@@ -1,0 +1,9 @@
+"""
+Plotting utilities
+"""
+
+module plotting:
+    snakefile: "rules.smk"
+    config: config
+
+use rule * from plotting as plotting_ *

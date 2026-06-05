@@ -14,7 +14,7 @@ Implemented steps:
 8. PCA/UMAP plots (`plot.py`)
 9. Assembly (`assemble.py`)
 
-Rules are declared in `rules/rules.smk`, parameterized in `rules/assemble.smk`, and plotting rules are in `rules/plots.smk`.
+Rules are declared in `rules/rules.smk`, parameterized in `rules/assemble.smk`, and plotting aliases are in `rules/plots.smk` (backed by `../plotting/rules.smk`).
 
 
 ## Inputs, outputs, and execution
