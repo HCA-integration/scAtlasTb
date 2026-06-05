@@ -93,8 +93,8 @@ Alternatively, you can use ``install_environment.sh``, which automatically creat
 
 .. code-block:: bash
 
-   bash install_environment -h  # help message
-   bash install_environment -f envs/<env_name>.yaml
+   bash envs/install_environment.sh -h  # help message
+   bash envs/install_environment.sh -f envs/<env_name>.yaml
 
 If you want to pre-install all environments, ``envs/install_all_environments.sh`` provides a convenient wrapper:
 
