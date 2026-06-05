@@ -64,7 +64,7 @@ Under each task, the ``input`` section lists module names, and each module is ma
      another_dataset:
        ...
 
-See :doc:`documentation <docs/principles/input_file_mapping.rst>` for more details on how to specify input mappings and the different formats you can use, as well as how they are resolved to file ids for downstream modules.
+See :ref:`documentation <input-file-mapping>` for more details on how to specify input mappings and the different formats you can use, as well as how they are resolved to file ids for downstream modules.
 
 .. warning::
    There can only be one instance of a module as a key in the input mapping (in the backend this is a dictionary). But you can reuse the same module output as input for multiple other modules. The order of the entries in the input mapping doesn't matter.
