@@ -14,6 +14,12 @@ help:
 
 .PHONY: help Makefile
 
+html: Makefile
+	@$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	@echo ""
+	@echo "🔨 Build finished! Open in your browser:"
+	@echo "  file://$(shell pwd)/$(BUILDDIR)/html/index.html"
+
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
 %: Makefile
