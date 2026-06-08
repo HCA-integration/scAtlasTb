@@ -27,7 +27,7 @@ The directories will be created automatically if they do not already exist.
 **Output & Computational Settings**
 
 * **Output Paths:** Intermediate and large files are stored under ``output_dir``, while images and summary files are stored under ``images``.
-* **Hardware Acceleration:** If you have a GPU or an Intel CPU, set ``use_gpu`` to ``true``. In the backend, this ensures Snakemake utilizes hardware-accelerated conda environments for supported rules.
+* **Hardware Acceleration:** If you have a supported GPU, set ``use_gpu`` to ``true``. In the backend, this ensures Snakemake utilizes GPU-enabled conda environments for supported rules.
 
 .. note:: 
    Relative paths must be relative to the project root (where you call the pipeline), not the directory of the configuration file itself.
@@ -45,9 +45,9 @@ The directories will be created automatically if they do not already exist.
 ----------------------
 
 You can select and combine modules to create a custom workflow by specifying the input and module configuration in a YAML file.
-Each instance of a workflow needs an user-defined task name and it can take any number of inputs consisting of modules.
+Each instance of a workflow needs a user-defined task name and it can take any number of inputs consisting of modules.
 
-Under each task, the `input` section lists module names, and each module is mapped to either its input files or the output of a previous module.
+Under each task, the ``input`` section lists module names, and each module is mapped to either its input files or the output of a previous module.
 
 .. code-block:: yaml
 
@@ -64,7 +64,7 @@ Under each task, the `input` section lists module names, and each module is mapp
      another_dataset:
        ...
 
-See :doc:`documentation <docs/principles/input_file_mapping.rst>` for more details on how to specify input mappings and the different formats you can use, as well as how they are resolved to file ids for downstream modules.
+See :ref:`documentation <input-file-mapping>` for more details on how to specify input mappings and the different formats you can use, as well as how they are resolved to file ids for downstream modules.
 
 .. warning::
    There can only be one instance of a module as a key in the input mapping (in the backend this is a dictionary). But you can reuse the same module output as input for multiple other modules. The order of the entries in the input mapping doesn't matter.
