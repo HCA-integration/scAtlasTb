@@ -56,6 +56,8 @@ rule run:
         clustering=lambda wildcards: mcfg.get_from_parameters(wildcards, 'clustering', default={}),
         use_covariate=lambda wildcards: mcfg.get_from_parameters(wildcards, 'use_covariate', default=False),
         use_gene_set=lambda wildcards: mcfg.get_from_parameters(wildcards, 'use_gene_set', default=False),
+        use_celltypes_list=lambda wildcards: mcfg.get_from_parameters(wildcards, 'use_celltypes_list', default=False),
+        celltypes_list=lambda wildcards: mcfg.get_from_parameters(wildcards, 'celltypes_list', default={}),
         covariates=lambda wildcards: mcfg.get_from_parameters(wildcards, 'covariate', default=[]),
         gene_sets=lambda wildcards: mcfg.get_gene_sets(wildcards.dataset),
         env=lambda wildcards: mcfg.get_from_parameters(wildcards, 'env', check_null=True, default=MetricNotDefinedError(wildcards)),

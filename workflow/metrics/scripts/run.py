@@ -35,8 +35,11 @@ input_type = params.get('input_type')
 clustering = params.get('clustering', {})
 use_covariate = params.get('use_covariate', False)
 use_gene_set = params.get('use_gene_set', False)
+use_celltypes_list = params.get('use_celltypes_list', True)
 covariates = params.get('covariates', [])
 gene_sets = params.get('gene_sets', {})
+celltypes_list = params.get('celltypes_list', {})
+GT_traj_key = params.get('GT_traj_key', 'CCF score')
 
 metric_function = metric_map[metric]
 
@@ -114,6 +117,11 @@ if 'raw' in snakemake.input.keys():
 if use_covariate and len(covariates) == 0:
     covariates = [label_key, batch_key]
 
+sctram_features = []
+if use_celltypes_list:
+    celltype_key = list(celltypes_list.keys())[0]
+    sctram_features = [celltype_key, GT_traj_key]
+
 gene_score_columns = []
 if use_gene_set:
     gene_score_columns = [x for x in adata.obs.columns if x.startswith('gene_score:')]
@@ -127,7 +135,7 @@ if use_cluster_range:
 else:
     cluster_columns = [cluster_key]
 
-columns = [batch_key, label_key] + covariates + cluster_columns + gene_score_columns
+columns = [batch_key, label_key] + covariates + cluster_columns + gene_score_columns + sctram_features
 columns = list(set(columns))  # make unique
 adata.obs = adata.obs[columns].copy()
 
@@ -142,6 +150,8 @@ scores = metric_function(
     cluster_keys=cluster_columns,
     covariate=covariates,
     gene_set=gene_sets,
+    celltypes_list=celltypes_list,
+    GT_traj_key=GT_traj_key,
     n_threads=threads,
 )
 

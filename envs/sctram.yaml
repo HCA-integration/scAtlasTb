@@ -1,0 +1,28 @@
+name: sctram
+channels:
+  - conda-forge
+  - pytorch
+  - defaults
+
+dependencies:
+  - python=3.11
+
+  # Core scientific stack
+  - numpy
+  - pandas
+  - scipy
+  - scikit-learn
+  - anndata
+  - scanpy
+  - pytorch
+
+  # Packages available on conda-forge
+  - scikit-image
+  - scikit-bio
+
+  - pip
+
+  - pip:
+      - loguru
+      - git+https://github.com/theislab/sctram.git
+      - torch-geometric

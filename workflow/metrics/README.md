@@ -243,6 +243,7 @@ The metrics requirements are encoded in `params.tsv`:
 - `needs_clustering` whether the metrics requires Leiden clustering for multiple resolutions [0.1 - 2.0]
 - `use_covariate` whether the metric uses custom covariates. Currently all covariates are assumed to contain biological signal and the resulting metric is considered to be a bio conservation metric
 - `use_gene_set` whether the metric uses a gene set
+- `use_celltypes_list` whether the metric uses a cell type list as input
 - `env` which environment to use
 - `resources` (cpu/gpu)
 - `threads` number of threads to provide for the metric call

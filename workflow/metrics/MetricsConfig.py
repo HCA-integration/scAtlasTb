@@ -26,6 +26,8 @@ class MetricsConfig(ModuleConfig):
         
         wildcards_df = self.set_gene_sets(wildcards_df)
         wildcards_df = self.set_covariates(wildcards_df)
+        wildcards_df = self.set_celltypes_list(wildcards_df)
+        wildcards_df = self.set_GT_traj_key(wildcards_df)
         
         self.update_parameters(
             wildcards_df=wildcards_df,
@@ -81,3 +83,20 @@ class MetricsConfig(ModuleConfig):
         wildcards_df[config_key] = wildcards_df[config_key].fillna('None')
 
         return wildcards_df
+
+    def set_celltypes_list(self, wildcards_df, config_key='celltypes_list'):
+        # celltypes_list only used for metrics that require it
+        wildcards_df.loc[~wildcards_df[f'use_{config_key}'], config_key] = None
+
+        wildcards_df[config_key] = wildcards_df[config_key].fillna('None')
+
+        return wildcards_df
+
+    def set_GT_traj_key(self, wildcards_df, config_key='GT_traj_key'):
+        # GT_traj_key only used for metrics that require it
+        wildcards_df.loc[~wildcards_df[f'use_celltypes_list'], config_key] = None
+
+        wildcards_df[config_key] = wildcards_df[config_key].fillna('None')
+
+        return wildcards_df
+

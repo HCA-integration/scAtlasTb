@@ -8,6 +8,7 @@ from .nmi import nmi, nmi_kmeans_y, nmi_leiden_y
 from .pcr import cell_cycle, pcr_comparison, pcr_y, pcr, pcr_random, pcr_genes
 from .kbet import kbet_y, kbet_pg
 from .morans_i import morans_i, morans_i_random, morans_i_genes, morans_i_genescore
+from .trajectory_eval import trajectory_evaluation
 
 metric_map = {
     'ari': ari,
@@ -46,5 +47,6 @@ metric_map = {
     'pcr_random': pcr_random,
     'pcr': pcr,
     'pcr_genes': pcr_genes,
+    'trajectory_evaluation': trajectory_evaluation,
     # 'pcr_random_genes': pcr_random_genes,
 }
