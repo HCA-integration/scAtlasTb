@@ -2,6 +2,7 @@ from utils.wildcards import wildcards_to_str
 
 
 rule benchmark_per_dataset:
+    message: "[Integration] Collect benchmarks: dataset={wildcards.dataset}"
     input:
         benchmark=lambda wildcards: mcfg.get_output_files(
             rules.integration_run_method.benchmark,
@@ -20,6 +21,7 @@ rule benchmark_per_dataset:
 
 
 rule benchmark:
+    message: "[Integration] Collect benchmarks: all datasets"
     input:
         benchmark=mcfg.get_output_files(rules.integration_run_method.benchmark),
     output:
@@ -35,6 +37,7 @@ rule benchmark:
 
 
 use rule barplot from plots as integration_barplot with:
+    message: "[Integration] Benchmark barplot: metric={wildcards.metric}"
     input:
         tsv=rules.benchmark.output.benchmark
     output:
@@ -52,6 +55,7 @@ use rule barplot from plots as integration_barplot with:
 
 
 use rule barplot from plots as integration_barplot_per_dataset with:
+    message: "[Integration] Benchmark barplot: dataset={wildcards.dataset} metric={wildcards.metric}"
     input:
         tsv=rules.benchmark_per_dataset.output.benchmark
     output:
