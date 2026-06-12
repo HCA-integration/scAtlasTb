@@ -29,7 +29,7 @@ The directories will be created automatically if they do not already exist.
 * **Output Paths:** Intermediate and large files are stored under ``output_dir``, while images and summary files are stored under ``images``.
 * **Hardware Acceleration:** If you have a supported GPU, set ``use_gpu`` to ``true``. In the backend, this ensures Snakemake utilizes GPU-enabled conda environments for supported rules.
 
-.. note:: 
+.. note::
    Relative paths must be relative to the project root (where you call the pipeline), not the directory of the configuration file itself.
 
 .. code-block:: yaml
