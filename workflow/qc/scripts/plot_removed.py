@@ -16,7 +16,7 @@ matplotlib.use('Agg')  # Non-interactive backend to reduce memory overhead
 plt.rcParams['svg.fonttype'] = 'none'
 logging.basicConfig(level=logging.INFO)
 
-from utils.io import read_anndata, parse_args_
+from utils.io import read_anndata, parse_args_, parse_set_nested
 from qc_utils import parse_parameters, QC_FLAGS, log_auto
 
 def plot_bar_all(adata, dataset, output_plots, dpi: int = 150):
@@ -281,9 +281,7 @@ def plot_removed(
     **kwargs,
 ):
     ## Variables ## ------------------------------------------------------------
-    # temp = vars(snakemake) if not isinstance(snakemake, dict) else snakemake
-    # snakemake = {k: v for k, v in temp.items()}
-    for i in kwargs.keys(): snakemake[i] = kwargs[i]
+    for k, v in kwargs.items(): parse_set_nested(snakemake, k, v)
     pp.pprint(snakemake)
     input_zarr = snakemake.input.zarr
     output_plots = Path(snakemake.output.plots)
@@ -300,7 +298,7 @@ def plot_removed(
     # If no cells filtered out, save empty plots
     if adata.obs.shape[0] == 0:
         logging.info('Empty data, skipping plots...')
-        exit(0)
+        return
     dataset, hues = parse_parameters(adata, snakemake.params, filter_hues=True)
 
     ## Main code ## ------------------------------------------------------------
