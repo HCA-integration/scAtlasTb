@@ -210,7 +210,13 @@ def log_auto_base(values: list, count_shift: int = 1) -> int:
     ValueError if the list is empty or contains non-positive values.
     """
     import math
-    data = [float(v + count_shift) for v in values]
+
+    # Drop NA values and validate input before computing min/max
+    data = [float(v + count_shift) for v in values if pd.notna(v)]
+    if not data:
+        raise ValueError("Input list is empty.")
+    if any(v <= 0 for v in data):
+        raise ValueError("All values must be strictly positive for log scaling.")
 
     # rule: dynamic-range
     vmin, vmax = min(data), max(data)
@@ -221,12 +227,7 @@ def log_auto_base(values: list, count_shift: int = 1) -> int:
     ):
         # No spread so either base works; or all within 0 and 1
         # no point in log transforming
-        return 1.0
-
-    if not data:
-        raise ValueError("Input list is empty.")
-    if any(v <= 0 for v in data):
-        raise ValueError("All values must be strictly positive for log scaling.")
+        return 1
 
     def _is_integer_close(x: float, tol: float = 1e-3) -> bool:
         return abs(x - round(x)) < tol
