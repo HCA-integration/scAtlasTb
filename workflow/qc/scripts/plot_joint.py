@@ -259,7 +259,7 @@ coordinates = [
 # filter to configured metrics only
 temp = [
     c for c in coordinates if
-    all(x in thresholds.keys() for x in c[:2])
+    all(x in updated_thresholds.keys() for x in c[:2])
 ]
 
 if len(temp) == 0:
