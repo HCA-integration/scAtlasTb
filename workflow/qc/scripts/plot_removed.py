@@ -17,7 +17,7 @@ plt.rcParams['svg.fonttype'] = 'none'
 logging.basicConfig(level=logging.INFO)
 
 from utils.io import read_anndata, parse_args_
-# from qc_utils import parse_parameters, QC_FLAGS, log_auto
+from qc_utils import parse_parameters, QC_FLAGS, log_auto
 
 def plot_bar_all(adata, dataset, output_plots, dpi: int = 150):
     logging.info('Plot removed cells...')
