@@ -77,9 +77,7 @@ def plot_composition(
     # Create JointGrid-like figure with space for legend
     from matplotlib.gridspec import GridSpec
     # Calculate dynamic height based on number of categories with better scaling
-    # Use 0.3 inches per category with a minimum of 6 inches
-    # make the width the height minust 10%
-    fig_height = max(6, n_hues * 0.3)
+    # make the width the height minus 10%
     fig = plt.figure(figsize=(fig_height - (fig_height * 0.1), fig_height))
     gs = GridSpec(
         nrows=1,
@@ -174,13 +172,13 @@ def plot_composition(
             )
 
     # Margin plot: stacked barplot of total counts on ax_margin
+    bottom = pd.Series(0, index=counts_ordered.index)
     for status in counts_ordered.columns:
         widths = counts_ordered[status]
         bars = ax_margin.barh(
             counts_ordered.index,
             widths,
             left=bottom,
-            edgecolor='white',
             linewidth=0.5,
             label=status,
             alpha=0.9,
@@ -242,6 +240,8 @@ def plot_violin(
         suffix: str = "",
         dpi: int = 150,
 ):
+    if isinstance(metrics, str):
+        metrics = [metrics]
     n_panels = len(metrics)
     figsize_metrics = 4 * n_panels
     if facet is None:
@@ -307,9 +307,11 @@ def plot_removed(
     logging.info(f'{hues=}')
     plot_bar_all(adata, dataset, output_plots, dpi)
 
-    # Filter out None hue before creating composition plots
-    hues_for_composition = [h for h in hues if h is not None]
-    logging.info(f'Plotting compositions for hues: {hues_for_composition}')
+    # Filter out None (and non-categorical) hues before creating composition plots
+    hues_for_composition = [
+        h for h in hues
+        if h is not None and pd.api.types.is_categorical_dtype(adata.obs[h])
+    ]
 
     # run in parallel using joblib; results is a list of return values (None or Exception)
     # Use threading backend to avoid copying data across processes (memory-efficient)
