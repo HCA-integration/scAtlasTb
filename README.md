@@ -1,9 +1,10 @@
 # Single Cell Atlasing Toolbox 🧰
 
 [![Documentation][badge-docs]][documentation]
+[![Tests][badge-tests]][tests]
 
-[badge-tests]: https://img.shields.io/github/actions/
-[badge-docs]: https://img.shields.io/readthedocs/scAtlasTb-utils
+[badge-tests]: https://img.shields.io/github/actions/workflow/status/HCA-integration/scAtlasTb/test.yaml?label=tests
+[badge-docs]: https://readthedocs.org/projects/scatlastb/badge/?version=latest
 
 **Toolbox of Snakemake pipelines for easy-to-use analyses and benchmarks for building integrated atlases**
 
@@ -137,9 +138,9 @@ total                                     31
 Reasons:
     (check individual jobs above for details)
     input files updated by another job:
-        integration_all, integration_barplot_per_dataset, integration_benchmark_per_dataset, integration_compute_umap, integration_plot_umap, integration_postprocess, integration_prepare, integration_run_method, preprocessing_assemble, preprocessing_highly_variable_genes, preprocessing_pca                                                                                             
+        integration_all, integration_barplot_per_dataset, integration_benchmark_per_dataset, integration_compute_umap, integration_plot_umap, integration_postprocess, integration_prepare, integra[...]
     missing output files:
-        integration_benchmark_per_dataset, integration_compute_umap, integration_postprocess, integration_prepare, integration_run_method, preprocessing_assemble, preprocessing_highly_variable_genes, preprocessing_normalize, preprocessing_pca
+        integration_benchmark_per_dataset, integration_compute_umap, integration_postprocess, integration_prepare, integration_run_method, preprocessing_assemble, preprocessing_highly_variable_ge[...]
 
 This was a dry-run (flag -n). The order of jobs does not reflect the order of execution.
 ```
@@ -159,5 +160,6 @@ If you found a bug, please use the [issue tracker][].
 > t.b.a
 
 [issue tracker]: https://github.com/HCA-integration/scAtlasTb/issues
+[tests]: https://github.com/HCA-integration/scAtlasTb/actions/workflows/test.yaml
 [documentation]: https://scatlastb.readthedocs.io
 [changelog]: https://scatlastb-utils.readthedocs.io/en/latest/changelog.html
