@@ -25,8 +25,7 @@ sns.set_theme(style='ticks')
 sns.set_context('paper', font_scale=1.2)
 
 from utils.io import read_anndata
-from qc_utils import parse_parameters, get_thresholds, plot_qc_joint, plot_density, QC_FLAGS
-
+from qc_utils import parse_parameters, get_thresholds, plot_qc_joint, plot_density, log_auto_base
 
 input_zarr = snakemake.input.zarr
 output_joint = Path(snakemake.output.joint)
@@ -147,8 +146,18 @@ def create_facet_figure(df, out_file, hue, joint_title, scatter_plot_kwargs, dpi
             title='', fig=fig,
             **plot_kwargs,
         )
-        plot_qc_joint(**common_kwargs, log_x=1,     log_y=1,     subplot_spec=outer[row_idx, 0])
-        plot_qc_joint(**common_kwargs, log_x=log_x, log_y=log_y, subplot_spec=outer[row_idx, 1])
+        plot_qc_joint(
+            **common_kwargs,
+            log_x=1,
+            log_y=1,
+            subplot_spec=outer[row_idx, 0]
+        )
+        plot_qc_joint(
+            **common_kwargs,
+            log_x=log_x if log_x > 1 else log_auto_base(df[x]),
+            log_y=log_y if log_y > 1 else log_auto_base(df[y]),
+            subplot_spec=outer[row_idx, 1]
+        )
 
     all_handles, all_labels = _add_threshold_legend(fig)
 
@@ -192,8 +201,18 @@ def create_density_figure(df, out_file, joint_title, dpi=150):
             threshold_linestyle2=threshold_linestyle2,
             title='', fig=fig,
         )
-        plot_density(**common_kwargs, log_x=1,     log_y=1,     subplot_spec=outer[row_idx, 0])
-        plot_density(**common_kwargs, log_x=log_x, log_y=log_y, subplot_spec=outer[row_idx, 1])
+        plot_density(
+            **common_kwargs,
+            log_x=1,
+            log_y=1,
+            subplot_spec=outer[row_idx, 0]
+        )
+        plot_density(
+            **common_kwargs,
+            log_x=log_x if log_x > 1 else log_auto_base(df[x]),
+            log_y=log_y if log_y > 1 else log_auto_base(df[y]),
+            subplot_spec=outer[row_idx, 1]
+        )
 
     all_handles, all_labels = _add_threshold_legend(fig)
     fig.legend(all_handles, all_labels, loc='outside right center', frameon=False, fontsize=10)
@@ -218,6 +237,7 @@ updated_thresholds = get_thresholds(
     threshold_keys=scautoqc_metrics,
     autoqc_thresholds=adata.uns.get('scautoqc_ranges'),
     user_thresholds=snakemake.params.get('thresholds'),
+    df=adata.obs.copy(),
 )
 auto_thresholds = get_thresholds(
     threshold_keys=scautoqc_metrics,
@@ -236,8 +256,21 @@ coordinates = [
     ('n_genes',  'scrublet_score', 2, 1),
     ('n_counts', 'scrublet_score', 10, 1),
 ]
-coordinates = [c for c in coordinates if all(x in adata.obs.columns for x in c[:2])]
+# filter to configured metrics only
+temp = [
+    c for c in coordinates if
+    all(x in updated_thresholds.keys() for x in c[:2])
+]
 
+if len(temp) == 0:
+    coordinates = [
+        c for c in coordinates if
+        all(x in adata.obs.columns for x in c[:2])
+    ]
+else:
+    coordinates = temp
+
+# reduce obs to required columns only
 required_columns = [
     col for col in {*hues, *[c for coords in coordinates for c in coords[:2]]}
     if col in adata.obs.columns

@@ -159,6 +159,16 @@ adata.uns['qc'] = df
 
 df.to_csv(output_tsv, sep='\t', index=False)
 
+apply_thresholds(
+    adata,
+    thresholds=get_thresholds(
+        threshold_keys,
+        user_thresholds=parse_autoqc(autoqc_thresholds),
+    ),
+    threshold_keys=threshold_keys,
+    column_name='sctk_qc_status',
+)
+
 # add QC status column to .obs with 'passed', 'failed', and 'ambiguous'
 apply_thresholds(
     adata,
@@ -199,7 +209,7 @@ else:
 # convert QC status to ordered categorical
 adata.obs['qc_status'] = pd.Categorical(
     adata.obs['qc_status'],
-    categories=['passed', 'failed', 'ambiguous'],
+    categories=['failed', 'ambiguous', 'passed'], # keep passed on top
     ordered=True
 )
 
