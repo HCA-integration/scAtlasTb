@@ -15,6 +15,7 @@ slurm*
 *.h5ad
 *.zarr/
 .idea/
+.vscode/
 
 # snakemake
 .snakemake

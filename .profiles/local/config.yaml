@@ -2,6 +2,8 @@ jobs: 1
 keep-going: False
 rerun-incomplete: True
 printshellcmds: True
+verbose: True
+reason: True
 scheduler: greedy
 use-conda: True
 rerun-triggers:

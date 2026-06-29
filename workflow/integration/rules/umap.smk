@@ -1,6 +1,12 @@
 ######### UMAP and embedding plots #########
 
 use rule umap from preprocessing as integration_compute_umap with:
+    message:
+        """
+        [Integration] Compute UMAP: dataset={wildcards.dataset} method={wildcards.method} output_type={wildcards.output_type}
+        input: {input}
+        output: {output}
+        """
     input:
         anndata=rules.integration_postprocess.output.zarr,
         rep=rules.integration_postprocess.output.zarr,
@@ -27,6 +33,12 @@ def get_colors(wildcards):
 
 
 use rule plots from preprocessing as integration_plot_umap with:
+    message:
+        """
+        [Integration] Plot UMAP: dataset={wildcards.dataset} method={wildcards.method} output_type={wildcards.output_type}
+        input: {input}
+        output: {output}
+        """
     input:
         anndata=rules.integration_compute_umap.output.zarr,
     output:

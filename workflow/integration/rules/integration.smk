@@ -18,7 +18,7 @@ def get_threads(wildcards, attempt):
 rule prepare:
     message:
         """
-        Prepare: Prepare dataset={wildcards.dataset} with file_id={wildcards.file_id} and var_mask={wildcards.var_mask}
+        [Integration] Prepare: dataset={wildcards.dataset} file_id={wildcards.file_id} var_mask={wildcards.var_mask}
         input: {input}
         output: {output}
         params: norm_counts={params.norm_counts} raw_counts={params.raw_counts} save_subset={params.save_subset}
@@ -60,7 +60,7 @@ integration_run_pattern = 'run_method/' + paramspace.wildcard_pattern.replace('-
 use rule run_method from integration as integration_run_method with:
     message:
        """
-       Integration: Run integration method {wildcards.method} on dataset={wildcards.dataset} file_id={wildcards.file_id}
+       [Integration] Run method={wildcards.method} dataset={wildcards.dataset} file_id={wildcards.file_id}
        input: {input}
        output: {output}
        wildcards: {wildcards}
@@ -111,6 +111,12 @@ def update_neighbors_args(wildcards):
 
 
 use rule neighbors from preprocessing as integration_postprocess with:
+    message:
+        """
+        [Integration] Postprocess (neighbors): dataset={wildcards.dataset} method={wildcards.method} output_type={wildcards.output_type}
+        input: {input}
+        output: {output}
+        """
     input:
         zarr=rules.integration_run_method.output.zarr,
         done=rules.integration_run_method.output.model,
